@@ -1,0 +1,61 @@
+.indicator-card {
+  display: block;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s ease;
+}
+
+.indicator-card:hover {
+  box-shadow: 0 4px 12px rgba(27, 54, 93, 0.14);
+}
+
+.indicator-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.indicator-card__level {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.indicator-card__name {
+  font-size: 1rem;
+  margin: 8px 0 12px;
+  color: var(--color-text);
+}
+
+.indicator-card__values {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.indicator-card__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.indicator-card__unit {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.indicator-card__target {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.indicator-card__sparkline {
+  margin-top: 8px;
+}

@@ -1,0 +1,182 @@
+.indicators-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.button-primary {
+  background: var(--color-teal);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.indicators-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.indicators-table th,
+.indicators-table td {
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9rem;
+}
+
+.indicators-table tr.row-inactive {
+  opacity: 0.5;
+}
+
+.indicators-table__actions {
+  display: flex;
+  gap: 12px;
+}
+
+.indicators-table__actions button {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.axis-chip {
+  color: white;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.indicator-form-page {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.indicator-form {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.indicator-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.indicator-form input,
+.indicator-form select,
+.indicator-form textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-weight: 400;
+}
+
+.indicator-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.indicator-form__parents {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+}
+
+.indicator-form__parents legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0 4px;
+}
+
+.indicator-form label.indicator-form__parent-option {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  padding: 4px 0;
+}
+
+.unit-picker__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.unit-picker__back {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.unit-picker__saving {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.indicator-form__target {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.indicator-form__target label {
+  flex: none;
+}
+
+.indicator-form__target-rule {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.indicator-form__target-rule .semaforo {
+  vertical-align: middle;
+}
+
+.indicator-form__error {
+  color: var(--color-fail);
+}
+
+.indicator-form__actions {
+  display: flex;
+  justify-content: flex-end;
+}

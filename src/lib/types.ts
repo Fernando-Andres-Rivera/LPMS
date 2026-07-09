@@ -1,0 +1,270 @@
+// Tipos que reflejan el esquema de Supabase (supabase/migrations).
+// Se mantienen manualmente en la Fase 1; en una fase posterior se pueden
+// generar automáticamente con `supabase gen types typescript`.
+
+export type UserRole =
+  | 'admin_consultora'
+  | 'admin_cliente'
+  | 'gerente'
+  | 'administrativo'
+  | 'operativo'
+
+export type IndicatorFrequency = 'diaria' | 'semanal' | 'quincenal' | 'mensual'
+export type ImprovementDirection = 'mayor_mejor' | 'menor_mejor'
+export type PdcaStatus = 'planificar' | 'hacer' | 'verificar' | 'actuar' | 'cerrado'
+export type CausalMethodology = '5_porques' | 'ishikawa'
+
+/** Cómo combinar varias mediciones dentro de un mismo período al revisar resultados. */
+export type AggregationMethod = 'suma' | 'promedio' | 'ultimo' | 'maximo' | 'minimo'
+
+export const AGGREGATION_METHOD_LABEL: Record<AggregationMethod, string> = {
+  suma: 'Suma del período',
+  promedio: 'Promedio del período',
+  ultimo: 'Último valor capturado',
+  maximo: 'Máximo del período',
+  minimo: 'Mínimo del período',
+}
+
+export const AGGREGATION_METHOD_HELP: Record<AggregationMethod, string> = {
+  suma: 'Ej. accidentes, defectos, paradas — cuentas que se acumulan en el período.',
+  promedio: 'Ej. % de cumplimiento, calificaciones — tasas que se promedian.',
+  ultimo: 'Ej. nivel de inventario — se queda con la medición más reciente del período.',
+  maximo: 'Ej. pico de una variable durante el período.',
+  minimo: 'Ej. el peor valor alcanzado durante el período.',
+}
+
+/** Ventana de tiempo usada para revisar resultados agregados en los tableros. */
+export type PeriodType = 'dia' | 'semana' | 'quincena' | 'mes' | 'trimestre'
+
+export const PERIOD_TYPE_LABEL: Record<PeriodType, string> = {
+  dia: 'Día',
+  semana: 'Semana',
+  quincena: 'Quincena',
+  mes: 'Mes',
+  trimestre: 'Trimestre',
+}
+
+export interface Organization {
+  id: string
+  name: string
+  industry: string | null
+  logo_url: string | null
+  active: boolean
+  created_at: string
+}
+
+export interface Site {
+  id: string
+  organization_id: string
+  name: string
+  address: string | null
+  active: boolean
+  org_unit_id: string | null
+}
+
+/** Nivel 2 (Unidad de Negocio) o Nivel 3 (Región) de la estructura organizacional. */
+export interface OrgUnit {
+  id: string
+  organization_id: string
+  parent_id: string | null
+  level: 2 | 3
+  name: string
+  active: boolean
+}
+
+/** Nivel 5+ (Instalación y más abajo) de la estructura organizacional, colgado de un sitio. */
+export interface SiteLocation {
+  id: string
+  site_id: string
+  parent_id: string | null
+  level: number
+  name: string
+  active: boolean
+}
+
+export const ORG_STRUCTURE_LEVEL_LABEL: Record<number, string> = {
+  1: 'Organización',
+  2: 'Unidad de Negocio',
+  3: 'Región',
+  4: 'Sitio',
+  5: 'Instalación',
+  6: 'Área Funcional',
+  7: 'Proceso',
+  8: 'Subproceso',
+  9: 'Línea / Célula',
+  10: 'Estación / Puesto',
+  11: 'Activo',
+  12: 'Ubicación Física',
+}
+
+export interface Profile {
+  id: string
+  organization_id: string
+  role: UserRole
+  full_name: string
+  email: string
+  active: boolean
+}
+
+export interface ProfileSite {
+  id: string
+  profile_id: string
+  site_id: string
+}
+
+export interface Axis {
+  id: string
+  code: string
+  name: string
+  color: string
+  icon: string | null
+  sort_order: number
+}
+
+export interface OrganizationAxis {
+  id: string
+  organization_id: string
+  axis_id: string
+  active: boolean
+}
+
+export interface Indicator {
+  id: string
+  organization_id: string
+  site_id: string | null
+  site_location_id: string | null
+  axis_id: string
+  level: 1 | 2 | 3
+  name: string
+  definition: string | null
+  calculation_formula: string | null
+  unit: string
+  frequency: IndicatorFrequency
+  improvement_direction: ImprovementDirection
+  aggregation_method: AggregationMethod
+  responsible_id: string | null
+  active: boolean
+  created_at: string
+}
+
+export interface Unit {
+  id: string
+  organization_id: string
+  name: string
+  created_by: string | null
+  created_at: string
+}
+
+export interface IndicatorLink {
+  id: string
+  child_indicator_id: string
+  parent_indicator_id: string
+}
+
+export interface Target {
+  id: string
+  indicator_id: string
+  period_year: number
+  period_month: number | null
+  target_value: number
+  created_by: string | null
+}
+
+export interface Measurement {
+  id: string
+  indicator_id: string
+  period_date: string
+  value: number
+  comment: string | null
+  site_location_id: string | null
+  captured_by: string | null
+  created_at: string
+}
+
+export const ISHIKAWA_CATEGORIES = [
+  'mano_de_obra',
+  'metodo',
+  'maquina',
+  'material',
+  'medicion',
+  'medio_ambiente',
+] as const
+
+export type IshikawaCategoryKey = (typeof ISHIKAWA_CATEGORIES)[number]
+
+export const ISHIKAWA_CATEGORY_LABEL: Record<IshikawaCategoryKey, string> = {
+  mano_de_obra: 'Mano de obra',
+  metodo: 'Método',
+  maquina: 'Máquina',
+  material: 'Material',
+  medicion: 'Medición',
+  medio_ambiente: 'Medio ambiente',
+}
+
+export interface IshikawaData {
+  categories: Record<IshikawaCategoryKey, string[]>
+}
+
+export interface FiveWhysData {
+  whys: string[]
+}
+
+export interface CausalAnalysis {
+  id: string
+  organization_id: string
+  indicator_id: string
+  measurement_id: string | null
+  methodology: CausalMethodology
+  description: string | null
+  root_cause: string | null
+  data: Partial<IshikawaData & FiveWhysData>
+  created_by: string | null
+  created_at: string
+}
+
+export interface CauseCategory {
+  id: string
+  organization_id: string
+  parent_id: string | null
+  name: string
+  active: boolean
+  created_by: string | null
+  created_at: string
+}
+
+export interface CausalAnalysisCause {
+  id: string
+  causal_analysis_id: string
+  cause_category_id: string
+}
+
+export interface ActionPlan {
+  id: string
+  organization_id: string
+  causal_analysis_id: string | null
+  indicator_id: string
+  description: string
+  responsible_id: string | null
+  due_date: string | null
+  event_date: string | null
+  closed_at: string | null
+  status: PdcaStatus
+  created_by: string | null
+  created_at: string
+}
+
+/**
+ * Los 4 cuartos del círculo de avance del plan de acción (formato SMQDC):
+ * vacío (problema definido) -> lanzada -> en ejecución -> terminada -> eficaz.
+ * `actuar` existe en la base para flexibilidad futura pero no se usa en
+ * este control de 4 pasos.
+ */
+export const ACTION_PLAN_STEPS: { status: PdcaStatus; label: string; quarters: number }[] = [
+  { status: 'planificar', label: 'Acción lanzada', quarters: 1 },
+  { status: 'hacer', label: 'En ejecución', quarters: 2 },
+  { status: 'verificar', label: 'Terminada', quarters: 3 },
+  { status: 'cerrado', label: 'Eficaz', quarters: 4 },
+]
+
+/** Estado del semáforo de un indicador, derivado en el cliente. */
+export type SemaforoEstado = 'cumple' | 'riesgo' | 'incumple' | 'sin_datos'

@@ -1,0 +1,35 @@
+.compliance-site-select {
+  margin-bottom: 20px;
+}
+
+.compliance-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.compliance-table th,
+.compliance-table td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.compliance-cell {
+  text-align: center;
+}
+
+.compliance-ok {
+  color: var(--color-ok);
+  font-weight: 700;
+}
+
+.compliance-missing {
+  color: var(--color-fail);
+  font-weight: 700;
+}

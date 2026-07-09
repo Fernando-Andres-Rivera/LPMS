@@ -1,0 +1,300 @@
+.page-subtitle {
+  color: var(--color-text-muted);
+  margin: 4px 0 20px;
+}
+
+.axes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.axis-card {
+  background: var(--color-surface);
+  border-top: 4px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 24px 16px;
+  text-decoration: none;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 88px;
+  font-weight: 600;
+}
+
+.axis-card:hover {
+  box-shadow: 0 4px 12px rgba(27, 54, 93, 0.14);
+}
+
+.period-row {
+  margin-bottom: 20px;
+}
+
+.indicators-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.indicator-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.indicator-diagnostic {
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  border-left: 3px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.indicator-diagnostic__label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.indicator-diagnostic__cause,
+.indicator-diagnostic__meta {
+  margin: 0 0 6px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.indicator-diagnostic__link {
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+.indicator-diagnostic--sin_datos {
+  border-left-color: var(--color-gray);
+}
+
+.indicator-diagnostic--sin_datos .indicator-diagnostic__label {
+  color: var(--color-text-muted);
+}
+
+.indicator-diagnostic--sin_causa {
+  border-left-color: var(--color-risk);
+  background: rgba(245, 124, 0, 0.08);
+}
+
+.indicator-diagnostic--sin_causa .indicator-diagnostic__label {
+  color: var(--color-risk);
+}
+
+.indicator-diagnostic--falta_gestion {
+  border-left-color: var(--color-fail);
+  background: rgba(211, 47, 47, 0.08);
+}
+
+.indicator-diagnostic--falta_gestion .indicator-diagnostic__label {
+  color: var(--color-fail);
+}
+
+.indicator-diagnostic--falta_eficacia {
+  border-left-color: var(--color-risk);
+  background: rgba(245, 124, 0, 0.08);
+}
+
+.indicator-diagnostic--falta_eficacia .indicator-diagnostic__label {
+  color: var(--color-risk);
+}
+
+.level-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.level-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.level-tab {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.level-tab--active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.level-site-select {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.level-section {
+  margin-bottom: 28px;
+}
+
+.level-section h3 {
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+
+.panorama-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.panorama-kpi {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panorama-kpi__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.panorama-kpi__value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.panorama-kpi__value--ok {
+  color: var(--color-ok);
+}
+
+.panorama-kpi__value--risk {
+  color: var(--color-risk);
+}
+
+.panorama-kpi__value--fail {
+  color: var(--color-fail);
+}
+
+.panorama-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.panorama-card h2 {
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.panorama-card__subtitle {
+  margin: 0 0 16px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.panorama-composition {
+  display: flex;
+  gap: 2px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.panorama-composition__segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3px;
+}
+
+.panorama-composition__label {
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.panorama-composition__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.panorama-composition__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.panorama-composition__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.panorama-section-title {
+  font-size: 1.15rem;
+  margin: 28px 0 14px;
+}
+
+.exceptions-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.exceptions-table th,
+.exceptions-table td {
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9rem;
+}
+
+.exceptions-table .axis-chip {
+  color: white;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.exceptions-footnote {
+  margin-top: 16px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}

@@ -1,0 +1,16 @@
+{
+  "name": "LPMS — Lean Performance Management System",
+  "short_name": "LPMS",
+  "description": "Sistema de gestión de desempeño Lean — LeanProLogistic",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1B365D",
+  "icons": [
+    {
+      "src": "/icons.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+.location-picker {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.location-picker__breadcrumb {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.location-picker__breadcrumb button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.location-picker__breadcrumb button:disabled {
+  color: var(--color-text);
+  cursor: default;
+}
+
+.location-picker__children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.location-picker__children button {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.location-picker__children button:hover {
+  border-color: var(--color-primary);
+}
+
+.location-picker__leaf-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}

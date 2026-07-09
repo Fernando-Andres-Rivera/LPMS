@@ -1,0 +1,124 @@
+.onboarding-page {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.onboarding-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+}
+
+.onboarding-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.onboarding-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.onboarding-form input,
+.onboarding-form select {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-weight: 400;
+}
+
+.onboarding-form input:disabled {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
+
+.onboarding-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.onboarding-axes {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+}
+
+.onboarding-axes legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0 4px;
+}
+
+.onboarding-form label.onboarding-axis-option {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  padding: 4px 0;
+}
+
+.industry-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.industry-picker input {
+  flex: 1;
+}
+
+.industry-picker__back {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.onboarding-error {
+  color: var(--color-fail);
+}
+
+.onboarding-success-text {
+  color: var(--color-ok);
+  font-weight: 600;
+}
+
+.onboarding-form__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.onboarding-success p {
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.onboarding-success__actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.onboarding-success__actions button {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 600;
+}

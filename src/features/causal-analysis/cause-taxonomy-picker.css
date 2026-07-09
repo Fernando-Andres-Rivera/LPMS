@@ -1,0 +1,117 @@
+.taxonomy-picker {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.taxonomy-breadcrumb {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.taxonomy-breadcrumb button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.taxonomy-breadcrumb button:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.taxonomy-use-current {
+  align-self: flex-start;
+  background: rgba(38, 166, 154, 0.12);
+  border: 1px solid var(--color-teal);
+  color: var(--color-teal);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.taxonomy-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.taxonomy-children button {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.taxonomy-children button:hover {
+  border-color: var(--color-primary);
+}
+
+.taxonomy-new {
+  display: flex;
+  gap: 8px;
+}
+
+.taxonomy-new input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.taxonomy-new button {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.taxonomy-new button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.taxonomy-selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.taxonomy-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 999px;
+  padding: 4px 6px 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.taxonomy-tag button {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 4px;
+}

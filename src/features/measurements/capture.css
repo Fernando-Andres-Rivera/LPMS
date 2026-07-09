@@ -1,0 +1,92 @@
+.capture-page {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.capture-form {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.capture-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.capture-select,
+.capture-date,
+.capture-comment {
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-weight: 400;
+  font-size: 1rem;
+}
+
+.capture-value {
+  padding: 20px;
+  border: 2px solid var(--color-teal);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 2rem;
+  text-align: center;
+}
+
+.capture-submit {
+  background: var(--color-teal);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 20px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.capture-submit:disabled {
+  opacity: 0.6;
+}
+
+.capture-message {
+  text-align: center;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+
+.capture-message--ok {
+  background: rgba(38, 166, 154, 0.12);
+  color: var(--color-teal);
+}
+
+.capture-message--error {
+  background: rgba(211, 47, 47, 0.1);
+  color: var(--color-fail);
+}
+
+.capture-deviation {
+  background: rgba(245, 124, 0, 0.1);
+  border: 1px solid var(--color-orange);
+  color: var(--color-orange);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.capture-deviation a {
+  color: var(--color-primary);
+}

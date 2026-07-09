@@ -1,0 +1,212 @@
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  width: 240px;
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  flex-shrink: 0;
+}
+
+.app-sidebar__brand {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0 20px 20px;
+  color: white;
+}
+
+.app-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.app-sidebar__section {
+  padding: 16px 20px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.app-sidebar__section:first-child {
+  padding-top: 4px;
+}
+
+.app-sidebar__nav a {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  padding: 11px 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+}
+
+.app-sidebar__nav a:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.app-sidebar__nav a.active {
+  color: white;
+  background: rgba(255, 255, 255, 0.12);
+  border-left-color: var(--color-teal);
+  font-weight: 600;
+}
+
+.app-sidebar-backdrop {
+  display: none;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px 24px;
+  flex-wrap: wrap;
+}
+
+.app-topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.app-topbar__user {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-topbar__role {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--color-teal);
+  background: rgba(38, 166, 154, 0.12);
+  padding: 3px 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.app-topbar__menu-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.app-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.app-topbar__org-switcher {
+  padding: 8px 12px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 600;
+  max-width: 200px;
+}
+
+.app-topbar__logout {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.app-topbar__logout:hover {
+  border-color: var(--color-orange);
+  color: var(--color-orange);
+}
+
+.app-content {
+  flex: 1;
+  padding: 28px;
+  overflow-y: auto;
+}
+
+.page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: var(--color-text-muted);
+}
+
+/* ============================================================
+   Menú lateral como panel deslizable en pantallas angostas
+   (celular / captura en piso), en vez de robar ancho fijo.
+   ============================================================ */
+@media (max-width: 767px) {
+  .app-topbar__menu-toggle {
+    display: block;
+  }
+
+  .app-topbar__user strong {
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .app-sidebar {
+    position: fixed;
+    inset: 0 25% 0 0;
+    z-index: 40;
+    max-width: 300px;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.25);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .app-sidebar--open {
+    transform: translateX(0);
+  }
+
+  .app-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 30;
+  }
+
+  .app-content {
+    padding: 16px;
+  }
+}

@@ -1,0 +1,65 @@
+.cascade-page {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.cascade-section {
+  margin-bottom: 24px;
+}
+
+.cascade-section h3 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+
+.cascade-level {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.cascade-node {
+  margin-bottom: 8px;
+}
+
+.cascade-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.cascade-pill--focus {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+  font-weight: 700;
+}
+
+.cascade-pill__level {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.cascade-pill--focus .cascade-pill__level {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.cascade-causal-link {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
