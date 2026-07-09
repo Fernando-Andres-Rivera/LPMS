@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase'
 import { aggregateValues, type PeriodBucket } from '../../lib/periods'
-import type { AggregationMethod, Axis, Indicator, Measurement, Target } from '../../lib/types'
+import type { AggregationMethod, Axis, Indicator, Target } from '../../lib/types'
 
 /** Ejes activos para la organización del usuario, ordenados por sort_order. */
 export async function fetchActiveAxes(organizationId: string): Promise<Axis[]> {
@@ -62,36 +62,93 @@ export async function fetchIndicatorsByLevel(
   return data ?? []
 }
 
-export interface IndicatorWithContext extends Indicator {
-  axes: Pick<Axis, 'id' | 'name' | 'color'> | null
-  sites: { id: string; name: string } | null
-  profiles: { full_name: string } | null
+/**
+ * Fila de la vista indicator_status: el indicador con su último valor,
+ * objetivo vigente y nombres de eje/sitio/responsable ya unidos. Una sola
+ * consulta resuelve todo el resumen, sin el patrón N+1 de antes.
+ */
+export interface IndicatorStatus {
+  id: string
+  organization_id: string
+  site_id: string | null
+  site_location_id: string | null
+  axis_id: string
+  level: 1 | 2 | 3
+  name: string
+  unit: string
+  frequency: Indicator['frequency']
+  improvement_direction: Indicator['improvement_direction']
+  aggregation_method: Indicator['aggregation_method']
+  responsible_id: string | null
+  active: boolean
+  axis_name: string | null
+  axis_color: string | null
+  site_name: string | null
+  responsible_name: string | null
+  latest_value: number | null
+  latest_period_date: string | null
+  target_value: number | null
 }
 
-/** Todos los indicadores activos de la organización, con eje, sitio y responsable embebidos. */
-export async function fetchAllIndicatorsWithContext(organizationId: string): Promise<IndicatorWithContext[]> {
+export async function fetchIndicatorStatuses(organizationId: string): Promise<IndicatorStatus[]> {
   const { data, error } = await supabase
-    .from('indicators')
-    .select('*, axes(id, name, color), sites(id, name), profiles(full_name)')
+    .from('indicator_status')
+    .select('*')
     .eq('organization_id', organizationId)
     .eq('active', true)
 
   if (error) throw error
-  return (data ?? []) as unknown as IndicatorWithContext[]
+  return (data ?? []) as IndicatorStatus[]
 }
 
-const TREND_LENGTH = 6
-
-export async function fetchIndicatorTrend(indicatorId: string): Promise<Measurement[]> {
+/** Todas las mediciones de varios indicadores dentro de un rango, en una sola
+ * consulta — para agregar por período en el cliente sin un round-trip por indicador. */
+export async function fetchMeasurementsInRange(
+  indicatorIds: string[],
+  startDate: string,
+  endDate: string,
+): Promise<{ indicator_id: string; period_date: string; value: number }[]> {
+  if (indicatorIds.length === 0) return []
   const { data, error } = await supabase
     .from('measurements')
-    .select('*')
-    .eq('indicator_id', indicatorId)
-    .order('period_date', { ascending: false })
-    .limit(TREND_LENGTH)
+    .select('indicator_id, period_date, value')
+    .in('indicator_id', indicatorIds)
+    .gte('period_date', startDate)
+    .lte('period_date', endDate)
 
   if (error) throw error
-  return (data ?? []).reverse()
+  return data ?? []
+}
+
+/** Objetivo vigente (mensual con fallback a anual) de varios indicadores, en una
+ * sola consulta. Devuelve un mapa indicador -> valor objetivo. */
+export async function fetchCurrentTargetsForIndicators(
+  indicatorIds: string[],
+  year: number,
+  month: number,
+): Promise<Map<string, number>> {
+  if (indicatorIds.length === 0) return new Map()
+  const { data, error } = await supabase
+    .from('targets')
+    .select('indicator_id, period_month, target_value')
+    .in('indicator_id', indicatorIds)
+    .eq('period_year', year)
+    .or(`period_month.eq.${month},period_month.is.null`)
+
+  if (error) throw error
+
+  const monthly = new Map<string, number>()
+  const annual = new Map<string, number>()
+  for (const row of data ?? []) {
+    if (row.period_month === month) monthly.set(row.indicator_id, row.target_value)
+    else if (row.period_month === null) annual.set(row.indicator_id, row.target_value)
+  }
+  const result = new Map<string, number>()
+  for (const id of indicatorIds) {
+    const value = monthly.get(id) ?? annual.get(id)
+    if (value !== undefined) result.set(id, value)
+  }
+  return result
 }
 
 export interface PeriodResult {

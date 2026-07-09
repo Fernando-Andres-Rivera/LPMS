@@ -4,10 +4,15 @@ import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { PeriodTypeSelector } from '../../components/ui/PeriodTypeSelector'
 import { calcularSemaforo } from '../../lib/semaforo'
-import { buildPeriodBuckets } from '../../lib/periods'
-import { fetchAxisById, fetchCurrentTarget, fetchIndicatorsByAxis, fetchIndicatorPeriodSeries } from './dashboardApi'
-import { fetchCausalAnalyses } from '../causal-analysis/causalAnalysisApi'
-import { fetchActionPlansForIndicator } from '../action-plans/actionPlansApi'
+import { aggregateValues, buildPeriodBuckets } from '../../lib/periods'
+import {
+  fetchAxisById,
+  fetchCurrentTargetsForIndicators,
+  fetchIndicatorsByAxis,
+  fetchMeasurementsInRange,
+} from './dashboardApi'
+import { fetchLatestRootCauses } from '../causal-analysis/causalAnalysisApi'
+import { fetchActionPlanCounts } from '../action-plans/actionPlansApi'
 import type { Axis, Indicator, PeriodType, SemaforoEstado } from '../../lib/types'
 import './dashboard.css'
 
@@ -67,28 +72,47 @@ export function AxisDashboardPage() {
 
       const now = new Date()
       const buckets = buildPeriodBuckets(periodType, now)
-      const rowsData = await Promise.all(
-        indicators.map(async (indicator) => {
-          const [series, target, causes, plans] = await Promise.all([
-            fetchIndicatorPeriodSeries(indicator.id, buckets, indicator.aggregation_method),
-            fetchCurrentTarget(indicator.id, now.getFullYear(), now.getMonth() + 1),
-            fetchCausalAnalyses(indicator.id),
-            fetchActionPlansForIndicator(indicator.id),
-          ])
-          const withData = series.filter((p) => p.value !== null)
-          const latestValue = withData.length ? withData[withData.length - 1].value : null
-          const targetValue = target?.target_value ?? null
-          return {
-            indicator,
-            latestValue,
-            targetValue,
-            trend: withData.map((p) => ({ period_date: p.label, value: p.value as number })),
-            estado: calcularSemaforo(latestValue, targetValue, indicator.improvement_direction),
-            rootCause: causes[0]?.root_cause ?? null,
-            actionPlanCount: plans.length,
-          }
-        }),
-      )
+      const ids = indicators.map((i) => i.id)
+
+      // 4 consultas en total (mediciones del rango, objetivos, causas, conteo de
+      // planes) sin importar cuántos indicadores haya — antes eran ~5 por indicador.
+      const [measRows, targetMap, causeMap, planCountMap] = await Promise.all([
+        fetchMeasurementsInRange(ids, buckets[0].startDate, buckets[buckets.length - 1].endDate),
+        fetchCurrentTargetsForIndicators(ids, now.getFullYear(), now.getMonth() + 1),
+        fetchLatestRootCauses(ids),
+        fetchActionPlanCounts(ids),
+      ])
+      if (cancelled) return
+
+      const measByIndicator = new Map<string, { period_date: string; value: number }[]>()
+      for (const m of measRows) {
+        const list = measByIndicator.get(m.indicator_id) ?? []
+        list.push({ period_date: m.period_date, value: m.value })
+        measByIndicator.set(m.indicator_id, list)
+      }
+
+      const rowsData = indicators.map((indicator) => {
+        const indMeas = measByIndicator.get(indicator.id) ?? []
+        const series = buckets.map((b) => ({
+          label: b.label,
+          value: aggregateValues(
+            indMeas.filter((r) => r.period_date >= b.startDate && r.period_date <= b.endDate),
+            indicator.aggregation_method,
+          ),
+        }))
+        const withData = series.filter((p) => p.value !== null)
+        const latestValue = withData.length ? (withData[withData.length - 1].value as number) : null
+        const targetValue = targetMap.get(indicator.id) ?? null
+        return {
+          indicator,
+          latestValue,
+          targetValue,
+          trend: withData.map((p) => ({ period_date: p.label, value: p.value as number })),
+          estado: calcularSemaforo(latestValue, targetValue, indicator.improvement_direction),
+          rootCause: causeMap.get(indicator.id) ?? null,
+          actionPlanCount: planCountMap.get(indicator.id) ?? 0,
+        }
+      })
       if (!cancelled) setRows(rowsData)
       setLoading(false)
     }

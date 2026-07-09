@@ -18,6 +18,24 @@ export async function fetchCausalAnalyses(indicatorId: string): Promise<CausalAn
   return (data ?? []) as unknown as CausalAnalysisWithAuthor[]
 }
 
+/** Causa raíz más reciente de varios indicadores, en una sola consulta.
+ * Devuelve un mapa indicador -> causa raíz (el análisis más reciente con causa). */
+export async function fetchLatestRootCauses(indicatorIds: string[]): Promise<Map<string, string>> {
+  if (indicatorIds.length === 0) return new Map()
+  const { data, error } = await supabase
+    .from('causal_analyses')
+    .select('indicator_id, root_cause, created_at')
+    .in('indicator_id', indicatorIds)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  const map = new Map<string, string>()
+  for (const row of data ?? []) {
+    if (row.root_cause && !map.has(row.indicator_id)) map.set(row.indicator_id, row.root_cause)
+  }
+  return map
+}
+
 export interface NewCausalAnalysis {
   organization_id: string
   indicator_id: string

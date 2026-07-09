@@ -19,6 +19,7 @@ import { IndicatorBoardPage } from './features/indicator-board/IndicatorBoardPag
 import { OrgStructurePage } from './features/org-structure/OrgStructurePage'
 import { OrgResultsPage } from './features/org-structure/OrgResultsPage'
 import { NewOrganizationPage } from './features/onboarding/NewOrganizationPage'
+import { ClientsPage } from './features/onboarding/ClientsPage'
 import { LinkUserPage } from './features/onboarding/LinkUserPage'
 
 const INDICATOR_MANAGER_ROLES = ['admin_consultora', 'admin_cliente', 'gerente', 'administrativo'] as const
@@ -57,6 +58,7 @@ function App() {
               </Route>
 
               <Route element={<RequireRole allowed={['admin_consultora']} />}>
+                <Route path="clientes" element={<ClientsPage />} />
                 <Route path="nuevo-cliente" element={<NewOrganizationPage />} />
               </Route>
 

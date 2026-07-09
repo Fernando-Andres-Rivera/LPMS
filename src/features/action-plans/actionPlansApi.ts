@@ -17,6 +17,17 @@ export async function fetchActionPlansForIndicator(indicatorId: string): Promise
   return (data ?? []) as unknown as ActionPlanWithNames[]
 }
 
+/** Cantidad de planes de acción por indicador, en una sola consulta.
+ * Devuelve un mapa indicador -> número de planes. */
+export async function fetchActionPlanCounts(indicatorIds: string[]): Promise<Map<string, number>> {
+  if (indicatorIds.length === 0) return new Map()
+  const { data, error } = await supabase.from('action_plans').select('indicator_id').in('indicator_id', indicatorIds)
+  if (error) throw error
+  const map = new Map<string, number>()
+  for (const row of data ?? []) map.set(row.indicator_id, (map.get(row.indicator_id) ?? 0) + 1)
+  return map
+}
+
 export interface NewActionPlan {
   organization_id: string
   indicator_id: string

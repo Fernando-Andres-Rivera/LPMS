@@ -3,14 +3,12 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Semaforo } from '../../components/ui/Semaforo'
 import { calcularSemaforo } from '../../lib/semaforo'
-import { fetchAllIndicatorsWithContext, fetchCurrentTarget, fetchIndicatorTrend, type IndicatorWithContext } from './dashboardApi'
+import { fetchIndicatorStatuses, type IndicatorStatus } from './dashboardApi'
 import type { SemaforoEstado } from '../../lib/types'
 import './dashboard.css'
 
 interface ExceptionRow {
-  indicator: IndicatorWithContext
-  latestValue: number | null
-  targetValue: number | null
+  status: IndicatorStatus
   estado: SemaforoEstado
 }
 
@@ -32,36 +30,25 @@ export function GlobalExceptionsPage() {
     const orgId = organizationId
     let cancelled = false
 
-    async function load() {
-      setLoading(true)
-      const indicators = await fetchAllIndicatorsWithContext(orgId)
+    // Una sola consulta a indicator_status resuelve el estado de todos los
+    // indicadores; antes era 2+ consultas por indicador (patrón N+1).
+    fetchIndicatorStatuses(orgId).then((statuses) => {
       if (cancelled) return
 
-      const now = new Date()
-      const allRows = await Promise.all(
-        indicators.map(async (indicator) => {
-          const [trend, target] = await Promise.all([
-            fetchIndicatorTrend(indicator.id),
-            fetchCurrentTarget(indicator.id, now.getFullYear(), now.getMonth() + 1),
-          ])
-          const latestValue = trend.length ? trend[trend.length - 1].value : null
-          const targetValue = target?.target_value ?? null
-          const estado = calcularSemaforo(latestValue, targetValue, indicator.improvement_direction)
-          return { indicator, latestValue, targetValue, estado }
-        }),
+      const evaluated = statuses.map((status) => ({
+        status,
+        estado: calcularSemaforo(status.latest_value, status.target_value, status.improvement_direction),
+      }))
+
+      setRows(
+        evaluated
+          .filter((row) => row.estado === 'incumple' || row.estado === 'riesgo')
+          .sort((a, b) => ESTADO_ORDEN[a.estado] - ESTADO_ORDEN[b.estado]),
       )
-      if (cancelled) return
-
-      const exceptions = allRows
-        .filter((row) => row.estado === 'incumple' || row.estado === 'riesgo')
-        .sort((a, b) => ESTADO_ORDEN[a.estado] - ESTADO_ORDEN[b.estado])
-
-      setRows(exceptions)
-      setSinDatosCount(allRows.filter((row) => row.estado === 'sin_datos').length)
+      setSinDatosCount(evaluated.filter((row) => row.estado === 'sin_datos').length)
       setLoading(false)
-    }
+    })
 
-    load()
     return () => {
       cancelled = true
     }
@@ -96,30 +83,30 @@ export function GlobalExceptionsPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ indicator, latestValue, targetValue, estado }) => (
-              <tr key={indicator.id}>
+            {rows.map(({ status, estado }) => (
+              <tr key={status.id}>
                 <td>
                   <Semaforo estado={estado} showLabel={false} />
                 </td>
                 <td>
-                  <span className="axis-chip" style={{ backgroundColor: indicator.axes?.color }}>
-                    {indicator.axes?.name}
+                  <span className="axis-chip" style={{ backgroundColor: status.axis_color ?? undefined }}>
+                    {status.axis_name}
                   </span>
                 </td>
-                <td>{indicator.sites?.name ?? 'Corporativo'}</td>
-                <td>{indicator.level}</td>
+                <td>{status.site_name ?? 'Corporativo'}</td>
+                <td>{status.level}</td>
                 <td>
-                  <Link to={`/tablero/${indicator.id}`}>{indicator.name}</Link>
+                  <Link to={`/tablero/${status.id}`}>{status.name}</Link>
                 </td>
                 <td>
-                  {latestValue ?? '—'} {indicator.unit}
+                  {status.latest_value ?? '—'} {status.unit}
                 </td>
                 <td>
-                  {targetValue ?? '—'} {indicator.unit}
+                  {status.target_value ?? '—'} {status.unit}
                 </td>
-                <td>{indicator.profiles?.full_name ?? 'Sin asignar'}</td>
+                <td>{status.responsible_name ?? 'Sin asignar'}</td>
                 <td>
-                  <Link to={`/analisis-causal/${indicator.id}`}>Analizar causa</Link>
+                  <Link to={`/analisis-causal/${status.id}`}>Analizar causa</Link>
                 </td>
               </tr>
             ))}

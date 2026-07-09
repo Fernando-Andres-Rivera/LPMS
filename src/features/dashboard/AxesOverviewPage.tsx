@@ -4,18 +4,12 @@ import { Bar, BarChart, CartesianGrid, Legend, LabelList, ResponsiveContainer, T
 import { useAuth } from '../../hooks/useAuth'
 import { Semaforo } from '../../components/ui/Semaforo'
 import { calcularSemaforo, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
-import {
-  fetchActiveAxes,
-  fetchAllIndicatorsWithContext,
-  fetchCurrentTarget,
-  fetchIndicatorTrend,
-  type IndicatorWithContext,
-} from './dashboardApi'
+import { fetchActiveAxes, fetchIndicatorStatuses, type IndicatorStatus } from './dashboardApi'
 import type { Axis, SemaforoEstado } from '../../lib/types'
 import './dashboard.css'
 
 interface EvaluatedIndicator {
-  indicator: IndicatorWithContext
+  status: IndicatorStatus
   estado: SemaforoEstado
 }
 
@@ -42,27 +36,19 @@ export function AxesOverviewPage() {
     const orgId = organizationId
     let cancelled = false
 
-    Promise.all([fetchActiveAxes(orgId), fetchAllIndicatorsWithContext(orgId)]).then(async ([axesData, indicators]) => {
+    // Una sola consulta a la vista indicator_status resuelve todo el
+    // resumen (último valor + objetivo por indicador), en vez de 2+
+    // consultas por indicador como antes.
+    Promise.all([fetchActiveAxes(orgId), fetchIndicatorStatuses(orgId)]).then(([axesData, statuses]) => {
       if (cancelled) return
       setAxes(axesData)
-
-      const now = new Date()
-      const rows = await Promise.all(
-        indicators.map(async (indicator) => {
-          const [trend, target] = await Promise.all([
-            fetchIndicatorTrend(indicator.id),
-            fetchCurrentTarget(indicator.id, now.getFullYear(), now.getMonth() + 1),
-          ])
-          const latestValue = trend.length ? trend[trend.length - 1].value : null
-          const targetValue = target?.target_value ?? null
-          const estado = calcularSemaforo(latestValue, targetValue, indicator.improvement_direction)
-          return { indicator, estado }
-        }),
+      setEvaluated(
+        statuses.map((status) => ({
+          status,
+          estado: calcularSemaforo(status.latest_value, status.target_value, status.improvement_direction),
+        })),
       )
-      if (!cancelled) {
-        setEvaluated(rows)
-        setLoading(false)
-      }
+      setLoading(false)
     })
 
     return () => {
@@ -85,11 +71,16 @@ export function AxesOverviewPage() {
   const byAxis = useMemo(() => {
     const map = new Map<string, AxisBreakdown>()
     for (const row of evaluated) {
-      const axis = row.indicator.axes
-      if (!axis) continue
-      const entry = map.get(axis.id) ?? { name: axis.name, cumple: 0, riesgo: 0, incumple: 0, sin_datos: 0 }
+      if (!row.status.axis_id) continue
+      const entry = map.get(row.status.axis_id) ?? {
+        name: row.status.axis_name ?? '—',
+        cumple: 0,
+        riesgo: 0,
+        incumple: 0,
+        sin_datos: 0,
+      }
       entry[row.estado] += 1
-      map.set(axis.id, entry)
+      map.set(row.status.axis_id, entry)
     }
     return [...map.values()].sort((a, b) => b.incumple + b.riesgo - (a.incumple + a.riesgo))
   }, [evaluated])

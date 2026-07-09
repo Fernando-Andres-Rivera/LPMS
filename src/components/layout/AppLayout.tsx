@@ -87,6 +87,11 @@ export function AppLayout() {
             </NavLink>
           )}
           {isConsultora && (
+            <NavLink to="/clientes" className={linkClass}>
+              Clientes
+            </NavLink>
+          )}
+          {isConsultora && (
             <NavLink to="/nuevo-cliente" className={linkClass}>
               + Nuevo cliente
             </NavLink>

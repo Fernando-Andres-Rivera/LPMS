@@ -3,8 +3,13 @@ import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { PeriodTypeSelector } from '../../components/ui/PeriodTypeSelector'
-import { buildPeriodBuckets } from '../../lib/periods'
-import { fetchActiveAxes, fetchCurrentTarget, fetchIndicatorsByLevel, fetchIndicatorPeriodSeries } from './dashboardApi'
+import { aggregateValues, buildPeriodBuckets } from '../../lib/periods'
+import {
+  fetchActiveAxes,
+  fetchCurrentTargetsForIndicators,
+  fetchIndicatorsByLevel,
+  fetchMeasurementsInRange,
+} from './dashboardApi'
 import { fetchSites } from '../indicators/indicatorsApi'
 import type { Axis, Indicator, PeriodType, Site } from '../../lib/types'
 import './dashboard.css'
@@ -53,21 +58,39 @@ export function LevelDashboardPage() {
 
       const now = new Date()
       const buckets = buildPeriodBuckets(periodType, now)
-      const rowsData = await Promise.all(
-        indicators.map(async (indicator) => {
-          const [series, target] = await Promise.all([
-            fetchIndicatorPeriodSeries(indicator.id, buckets, indicator.aggregation_method),
-            fetchCurrentTarget(indicator.id, now.getFullYear(), now.getMonth() + 1),
-          ])
-          const withData = series.filter((p) => p.value !== null)
-          return {
-            indicator,
-            latestValue: withData.length ? withData[withData.length - 1].value : null,
-            targetValue: target?.target_value ?? null,
-            trend: withData.map((p) => ({ period_date: p.label, value: p.value as number })),
-          }
-        }),
-      )
+      const ids = indicators.map((i) => i.id)
+
+      // 2 consultas en total en vez de 2 por indicador (patrón N+1).
+      const [measRows, targetMap] = await Promise.all([
+        fetchMeasurementsInRange(ids, buckets[0].startDate, buckets[buckets.length - 1].endDate),
+        fetchCurrentTargetsForIndicators(ids, now.getFullYear(), now.getMonth() + 1),
+      ])
+      if (cancelled) return
+
+      const measByIndicator = new Map<string, { period_date: string; value: number }[]>()
+      for (const m of measRows) {
+        const list = measByIndicator.get(m.indicator_id) ?? []
+        list.push({ period_date: m.period_date, value: m.value })
+        measByIndicator.set(m.indicator_id, list)
+      }
+
+      const rowsData = indicators.map((indicator) => {
+        const indMeas = measByIndicator.get(indicator.id) ?? []
+        const series = buckets.map((b) => ({
+          label: b.label,
+          value: aggregateValues(
+            indMeas.filter((r) => r.period_date >= b.startDate && r.period_date <= b.endDate),
+            indicator.aggregation_method,
+          ),
+        }))
+        const withData = series.filter((p) => p.value !== null)
+        return {
+          indicator,
+          latestValue: withData.length ? (withData[withData.length - 1].value as number) : null,
+          targetValue: targetMap.get(indicator.id) ?? null,
+          trend: withData.map((p) => ({ period_date: p.label, value: p.value as number })),
+        }
+      })
       if (!cancelled) setRows(rowsData)
       setLoading(false)
     }

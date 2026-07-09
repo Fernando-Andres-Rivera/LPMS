@@ -60,6 +60,22 @@ export async function fetchOrganizationsList(): Promise<Organization[]> {
   return data ?? []
 }
 
+/** Todas las organizaciones (activas e inactivas) — para la gestión de clientes
+ * del admin_consultora. La RLS ya restringe esto solo a ese rol. */
+export async function fetchAllOrganizations(): Promise<Organization[]> {
+  const { data, error } = await supabase.from('organizations').select('*').order('name')
+  if (error) throw error
+  return data ?? []
+}
+
+/** Desactiva (borrado suave) o reactiva un cliente. Desactivar NO borra datos:
+ * la organización desaparece del switcher y de las listas, pero todo su
+ * histórico se conserva y puede reactivarse. */
+export async function setOrganizationActive(organizationId: string, active: boolean): Promise<void> {
+  const { error } = await supabase.from('organizations').update({ active }).eq('id', organizationId)
+  if (error) throw error
+}
+
 export async function fetchSitesForOrganization(organizationId: string): Promise<Site[]> {
   const { data, error } = await supabase
     .from('sites')
