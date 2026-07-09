@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import type { Indicator, SemaforoEstado, SiteLocation } from '../../lib/types'
+import type { Indicator, SemaforoEstado, Site, SiteLocation } from '../../lib/types'
 import { fetchCapturableIndicators, fetchMeasurementForPeriod, saveMeasurement } from './measurementsApi'
 import { fetchCurrentTarget } from '../dashboard/dashboardApi'
+import { fetchSites } from '../indicators/indicatorsApi'
 import { fetchSiteLocations } from '../org-structure/orgStructureApi'
 import { calcularSemaforo } from '../../lib/semaforo'
 import './capture.css'
@@ -12,9 +13,32 @@ function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+/**
+ * Etiqueta cada instalación con su ruta completa dentro del sitio
+ * (Instalación › Línea › Estación …), para que al capturar se vea el lugar
+ * exacto en la estructura, no solo el nombre del último nivel.
+ */
+function buildLocationOptions(locations: SiteLocation[]): { id: string; label: string }[] {
+  const byId = new Map(locations.map((loc) => [loc.id, loc]))
+  return locations
+    .map((loc) => {
+      const parts = [loc.name]
+      let current = loc
+      while (current.parent_id) {
+        const parent = byId.get(current.parent_id)
+        if (!parent) break
+        parts.unshift(parent.name)
+        current = parent
+      }
+      return { id: loc.id, label: parts.join(' › ') }
+    })
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
 export function MeasurementCapturePage() {
   const { profile, siteIds, organizationId } = useAuth()
   const [indicators, setIndicators] = useState<Indicator[]>([])
+  const [sites, setSites] = useState<Site[]>([])
   const [indicatorId, setIndicatorId] = useState('')
   const [periodDate, setPeriodDate] = useState(today())
   const [value, setValue] = useState('')
@@ -27,14 +51,20 @@ export function MeasurementCapturePage() {
 
   useEffect(() => {
     if (!profile || !organizationId) return
-    fetchCapturableIndicators(profile, organizationId, siteIds).then((data) => {
-      setIndicators(data)
-      if (data.length && !indicatorId) setIndicatorId(data[0].id)
+    Promise.all([
+      fetchCapturableIndicators(profile, organizationId, siteIds),
+      fetchSites(organizationId),
+    ]).then(([indicatorsData, sitesData]) => {
+      setIndicators(indicatorsData)
+      setSites(sitesData)
+      if (indicatorsData.length && !indicatorId) setIndicatorId(indicatorsData[0].id)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, organizationId, siteIds])
 
   const selectedIndicator = indicators.find((i) => i.id === indicatorId)
+  const selectedSite = sites.find((s) => s.id === selectedIndicator?.site_id) ?? null
+  const locationOptions = buildLocationOptions(siteLocations)
 
   useEffect(() => {
     if (!indicatorId || !periodDate) return
@@ -148,22 +178,41 @@ export function MeasurementCapturePage() {
             />
           </label>
 
-          {siteLocations.length > 0 && (
-            <label className="capture-label">
-              ¿Dónde ocurrió exactamente? (opcional)
-              <select
-                className="capture-select"
-                value={siteLocationId}
-                onChange={(e) => setSiteLocationId(e.target.value)}
-              >
-                <option value="">Sin precisar</option>
-                {siteLocations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+          {selectedIndicator && (
+            <div className="capture-location">
+              <span className="capture-location__title">¿Dónde ocurrió en la estructura organizacional?</span>
+
+              {selectedIndicator.site_id ? (
+                <>
+                  <p className="capture-location__site">
+                    Sitio: <strong>{selectedSite?.name ?? '—'}</strong>
+                  </p>
+                  {locationOptions.length > 0 ? (
+                    <select
+                      className="capture-select"
+                      value={siteLocationId}
+                      onChange={(e) => setSiteLocationId(e.target.value)}
+                    >
+                      <option value="">Todo el sitio (sin precisar instalación)</option>
+                      {locationOptions.map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="capture-location__empty">
+                      Este sitio no tiene instalaciones registradas todavía — la medición queda a nivel del sitio.
+                      Puedes agregar instalaciones en <Link to="/estructura-organizacional">Estructura organizacional</Link>.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="capture-location__site">
+                  Indicador corporativo — no está atado a un sitio específico de la estructura.
+                </p>
+              )}
+            </div>
           )}
 
           {message && <p className={`capture-message capture-message--${message.type}`}>{message.text}</p>}
