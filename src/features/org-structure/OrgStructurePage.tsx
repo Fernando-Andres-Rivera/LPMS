@@ -5,12 +5,28 @@ import {
   createOrgUnit,
   createSite,
   createSiteLocation,
+  deleteOrgUnit,
+  deleteSite,
+  deleteSiteLocation,
   fetchOrgUnits,
   fetchSiteLocationsForSites,
   fetchSitesWithOrgUnit,
+  renameOrgUnit,
+  renameSite,
+  renameSiteLocation,
+  setSiteActive,
+  setSiteLocationActive,
 } from './orgStructureApi'
 import type { OrgUnit, Site, SiteLocation } from '../../lib/types'
 import './org-structure.css'
+
+type StructureKind = 'org_unit' | 'site' | 'location'
+
+interface StructureRef {
+  kind: StructureKind
+  id: string
+  name: string
+}
 
 function buildOrgUnitOptions(orgUnits: OrgUnit[]): { id: string; label: string }[] {
   const businessUnits = orgUnits.filter((u) => u.level === 2)
@@ -39,6 +55,12 @@ export function OrgStructurePage() {
   const [newSiteAddress, setNewSiteAddress] = useState('')
   const [newSiteOrgUnitId, setNewSiteOrgUnitId] = useState('')
   const [savingSite, setSavingSite] = useState(false)
+
+  const [editing, setEditing] = useState<(StructureRef & { value: string }) | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState<StructureRef | null>(null)
+  // Si un borrado quedó bloqueado por datos históricos, guardamos la
+  // referencia para ofrecer "Desactivar en su lugar" junto al mensaje.
+  const [blocked, setBlocked] = useState<(StructureRef & { message: string }) | null>(null)
 
   async function loadAll() {
     if (!organizationId) return
@@ -146,6 +168,106 @@ export function OrgStructurePage() {
     await loadAll()
   }
 
+  async function handleSaveRename() {
+    if (!editing || !editing.value.trim()) return
+    const name = editing.value.trim()
+    if (editing.kind === 'org_unit') await renameOrgUnit(editing.id, name)
+    else if (editing.kind === 'site') await renameSite(editing.id, name)
+    else await renameSiteLocation(editing.id, name)
+    setEditing(null)
+    await loadAll()
+  }
+
+  async function handleConfirmDelete() {
+    if (!confirmingDelete) return
+    const target = confirmingDelete
+    setConfirmingDelete(null)
+    setBlocked(null)
+    try {
+      if (target.kind === 'org_unit') await deleteOrgUnit(target.id, target.name)
+      else if (target.kind === 'site') await deleteSite(target.id, target.name)
+      else await deleteSiteLocation(target.id, target.name)
+      await loadAll()
+    } catch (err) {
+      setBlocked({
+        ...target,
+        message: err instanceof Error ? err.message : 'No se pudo eliminar.',
+      })
+    }
+  }
+
+  /** "Desactivar en su lugar" cuando el borrado quedó bloqueado por histórico:
+   * el nodo desaparece de las listas y selectores pero conserva sus datos. */
+  async function handleDeactivateBlocked() {
+    if (!blocked) return
+    if (blocked.kind === 'site') await setSiteActive(blocked.id, false)
+    else if (blocked.kind === 'location') await setSiteLocationActive(blocked.id, false)
+    setBlocked(null)
+    await loadAll()
+  }
+
+  function renderItemActions(ref: StructureRef) {
+    if (confirmingDelete && confirmingDelete.id === ref.id) {
+      return (
+        <span className="org-structure-confirm">
+          ¿Eliminar <strong>{ref.name}</strong>?
+          <button type="button" className="org-structure-confirm__yes" onClick={handleConfirmDelete}>
+            Sí, eliminar
+          </button>
+          <button type="button" onClick={() => setConfirmingDelete(null)}>
+            Cancelar
+          </button>
+        </span>
+      )
+    }
+    return (
+      <span className="org-structure-item-actions">
+        <button
+          type="button"
+          title={`Renombrar ${ref.name}`}
+          onClick={() => setEditing({ ...ref, value: ref.name })}
+        >
+          ✎
+        </button>
+        <button
+          type="button"
+          title={`Eliminar ${ref.name}`}
+          className="org-structure-item-actions__delete"
+          onClick={() => {
+            setBlocked(null)
+            setConfirmingDelete(ref)
+          }}
+        >
+          ×
+        </button>
+      </span>
+    )
+  }
+
+  function renderRenameInput() {
+    if (!editing) return null
+    return (
+      <span className="org-structure-rename">
+        <input
+          value={editing.value}
+          onChange={(e) => setEditing((cur) => (cur ? { ...cur, value: e.target.value } : cur))}
+          autoFocus
+        />
+        <button
+          type="button"
+          className="org-structure-rename__save"
+          onClick={handleSaveRename}
+          disabled={!editing.value.trim()}
+        >
+          Guardar
+        </button>
+        <button type="button" onClick={() => setEditing(null)}>
+          Cancelar
+        </button>
+      </span>
+    )
+  }
+
   const orgUnitOptions = buildOrgUnitOptions(orgUnits)
   const businessUnits = orgUnits.filter((u) => u.level === 2)
 
@@ -161,18 +283,48 @@ export function OrgStructurePage() {
         cliente, aquí es donde se abre cada unidad de negocio, sitio o instalación nueva.
       </p>
 
+      {blocked && (
+        <div className="org-structure-blocked">
+          <p>{blocked.message}</p>
+          {blocked.kind !== 'org_unit' && (
+            <button type="button" className="org-structure-blocked__deactivate" onClick={handleDeactivateBlocked}>
+              Desactivar "{blocked.name}" conservando su histórico
+            </button>
+          )}
+          <button type="button" className="org-structure-blocked__close" onClick={() => setBlocked(null)}>
+            Cerrar
+          </button>
+        </div>
+      )}
+
       <section className="org-structure-card">
         <h2>1. Unidades de Negocio y Regiones</h2>
 
         <div className="org-structure-tree">
           {businessUnits.map((bu) => (
             <div key={bu.id} className="org-structure-bu">
-              <strong>{bu.name}</strong>
+              {editing?.id === bu.id ? (
+                renderRenameInput()
+              ) : (
+                <>
+                  <strong>{bu.name}</strong>
+                  {renderItemActions({ kind: 'org_unit', id: bu.id, name: bu.name })}
+                </>
+              )}
               <ul>
                 {orgUnits
                   .filter((u) => u.parent_id === bu.id)
                   .map((region) => (
-                    <li key={region.id}>{region.name}</li>
+                    <li key={region.id}>
+                      {editing?.id === region.id ? (
+                        renderRenameInput()
+                      ) : (
+                        <>
+                          {region.name}
+                          {renderItemActions({ kind: 'org_unit', id: region.id, name: region.name })}
+                        </>
+                      )}
+                    </li>
                   ))}
               </ul>
               <div className="org-structure-add-row">
@@ -249,7 +401,16 @@ export function OrgStructurePage() {
           <tbody>
             {sites.map((site) => (
               <tr key={site.id}>
-                <td>{site.name}</td>
+                <td>
+                  {editing?.id === site.id ? (
+                    renderRenameInput()
+                  ) : (
+                    <>
+                      {site.name}
+                      {renderItemActions({ kind: 'site', id: site.id, name: site.name })}
+                    </>
+                  )}
+                </td>
                 <td>
                   <select
                     value={site.org_unit_id ?? ''}
@@ -267,7 +428,14 @@ export function OrgStructurePage() {
                   <div className="org-structure-locations">
                     {(locationsBySite[site.id] ?? []).map((loc) => (
                       <span key={loc.id} className="org-structure-location-chip">
-                        {loc.name}
+                        {editing?.id === loc.id ? (
+                          renderRenameInput()
+                        ) : (
+                          <>
+                            {loc.name}
+                            {renderItemActions({ kind: 'location', id: loc.id, name: loc.name })}
+                          </>
+                        )}
                       </span>
                     ))}
                   </div>

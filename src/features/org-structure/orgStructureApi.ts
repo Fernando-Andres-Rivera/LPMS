@@ -1,6 +1,21 @@
 import { supabase } from '../../lib/supabase'
 import type { OrgUnit, Site, SiteLocation } from '../../lib/types'
 
+/**
+ * Postgres bloquea con error 23503 (llave foránea) el borrado de un nodo de
+ * la estructura que tiene indicadores o mediciones históricas colgando — esa
+ * protección es deliberada. Aquí se traduce ese error técnico a un mensaje
+ * accionable; cualquier otro error se relanza tal cual.
+ */
+function translateStructureDeleteError(error: { code?: string; message: string }, nombre: string): Error {
+  if (error.code === '23503') {
+    return new Error(
+      `"${nombre}" tiene indicadores o mediciones históricas vinculadas y no se puede eliminar sin perder ese histórico. Usa "Desactivar" para sacarla de las listas conservando los datos.`,
+    )
+  }
+  return new Error(error.message)
+}
+
 export async function fetchOrgUnits(organizationId: string): Promise<OrgUnit[]> {
   const { data, error } = await supabase
     .from('org_units')
@@ -38,6 +53,56 @@ export async function createOrgUnit(params: {
 
 export async function assignSiteToOrgUnit(siteId: string, orgUnitId: string | null): Promise<void> {
   const { error } = await supabase.from('sites').update({ org_unit_id: orgUnitId }).eq('id', siteId)
+  if (error) throw error
+}
+
+export async function renameOrgUnit(id: string, name: string): Promise<void> {
+  const { error } = await supabase.from('org_units').update({ name }).eq('id', id)
+  if (error) throw error
+}
+
+/** Borra una unidad de negocio o región mal creada. Sus regiones hijas se
+ * borran en cascada y los sitios que tuviera asignados quedan "sin asignar"
+ * (no se borran) — requiere la migración 20260722000000. */
+export async function deleteOrgUnit(id: string, nombre: string): Promise<void> {
+  const { error } = await supabase.from('org_units').delete().eq('id', id)
+  if (error) throw translateStructureDeleteError(error, nombre)
+}
+
+export async function renameSite(id: string, name: string): Promise<void> {
+  const { error } = await supabase.from('sites').update({ name }).eq('id', id)
+  if (error) throw error
+}
+
+/** Borra un sitio mal creado. Si tiene indicadores o mediciones históricas,
+ * la base de datos lo bloquea y el error resultante sugiere desactivarlo. */
+export async function deleteSite(id: string, nombre: string): Promise<void> {
+  const { error } = await supabase.from('sites').delete().eq('id', id)
+  if (error) throw translateStructureDeleteError(error, nombre)
+}
+
+/** Desactivar saca el sitio de todas las listas (captura, tableros, Pareto)
+ * conservando su histórico intacto. */
+export async function setSiteActive(id: string, active: boolean): Promise<void> {
+  const { error } = await supabase.from('sites').update({ active }).eq('id', id)
+  if (error) throw error
+}
+
+export async function renameSiteLocation(id: string, name: string): Promise<void> {
+  const { error } = await supabase.from('site_locations').update({ name }).eq('id', id)
+  if (error) throw error
+}
+
+/** Borra una instalación mal creada (y sus sub-niveles en cascada). Si ella o
+ * alguno de sus sub-niveles tiene indicadores o mediciones históricas, la
+ * base de datos bloquea el borrado y el error sugiere desactivarla. */
+export async function deleteSiteLocation(id: string, nombre: string): Promise<void> {
+  const { error } = await supabase.from('site_locations').delete().eq('id', id)
+  if (error) throw translateStructureDeleteError(error, nombre)
+}
+
+export async function setSiteLocationActive(id: string, active: boolean): Promise<void> {
+  const { error } = await supabase.from('site_locations').update({ active }).eq('id', id)
   if (error) throw error
 }
 

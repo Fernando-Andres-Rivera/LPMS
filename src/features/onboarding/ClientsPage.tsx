@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { deleteOrganizationPermanently, fetchAllOrganizations, setOrganizationActive } from './onboardingApi'
+import {
+  deleteOrganizationPermanently,
+  fetchAllOrganizations,
+  setOrganizationActive,
+  updateOrganization,
+} from './onboardingApi'
+import { INDUSTRY_OPTIONS, OTHER_INDUSTRY } from './industries'
 import type { Organization } from '../../lib/types'
 import './clients.css'
 
@@ -17,6 +23,11 @@ export function ClientsPage() {
 
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editIndustry, setEditIndustry] = useState('')
+  const [editCustomIndustry, setEditCustomIndustry] = useState(false)
 
   async function loadOrgs(): Promise<Organization[]> {
     const data = await fetchAllOrganizations()
@@ -76,6 +87,35 @@ export function ClientsPage() {
     }
   }
 
+  function startEditing(org: Organization) {
+    setEditingId(org.id)
+    setEditName(org.name)
+    const industry = org.industry ?? ''
+    setEditIndustry(industry)
+    setEditCustomIndustry(industry !== '' && !INDUSTRY_OPTIONS.includes(industry))
+  }
+
+  async function handleSaveEdit(org: Organization) {
+    if (!editName.trim()) return
+    setBusyId(org.id)
+    setError(null)
+    try {
+      await updateOrganization(org.id, {
+        name: editName.trim(),
+        industry: editIndustry.trim() || null,
+      })
+      await loadOrgs()
+      // El switcher del topbar muestra el nombre — refrescarlo para que el
+      // cambio de razón social se vea de inmediato.
+      await refreshOrganizations()
+      setEditingId(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar el cliente.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   if (loading) return <p>Cargando clientes…</p>
 
   const activeCount = orgs.filter((o) => o.active).length
@@ -113,19 +153,91 @@ export function ClientsPage() {
             {orgs.map((org) => (
               <tr key={org.id} className={org.active ? '' : 'clients-row--inactive'}>
                 <td>
-                  <strong>{org.name}</strong>
-                  {organizationId === org.id && org.active && (
-                    <span className="clients-current-tag">seleccionada</span>
+                  {editingId === org.id ? (
+                    <input
+                      className="clients-edit-input"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Razón social"
+                      autoFocus
+                    />
+                  ) : (
+                    <>
+                      <strong>{org.name}</strong>
+                      {organizationId === org.id && org.active && (
+                        <span className="clients-current-tag">seleccionada</span>
+                      )}
+                    </>
                   )}
                 </td>
-                <td>{org.industry ?? '—'}</td>
+                <td>
+                  {editingId === org.id ? (
+                    editCustomIndustry ? (
+                      <div className="clients-edit-industry">
+                        <input
+                          className="clients-edit-input"
+                          value={editIndustry}
+                          onChange={(e) => setEditIndustry(e.target.value)}
+                          placeholder="Escribe la industria…"
+                        />
+                        <button
+                          type="button"
+                          className="clients-edit-industry__back"
+                          onClick={() => {
+                            setEditCustomIndustry(false)
+                            setEditIndustry('')
+                          }}
+                        >
+                          ← volver a la lista
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        className="clients-edit-input"
+                        value={editIndustry}
+                        onChange={(e) => {
+                          if (e.target.value === OTHER_INDUSTRY) {
+                            setEditCustomIndustry(true)
+                            setEditIndustry('')
+                          } else {
+                            setEditIndustry(e.target.value)
+                          }
+                        }}
+                      >
+                        <option value="">Sin industria</option>
+                        {INDUSTRY_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                        <option value={OTHER_INDUSTRY}>Otra, especificar…</option>
+                      </select>
+                    )
+                  ) : (
+                    (org.industry ?? '—')
+                  )}
+                </td>
                 <td>
                   <span className={`clients-status clients-status--${org.active ? 'active' : 'inactive'}`}>
                     {org.active ? 'Activa' : 'Inactiva'}
                   </span>
                 </td>
                 <td className="clients-action-cell">
-                  {!org.active && deletingId === org.id ? (
+                  {editingId === org.id ? (
+                    <div className="clients-confirm__actions">
+                      <button
+                        type="button"
+                        className="clients-reactivate"
+                        onClick={() => handleSaveEdit(org)}
+                        disabled={!editName.trim() || busyId === org.id}
+                      >
+                        {busyId === org.id ? 'Guardando…' : 'Guardar'}
+                      </button>
+                      <button type="button" className="clients-cancel" onClick={() => setEditingId(null)}>
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : !org.active && deletingId === org.id ? (
                     <div className="clients-confirm clients-confirm--danger">
                       <span className="clients-confirm__prompt">
                         Esto elimina PERMANENTEMENTE <strong>{org.name}</strong> y todos sus datos (sitios,
@@ -168,6 +280,14 @@ export function ClientsPage() {
                         disabled={busyId === org.id}
                       >
                         {busyId === org.id ? 'Reactivando…' : 'Reactivar'}
+                      </button>
+                      <button
+                        type="button"
+                        className="clients-edit-trigger"
+                        onClick={() => startEditing(org)}
+                        disabled={busyId === org.id}
+                      >
+                        Editar
                       </button>
                       <button
                         type="button"
@@ -214,16 +334,25 @@ export function ClientsPage() {
                       </div>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      className="clients-deactivate-trigger"
-                      onClick={() => {
-                        setConfirmingId(org.id)
-                        setConfirmText('')
-                      }}
-                    >
-                      Desactivar
-                    </button>
+                    <div className="clients-confirm__actions">
+                      <button
+                        type="button"
+                        className="clients-edit-trigger"
+                        onClick={() => startEditing(org)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="clients-deactivate-trigger"
+                        onClick={() => {
+                          setConfirmingId(org.id)
+                          setConfirmText('')
+                        }}
+                      >
+                        Desactivar
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>

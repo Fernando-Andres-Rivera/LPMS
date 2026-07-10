@@ -76,6 +76,16 @@ export async function setOrganizationActive(organizationId: string, active: bool
   if (error) throw error
 }
 
+/** Actualiza los datos básicos del cliente — ej. cambio de razón social o de
+ * industria. No toca nada más: sitios, usuarios e histórico siguen intactos. */
+export async function updateOrganization(
+  organizationId: string,
+  values: { name: string; industry: string | null },
+): Promise<void> {
+  const { error } = await supabase.from('organizations').update(values).eq('id', organizationId)
+  if (error) throw error
+}
+
 /** Borrado FÍSICO e irreversible — arrastra en cascada sitios, indicadores,
  * mediciones, análisis causales, planes de acción y usuarios de esa
  * organización. Solo para limpiar datos de prueba; para un cliente real usa

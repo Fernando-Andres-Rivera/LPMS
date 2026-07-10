@@ -2,27 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { createOrganizationWithSite, fetchAllAxesCatalog } from './onboardingApi'
+import { INDUSTRY_OPTIONS, OTHER_INDUSTRY } from './industries'
 import type { Axis } from '../../lib/types'
 import './onboarding.css'
-
-const INDUSTRY_OPTIONS = [
-  'Alimentos y bebidas',
-  'Manufactura',
-  'Logística y transporte',
-  'Automotriz',
-  'Textil y confección',
-  'Farmacéutica',
-  'Metalmecánica',
-  'Plásticos y empaques',
-  'Agroindustria',
-  'Construcción',
-  'Energía',
-  'Química',
-  'Retail / Comercio',
-  'Servicios',
-]
-
-const OTHER_INDUSTRY = '__other__'
 
 export function NewOrganizationPage() {
   const { profile, refreshOrganizations } = useAuth()
