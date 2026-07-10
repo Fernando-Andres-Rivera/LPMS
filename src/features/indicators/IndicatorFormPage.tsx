@@ -39,6 +39,22 @@ const DIRECCIONES: { value: ImprovementDirection; label: string }[] = [
 ]
 const AGGREGATION_METHODS: AggregationMethod[] = ['ultimo', 'suma', 'promedio', 'maximo', 'minimo']
 
+// Cómo nombrar el objetivo según la frecuencia de captura del indicador —
+// un objetivo "diario" no se lee igual que uno "mensual", aunque ambos se
+// guarden como el mismo valor vigente para todo el año.
+const FRECUENCIA_ADJETIVO: Record<IndicatorFrequency, string> = {
+  diaria: 'diario',
+  semanal: 'semanal',
+  quincenal: 'quincenal',
+  mensual: 'mensual',
+}
+const FRECUENCIA_SUSTANTIVO: Record<IndicatorFrequency, string> = {
+  diaria: 'día',
+  semanal: 'semana',
+  quincenal: 'quincena',
+  mensual: 'mes',
+}
+
 export function IndicatorFormPage() {
   const { id } = useParams<{ id: string }>()
   const isEditing = Boolean(id)
@@ -307,19 +323,21 @@ export function IndicatorFormPage() {
 
         <div className="indicator-form__target">
           <label>
-            Objetivo (año {CURRENT_YEAR})
+            Objetivo {FRECUENCIA_ADJETIVO[form.frequency]} (vigente todo {CURRENT_YEAR})
             <input
               type="number"
               step="any"
               value={targetValue}
               onChange={(e) => setTargetValue(e.target.value)}
-              placeholder={`Ej. 5 ${form.unit}`.trim()}
+              placeholder={`Ej. 0 ${form.unit} por ${FRECUENCIA_SUSTANTIVO[form.frequency]}`.trim()}
             />
           </label>
           <p className="indicator-form__target-rule">
-            Regla estándar de color, igual en todas las pantallas del aplicativo (tablero, cascada, panorama
-            global): un valor {form.improvement_direction === 'mayor_mejor' ? '≥' : '≤'}{' '}
-            {targetValue.trim() || '—'} se muestra <Semaforo estado="cumple" size="sm" />, uno claramente{' '}
+            Como la frecuencia de captura es <strong>{form.frequency}</strong>, este objetivo se evalúa contra
+            cada valor {FRECUENCIA_ADJETIVO[form.frequency]} — no contra un total del año. Regla estándar de
+            color, igual en todas las pantallas del aplicativo (tablero, cascada, panorama global): un valor{' '}
+            {form.improvement_direction === 'mayor_mejor' ? '≥' : '≤'} {targetValue.trim() || '—'} se muestra{' '}
+            <Semaforo estado="cumple" size="sm" />, uno claramente{' '}
             {form.improvement_direction === 'mayor_mejor' ? '<' : '>'} el objetivo se muestra{' '}
             <Semaforo estado="incumple" size="sm" />, con una banda intermedia <Semaforo estado="riesgo" size="sm" />{' '}
             cerca del límite.

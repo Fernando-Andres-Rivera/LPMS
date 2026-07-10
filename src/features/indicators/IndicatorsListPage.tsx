@@ -1,13 +1,23 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { fetchIndicators, setIndicatorActive, type IndicatorWithRelations } from './indicatorsApi'
+import {
+  deleteIndicatorPermanently,
+  fetchIndicators,
+  setIndicatorActive,
+  type IndicatorWithRelations,
+} from './indicatorsApi'
 import './indicators.css'
 
 export function IndicatorsListPage() {
-  const { organizationId } = useAuth()
+  const { organizationId, profile } = useAuth()
   const [indicators, setIndicators] = useState<IndicatorWithRelations[]>([])
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const canHardDelete = profile?.role === 'admin_consultora'
 
   async function reload() {
     if (!organizationId) return
@@ -30,6 +40,20 @@ export function IndicatorsListPage() {
     reload()
   }
 
+  async function handleDelete(indicator: IndicatorWithRelations) {
+    setBusyId(indicator.id)
+    setError(null)
+    try {
+      await deleteIndicatorPermanently(indicator.id)
+      await reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar el indicador.')
+    } finally {
+      setBusyId(null)
+      setDeletingId(null)
+    }
+  }
+
   if (loading) return <p>Cargando indicadores…</p>
 
   return (
@@ -40,6 +64,8 @@ export function IndicatorsListPage() {
           + Nuevo indicador
         </Link>
       </div>
+
+      {error && <p className="indicators-error">{error}</p>}
 
       <div className="table-scroll">
       <table className="indicators-table">
@@ -72,6 +98,32 @@ export function IndicatorsListPage() {
                 <button onClick={() => toggleActive(indicator)}>
                   {indicator.active ? 'Desactivar' : 'Activar'}
                 </button>
+                {canHardDelete && !indicator.active && (
+                  deletingId === indicator.id ? (
+                    <span className="indicators-delete-confirm">
+                      ¿Eliminar definitivamente?
+                      <button
+                        type="button"
+                        className="indicators-delete"
+                        onClick={() => handleDelete(indicator)}
+                        disabled={busyId === indicator.id}
+                      >
+                        {busyId === indicator.id ? 'Eliminando…' : 'Sí, eliminar'}
+                      </button>
+                      <button type="button" onClick={() => setDeletingId(null)}>
+                        Cancelar
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="indicators-delete-trigger"
+                      onClick={() => setDeletingId(indicator.id)}
+                    >
+                      Eliminar
+                    </button>
+                  )
+                )}
               </td>
             </tr>
           ))}

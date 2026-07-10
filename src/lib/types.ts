@@ -12,7 +12,13 @@ export type UserRole =
 export type IndicatorFrequency = 'diaria' | 'semanal' | 'quincenal' | 'mensual'
 export type ImprovementDirection = 'mayor_mejor' | 'menor_mejor'
 export type PdcaStatus = 'planificar' | 'hacer' | 'verificar' | 'actuar' | 'cerrado'
-export type CausalMethodology = '5_porques' | 'ishikawa'
+export type CausalMethodology = '5_porques' | 'ishikawa' | 'causas_estandar'
+
+export const CAUSAL_METHODOLOGY_LABEL: Record<CausalMethodology, string> = {
+  ishikawa: 'Ishikawa',
+  '5_porques': '5 Porqués',
+  causas_estandar: 'Causas posibles',
+}
 
 /** Cómo combinar varias mediciones dentro de un mismo período al revisar resultados. */
 export type AggregationMethod = 'suma' | 'promedio' | 'ultimo' | 'maximo' | 'minimo'
@@ -236,6 +242,28 @@ export interface CausalAnalysisCause {
   id: string
   causal_analysis_id: string
   cause_category_id: string
+}
+
+/**
+ * Nodo del árbol de causas PROPIO de un indicador (ej. Máquina -> Extrusora 3
+ * -> Motor para "daños mecánicos"), a diferencia de CauseCategory que es un
+ * árbol compartido por toda la organización. Alimenta la pestaña "Causas
+ * posibles" del análisis causal.
+ */
+export interface IndicatorCause {
+  id: string
+  indicator_id: string
+  parent_id: string | null
+  name: string
+  active: boolean
+  created_by: string | null
+  created_at: string
+}
+
+export interface CausalAnalysisIndicatorCause {
+  id: string
+  causal_analysis_id: string
+  indicator_cause_id: string
 }
 
 export interface ActionPlan {

@@ -76,6 +76,15 @@ export async function setOrganizationActive(organizationId: string, active: bool
   if (error) throw error
 }
 
+/** Borrado FÍSICO e irreversible — arrastra en cascada sitios, indicadores,
+ * mediciones, análisis causales, planes de acción y usuarios de esa
+ * organización. Solo para limpiar datos de prueba; para un cliente real usa
+ * setOrganizationActive(id, false). Restringido a admin_consultora por RLS. */
+export async function deleteOrganizationPermanently(organizationId: string): Promise<void> {
+  const { error } = await supabase.from('organizations').delete().eq('id', organizationId)
+  if (error) throw error
+}
+
 export async function fetchSitesForOrganization(organizationId: string): Promise<Site[]> {
   const { data, error } = await supabase
     .from('sites')

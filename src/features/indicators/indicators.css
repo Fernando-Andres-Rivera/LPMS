@@ -53,6 +53,31 @@
   text-decoration: underline;
 }
 
+.indicators-error {
+  color: var(--color-fail);
+}
+
+.indicators-table__actions .indicators-delete-trigger {
+  color: var(--color-fail);
+}
+
+.indicators-delete-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--color-fail);
+}
+
+.indicators-table__actions .indicators-delete-confirm .indicators-delete {
+  background: var(--color-fail);
+  color: white;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-weight: 600;
+}
+
 .axis-chip {
   color: white;
   padding: 2px 10px;

@@ -149,3 +149,11 @@ export async function setIndicatorActive(id: string, active: boolean): Promise<v
   const { error } = await supabase.from('indicators').update({ active }).eq('id', id)
   if (error) throw error
 }
+
+/** Borrado FÍSICO e irreversible — arrastra en cascada objetivos, mediciones,
+ * análisis causales y planes de acción de este indicador. Solo para limpiar
+ * datos de prueba; para uso normal usa setIndicatorActive(id, false). */
+export async function deleteIndicatorPermanently(id: string): Promise<void> {
+  const { error } = await supabase.from('indicators').delete().eq('id', id)
+  if (error) throw error
+}

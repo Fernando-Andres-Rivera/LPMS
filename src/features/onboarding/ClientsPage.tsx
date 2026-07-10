@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { fetchAllOrganizations, setOrganizationActive } from './onboardingApi'
+import { deleteOrganizationPermanently, fetchAllOrganizations, setOrganizationActive } from './onboardingApi'
 import type { Organization } from '../../lib/types'
 import './clients.css'
 
@@ -14,6 +14,9 @@ export function ClientsPage() {
   const [confirmText, setConfirmText] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   async function loadOrgs(): Promise<Organization[]> {
     const data = await fetchAllOrganizations()
@@ -57,6 +60,22 @@ export function ClientsPage() {
     }
   }
 
+  async function handleDelete(org: Organization) {
+    setBusyId(org.id)
+    setError(null)
+    try {
+      await deleteOrganizationPermanently(org.id)
+      await loadOrgs()
+      await refreshOrganizations()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar la organización.')
+    } finally {
+      setBusyId(null)
+      setDeletingId(null)
+      setDeleteConfirmText('')
+    }
+  }
+
   if (loading) return <p>Cargando clientes…</p>
 
   const activeCount = orgs.filter((o) => o.active).length
@@ -69,7 +88,8 @@ export function ClientsPage() {
           <p className="page-subtitle">
             {activeCount} activo{activeCount === 1 ? '' : 's'} de {orgs.length}. Desactivar un cliente lo oculta del
             switcher y de toda la aplicación, pero <strong>conserva todos sus datos</strong> — se puede reactivar
-            cuando quieras. No borra nada.
+            cuando quieras. No borra nada. Eliminar permanentemente sí borra todo (sitios, indicadores, mediciones,
+            usuarios) y solo está disponible para clientes ya desactivados — úsalo solo para limpiar datos de prueba.
           </p>
         </div>
         <Link to="/nuevo-cliente" className="button-primary">
@@ -105,15 +125,62 @@ export function ClientsPage() {
                   </span>
                 </td>
                 <td className="clients-action-cell">
-                  {!org.active ? (
-                    <button
-                      type="button"
-                      className="clients-reactivate"
-                      onClick={() => handleToggle(org, true)}
-                      disabled={busyId === org.id}
-                    >
-                      {busyId === org.id ? 'Reactivando…' : 'Reactivar'}
-                    </button>
+                  {!org.active && deletingId === org.id ? (
+                    <div className="clients-confirm clients-confirm--danger">
+                      <span className="clients-confirm__prompt">
+                        Esto elimina PERMANENTEMENTE <strong>{org.name}</strong> y todos sus datos (sitios,
+                        indicadores, mediciones, análisis, usuarios). Escribe <strong>{org.name}</strong> para
+                        confirmar:
+                      </span>
+                      <input
+                        value={deleteConfirmText}
+                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                        placeholder={org.name}
+                        autoFocus
+                      />
+                      <div className="clients-confirm__actions">
+                        <button
+                          type="button"
+                          className="clients-delete"
+                          onClick={() => handleDelete(org)}
+                          disabled={deleteConfirmText.trim() !== org.name || busyId === org.id}
+                        >
+                          {busyId === org.id ? 'Eliminando…' : 'Eliminar definitivamente'}
+                        </button>
+                        <button
+                          type="button"
+                          className="clients-cancel"
+                          onClick={() => {
+                            setDeletingId(null)
+                            setDeleteConfirmText('')
+                          }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : !org.active ? (
+                    <div className="clients-inactive-actions">
+                      <button
+                        type="button"
+                        className="clients-reactivate"
+                        onClick={() => handleToggle(org, true)}
+                        disabled={busyId === org.id}
+                      >
+                        {busyId === org.id ? 'Reactivando…' : 'Reactivar'}
+                      </button>
+                      <button
+                        type="button"
+                        className="clients-delete-trigger"
+                        onClick={() => {
+                          setDeletingId(org.id)
+                          setDeleteConfirmText('')
+                        }}
+                        disabled={busyId === org.id}
+                      >
+                        Eliminar permanentemente
+                      </button>
+                    </div>
                   ) : confirmingId === org.id ? (
                     <div className="clients-confirm">
                       <span className="clients-confirm__prompt">

@@ -5,6 +5,8 @@ import { fetchIndicatorById } from '../indicators/indicatorsApi'
 import { fetchCurrentTarget } from '../dashboard/dashboardApi'
 import { fetchCauseCategories, tagCausalAnalysis } from '../pareto/causeTaxonomyApi'
 import { CauseTaxonomyPicker } from './CauseTaxonomyPicker'
+import { StandardCausesPanel } from './StandardCausesPanel'
+import { fetchIndicatorCauseTags, fetchIndicatorCauses } from './standardCausesApi'
 import {
   checkRequiresRigor,
   createCausalAnalysis,
@@ -12,6 +14,7 @@ import {
   type CausalAnalysisWithAuthor,
 } from './causalAnalysisApi'
 import {
+  CAUSAL_METHODOLOGY_LABEL,
   ISHIKAWA_CATEGORIES,
   ISHIKAWA_CATEGORY_LABEL,
   type CausalMethodology,
@@ -59,15 +62,40 @@ export function CausalAnalysisPage() {
   const [categories, setCategories] = useState<CauseCategory[]>([])
   const [selectedTags, setSelectedTags] = useState<CauseCategory[]>([])
 
+  const [indicatorCauseByAnalysis, setIndicatorCauseByAnalysis] = useState<Map<string, string>>(new Map())
+
+  /**
+   * Nunca rechaza: si la tabla indicator_causes todavía no existe (migración
+   * pendiente) u otro error transitorio ocurre, el resto de la página (que
+   * no depende de la pestaña "Causas posibles") no debe quedarse colgada.
+   */
+  async function fetchIndicatorCauseHistory(id: string): Promise<Map<string, string>> {
+    try {
+      const [causesData, tagsData] = await Promise.all([fetchIndicatorCauses(id), fetchIndicatorCauseTags(id)])
+      const byId = new Map(causesData.map((c) => [c.id, c.name]))
+      const byAnalysis = new Map<string, string>()
+      for (const tag of tagsData) {
+        const name = byId.get(tag.indicator_cause_id)
+        if (name && !byAnalysis.has(tag.causal_analysis_id)) byAnalysis.set(tag.causal_analysis_id, name)
+      }
+      return byAnalysis
+    } catch (err) {
+      console.error('No se pudo cargar el historial de causas posibles:', err)
+      return new Map()
+    }
+  }
+
   async function loadAll() {
     if (!indicatorId) return
     setLoading(true)
-    const [indicatorData, analyses] = await Promise.all([
+    const [indicatorData, analyses, causeHistory] = await Promise.all([
       fetchIndicatorById(indicatorId),
       fetchCausalAnalyses(indicatorId),
+      fetchIndicatorCauseHistory(indicatorId),
     ])
     setIndicator(indicatorData)
     setHistory(analyses)
+    setIndicatorCauseByAnalysis(causeHistory)
 
     if (indicatorData) {
       const now = new Date()
@@ -81,21 +109,24 @@ export function CausalAnalysisPage() {
     if (!indicatorId) return
     let cancelled = false
 
-    Promise.all([fetchIndicatorById(indicatorId), fetchCausalAnalyses(indicatorId)]).then(
-      async ([indicatorData, analyses]) => {
-        if (cancelled) return
-        setIndicator(indicatorData)
-        setHistory(analyses)
+    Promise.all([
+      fetchIndicatorById(indicatorId),
+      fetchCausalAnalyses(indicatorId),
+      fetchIndicatorCauseHistory(indicatorId),
+    ]).then(async ([indicatorData, analyses, causeHistory]) => {
+      if (cancelled) return
+      setIndicator(indicatorData)
+      setHistory(analyses)
+      setIndicatorCauseByAnalysis(causeHistory)
 
-        if (indicatorData) {
-          const now = new Date()
-          const target = await fetchCurrentTarget(indicatorId, now.getFullYear(), now.getMonth() + 1)
-          if (cancelled) return
-          setRequiresRigor(await checkRequiresRigor(indicatorData, target))
-        }
-        if (!cancelled) setLoading(false)
-      },
-    )
+      if (indicatorData) {
+        const now = new Date()
+        const target = await fetchCurrentTarget(indicatorId, now.getFullYear(), now.getMonth() + 1)
+        if (cancelled) return
+        setRequiresRigor(await checkRequiresRigor(indicatorData, target))
+      }
+      if (!cancelled) setLoading(false)
+    })
 
     return () => {
       cancelled = true
@@ -195,24 +226,41 @@ export function CausalAnalysisPage() {
         </div>
       )}
 
-      <form className="causal-form" onSubmit={handleSubmit}>
-        <div className="causal-methodology-toggle">
-          <button
-            type="button"
-            className={methodology === 'ishikawa' ? 'active' : ''}
-            onClick={() => setMethodology('ishikawa')}
-          >
-            Espina de pescado (Ishikawa)
-          </button>
-          <button
-            type="button"
-            className={methodology === '5_porques' ? 'active' : ''}
-            onClick={() => setMethodology('5_porques')}
-          >
-            5 Porqués
-          </button>
-        </div>
+      <div className="causal-methodology-toggle">
+        <button
+          type="button"
+          className={methodology === 'ishikawa' ? 'active' : ''}
+          onClick={() => setMethodology('ishikawa')}
+        >
+          Espina de pescado (Ishikawa)
+        </button>
+        <button
+          type="button"
+          className={methodology === '5_porques' ? 'active' : ''}
+          onClick={() => setMethodology('5_porques')}
+        >
+          5 Porqués
+        </button>
+        <button
+          type="button"
+          className={methodology === 'causas_estandar' ? 'active' : ''}
+          onClick={() => setMethodology('causas_estandar')}
+        >
+          Causas posibles
+        </button>
+      </div>
 
+      {methodology === 'causas_estandar' ? (
+        profile && (
+          <StandardCausesPanel
+            indicator={indicator}
+            measurementId={measurementId}
+            createdBy={profile.id}
+            onSaved={loadAll}
+          />
+        )
+      ) : (
+      <form className="causal-form" onSubmit={handleSubmit}>
         {methodology === 'ishikawa' ? (
           <div className="causal-ishikawa-grid">
             {ISHIKAWA_CATEGORIES.map((cat) => (
@@ -276,6 +324,7 @@ export function CausalAnalysisPage() {
           </button>
         </div>
       </form>
+      )}
 
       <h2>Historial</h2>
       {history.length === 0 && <p>Todavía no hay análisis registrados para este indicador.</p>}
@@ -283,15 +332,18 @@ export function CausalAnalysisPage() {
         {history.map((analysis) => (
           <details key={analysis.id} className="causal-history-item">
             <summary>
-              <span className="causal-history-methodology">
-                {analysis.methodology === 'ishikawa' ? 'Ishikawa' : '5 Porqués'}
-              </span>
+              <span className="causal-history-methodology">{CAUSAL_METHODOLOGY_LABEL[analysis.methodology]}</span>
               <span className="causal-history-root">{analysis.root_cause}</span>
               <span className="causal-history-meta">
                 {analysis.profiles?.full_name ?? 'Usuario'} · {new Date(analysis.created_at).toLocaleDateString('es-CO')}
               </span>
             </summary>
             {analysis.description && <p>{analysis.description}</p>}
+            {analysis.methodology === 'causas_estandar' && indicatorCauseByAnalysis.has(analysis.id) && (
+              <p className="causal-history-detail">
+                <strong>Causa:</strong> {indicatorCauseByAnalysis.get(analysis.id)}
+              </p>
+            )}
             {analysis.methodology === 'ishikawa' && analysis.data.categories && (
               <ul className="causal-history-detail">
                 {ISHIKAWA_CATEGORIES.filter((cat) => (analysis.data.categories?.[cat]?.length ?? 0) > 0).map(
