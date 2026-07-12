@@ -39,6 +39,13 @@ const DIRECCIONES: { value: ImprovementDirection; label: string }[] = [
   { value: 'mayor_mejor', label: 'Mayor es mejor' },
   { value: 'menor_mejor', label: 'Menor es mejor' },
 ]
+// Para un indicador binario, "sentido de mejora" se reutiliza para elegir
+// CUÁL respuesta es la meta — no siempre es "Sí" (ej. "¿hubo un accidente?"
+// tiene como objetivo que sea "No").
+const BINARY_DIRECCIONES: { value: ImprovementDirection; label: string }[] = [
+  { value: 'mayor_mejor', label: 'El objetivo es Sí' },
+  { value: 'menor_mejor', label: 'El objetivo es No' },
+]
 const AGGREGATION_METHODS: AggregationMethod[] = ['ultimo', 'suma', 'promedio', 'maximo', 'minimo']
 // Un indicador binario (Sí/No) solo admite reglas que dan un resultado 0/1
 // limpio — promedio o suma darían un número intermedio que ya no se puede
@@ -168,10 +175,10 @@ export function IndicatorFormPage() {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
-  // Un indicador binario no tiene "sentido de mejora" ni unidad propios (Sí
-  // siempre es mejor que No), y solo admite las reglas de agregación que dan
-  // un resultado 0/1 limpio — se fuerzan aquí en vez de dejar que queden
-  // configurados con algo que ya no tiene sentido para este tipo.
+  // Un indicador binario no tiene unidad propia, y solo admite las reglas de
+  // agregación que dan un resultado 0/1 limpio — se fuerzan aquí. El sentido
+  // de mejora SÍ se conserva: se reutiliza para elegir si la meta es Sí o No
+  // (ver BINARY_DIRECCIONES), por defecto Sí al cambiar a este tipo.
   function handleValueTypeChange(nextType: IndicatorValueType) {
     setForm((f) => ({
       ...f,
@@ -183,7 +190,6 @@ export function IndicatorFormPage() {
           ? 'ultimo'
           : f.aggregation_method,
     }))
-    if (nextType === 'binario') setTargetValue('1')
   }
 
   function toggleParent(parentId: string) {
@@ -204,10 +210,11 @@ export function IndicatorFormPage() {
         await updateIndicator(id, payload, selectedParents)
       }
 
-      // El objetivo de un indicador binario siempre es "Sí" (target_value=1) —
-      // no depende de lo que el usuario haya escrito, porque ese campo ni
-      // siquiera se muestra para este tipo.
-      const effectiveTarget = form.value_type === 'binario' ? '1' : targetValue
+      // El objetivo de un indicador binario no es un número que el usuario
+      // escriba: es "Sí" o "No" según el sentido de mejora elegido arriba
+      // (mayor_mejor = la meta es Sí, menor_mejor = la meta es No).
+      const effectiveTarget =
+        form.value_type === 'binario' ? (form.improvement_direction === 'mayor_mejor' ? '1' : '0') : targetValue
       if (effectiveTarget.trim()) {
         await saveAnnualTarget({
           indicatorId,
@@ -352,21 +359,19 @@ export function IndicatorFormPage() {
             </select>
           </label>
 
-          {form.value_type === 'numerico' && (
-            <label>
-              Sentido de mejora
-              <select
-                value={form.improvement_direction}
-                onChange={(e) => update('improvement_direction', e.target.value as ImprovementDirection)}
-              >
-                {DIRECCIONES.map((dir) => (
-                  <option key={dir.value} value={dir.value}>
-                    {dir.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+          <label>
+            {form.value_type === 'binario' ? 'Objetivo' : 'Sentido de mejora'}
+            <select
+              value={form.improvement_direction}
+              onChange={(e) => update('improvement_direction', e.target.value as ImprovementDirection)}
+            >
+              {(form.value_type === 'binario' ? BINARY_DIRECCIONES : DIRECCIONES).map((dir) => (
+                <option key={dir.value} value={dir.value}>
+                  {dir.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <label className="indicator-form__parent-option">
@@ -409,9 +414,11 @@ export function IndicatorFormPage() {
           <div className="indicator-form__target">
             <span className="indicator-form__target-label">Objetivo</span>
             <p className="indicator-form__target-rule">
-              Fijo en <strong>Sí</strong> — un indicador de cumplimiento no tiene un número que definir. Cada vez
-              que se capture <Semaforo estado="cumple" size="sm" /> Sí, o <Semaforo estado="incumple" size="sm" />{' '}
-              No.
+              La meta es <strong>{form.improvement_direction === 'mayor_mejor' ? 'Sí' : 'No'}</strong> — no hay un
+              número que definir, arriba elegiste cuál respuesta es la deseada. Cada vez que se capture{' '}
+              {form.improvement_direction === 'mayor_mejor' ? 'Sí' : 'No'}{' '}
+              <Semaforo estado="cumple" size="sm" />, o{' '}
+              {form.improvement_direction === 'mayor_mejor' ? 'No' : 'Sí'} <Semaforo estado="incumple" size="sm" />.
             </p>
           </div>
         ) : (
