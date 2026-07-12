@@ -53,7 +53,12 @@ export async function fetchCapturableIndicators(
   organizationId: string,
   siteIds: string[],
 ): Promise<Indicator[]> {
-  let query = supabase.from('indicators').select('*').eq('organization_id', organizationId).eq('active', true)
+  let query = supabase
+    .from('indicators')
+    .select('*')
+    .eq('organization_id', organizationId)
+    .eq('active', true)
+    .eq('is_calculated', false)
 
   if (profile.role === 'operativo') {
     query = query.eq('level', 1).in('site_id', siteIds.length ? siteIds : ['00000000-0000-0000-0000-000000000000'])

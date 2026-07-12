@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase'
 import { aggregateValues, type PeriodBucket } from '../../lib/periods'
-import type { AggregationMethod, Axis, Indicator, Target } from '../../lib/types'
+import type { AggregationMethod, Axis, Indicator, IndicatorLink, Target } from '../../lib/types'
 
 /** Ejes activos para la organización del usuario, ordenados por sort_order. */
 export async function fetchActiveAxes(organizationId: string): Promise<Axis[]> {
@@ -186,6 +186,42 @@ export async function fetchIndicatorPeriodSeries(
       method,
     ),
   }))
+}
+
+/**
+ * Igual que fetchIndicatorPeriodSeries, pero para un indicador CALCULADO: en
+ * vez de leer measurements propios, combina — con la misma
+ * aggregation_method — el valor de cada bucket de sus indicadores hijo
+ * (recursivo: un hijo también puede ser calculado). `allIndicators`/`allLinks`
+ * se traen una sola vez para toda la organización (mismo patrón que
+ * cascadeApi.fetchCascadeData) y se reutilizan en cada nivel de la
+ * recursión, para no hacer una consulta nueva por cada indicador del árbol.
+ */
+export async function computeIndicatorSeries(
+  indicator: Indicator,
+  allIndicators: Indicator[],
+  allLinks: IndicatorLink[],
+  buckets: PeriodBucket[],
+): Promise<PeriodResult[]> {
+  if (!indicator.is_calculated) {
+    return fetchIndicatorPeriodSeries(indicator.id, buckets, indicator.aggregation_method)
+  }
+
+  const childIds = allLinks.filter((l) => l.parent_indicator_id === indicator.id).map((l) => l.child_indicator_id)
+  const children = allIndicators.filter((i) => childIds.includes(i.id))
+  if (children.length === 0) return buckets.map((b) => ({ label: b.label, value: null }))
+
+  const childSeries = await Promise.all(
+    children.map((child) => computeIndicatorSeries(child, allIndicators, allLinks, buckets)),
+  )
+
+  return buckets.map((bucket, i) => {
+    const values = childSeries
+      .map((series) => series[i]?.value)
+      .filter((v): v is number => v !== null && v !== undefined)
+      .map((value) => ({ period_date: bucket.endDate, value }))
+    return { label: bucket.label, value: aggregateValues(values, indicator.aggregation_method) }
+  })
 }
 
 export async function fetchCurrentTarget(indicatorId: string, year: number, month: number): Promise<Target | null> {

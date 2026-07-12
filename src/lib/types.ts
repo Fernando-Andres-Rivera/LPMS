@@ -66,6 +66,7 @@ export interface Site {
   address: string | null
   active: boolean
   org_unit_id: string | null
+  operation_start_date: string | null
 }
 
 /** Nivel 2 (Unidad de Negocio) o Nivel 3 (Región) de la estructura organizacional. */
@@ -151,6 +152,9 @@ export interface Indicator {
   responsible_id: string | null
   active: boolean
   created_at: string
+  /** Si es true, el valor no se captura a mano: se calcula sumando/promediando
+   * (según aggregation_method) los valores de sus indicadores hijo. */
+  is_calculated: boolean
 }
 
 export interface Unit {
@@ -184,6 +188,40 @@ export interface Measurement {
   comment: string | null
   site_location_id: string | null
   captured_by: string | null
+  created_at: string
+}
+
+// ------------------------------------------------------------
+// Módulo de Seguridad y Salud en el Trabajo (SST)
+// ------------------------------------------------------------
+
+export type SafetyEventType = 'accidente' | 'incidente' | 'acto_inseguro' | 'condicion_insegura'
+export type AccidentSeverity = 'fatal' | 'serio' | 'leve'
+
+export const SAFETY_EVENT_TYPE_LABEL: Record<SafetyEventType, string> = {
+  accidente: 'Accidente',
+  incidente: 'Incidente (sin daño)',
+  acto_inseguro: 'Acto inseguro',
+  condicion_insegura: 'Condición insegura',
+}
+
+export const ACCIDENT_SEVERITY_LABEL: Record<AccidentSeverity, string> = {
+  fatal: 'Fatal',
+  serio: 'Serio (>2 días de incapacidad)',
+  leve: 'Leve (<2 días de incapacidad)',
+}
+
+export interface SafetyEvent {
+  id: string
+  organization_id: string
+  site_id: string
+  event_type: SafetyEventType
+  event_date: string
+  severity: AccidentSeverity | null
+  disability_days: number | null
+  workers_affected: number | null
+  description: string | null
+  created_by: string | null
   created_at: string
 }
 

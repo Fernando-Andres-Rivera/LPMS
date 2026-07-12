@@ -5,10 +5,11 @@ import { Semaforo } from '../../components/ui/Semaforo'
 import { ActionPlanProgress } from '../../components/ui/ActionPlanProgress'
 import { PeriodTypeSelector } from '../../components/ui/PeriodTypeSelector'
 import { calcularSemaforo } from '../../lib/semaforo'
-import { buildPeriodBuckets } from '../../lib/periods'
+import { buildPeriodBuckets, type PeriodBucket } from '../../lib/periods'
 import { fetchIndicatorWithRelationsById, fetchProfiles } from '../indicators/indicatorsApi'
 import type { IndicatorWithRelations } from '../indicators/indicatorsApi'
-import { fetchCurrentTarget, fetchIndicatorPeriodSeries } from '../dashboard/dashboardApi'
+import { computeIndicatorSeries, fetchCurrentTarget, fetchIndicatorPeriodSeries } from '../dashboard/dashboardApi'
+import { fetchCascadeData } from '../cascade/cascadeApi'
 import { fetchCausalAnalyses, type CausalAnalysisWithAuthor } from '../causal-analysis/causalAnalysisApi'
 import {
   advanceActionPlanStatus,
@@ -16,12 +17,24 @@ import {
   fetchActionPlansForIndicator,
   type ActionPlanWithNames,
 } from '../action-plans/actionPlansApi'
-import { ACTION_PLAN_STEPS } from '../../lib/types'
+import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL } from '../../lib/types'
 import type { PdcaStatus, PeriodType, Profile, Target } from '../../lib/types'
 import './indicator-board.css'
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
+}
+
+/** Serie de un indicador manual (measurements propios) o calculado (rollup
+ * recursivo de sus indicadores hijo — solo trae el árbol completo de la
+ * organización cuando realmente hace falta, para no pagar ese costo en el
+ * caso común). */
+async function fetchSeries(indicator: IndicatorWithRelations, buckets: PeriodBucket[], organizationId: string) {
+  if (!indicator.is_calculated) {
+    return fetchIndicatorPeriodSeries(indicator.id, buckets, indicator.aggregation_method)
+  }
+  const { indicators, links } = await fetchCascadeData(organizationId)
+  return computeIndicatorSeries(indicator, indicators, links, buckets)
 }
 
 export function IndicatorBoardPage() {
@@ -52,9 +65,7 @@ export function IndicatorBoardPage() {
     const indicatorData = await fetchIndicatorWithRelationsById(indicatorId)
     const buckets = buildPeriodBuckets(periodType, new Date())
     const [series, causesData, plansData, profilesData] = await Promise.all([
-      indicatorData
-        ? fetchIndicatorPeriodSeries(indicatorId, buckets, indicatorData.aggregation_method)
-        : Promise.resolve([]),
+      indicatorData ? fetchSeries(indicatorData, buckets, organizationId) : Promise.resolve([]),
       fetchCausalAnalyses(indicatorId),
       fetchActionPlansForIndicator(indicatorId),
       fetchProfiles(organizationId),
@@ -83,9 +94,7 @@ export function IndicatorBoardPage() {
       if (cancelled) return
       const buckets = buildPeriodBuckets(periodType, new Date())
       const [series, causesData, plansData, profilesData] = await Promise.all([
-        indicatorData
-          ? fetchIndicatorPeriodSeries(indicatorId, buckets, indicatorData.aggregation_method)
-          : Promise.resolve([]),
+        indicatorData ? fetchSeries(indicatorData, buckets, organizationId) : Promise.resolve([]),
         fetchCausalAnalyses(indicatorId),
         fetchActionPlansForIndicator(indicatorId),
         fetchProfiles(organizationId),
@@ -176,6 +185,12 @@ export function IndicatorBoardPage() {
           <h2>Resultado</h2>
           <PeriodTypeSelector value={periodType} onChange={setPeriodType} />
         </div>
+        {indicator.is_calculated && (
+          <p className="board-result__calculated-note">
+            Valor calculado automáticamente ({AGGREGATION_METHOD_LABEL[indicator.aggregation_method].toLowerCase()}{' '}
+            de sus indicadores hijo) — no se captura a mano.
+          </p>
+        )}
         <div className={`board-result__badge board-result__badge--${estado}`}>
           {estado === 'cumple' ? '✓ CUMPLE' : estado === 'sin_datos' ? 'SIN DATOS' : '✗ NO CUMPLE'}
         </div>

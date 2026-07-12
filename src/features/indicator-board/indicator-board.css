@@ -74,6 +74,16 @@
   font-size: 0.82rem;
 }
 
+.board-result__calculated-note {
+  margin: 0 0 12px;
+  color: var(--color-primary);
+  background: rgba(27, 54, 93, 0.06);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .board-result__badge {
   display: inline-block;
   font-weight: 800;

@@ -1,0 +1,406 @@
+.safety-page {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.safety-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.safety-filters select {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.safety-operation-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  background: rgba(245, 124, 0, 0.08);
+  border: 1px solid var(--color-orange);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+  color: var(--color-orange);
+}
+
+.safety-operation-start input {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.safety-operation-start button {
+  background: var(--color-orange);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.safety-operation-start button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.safety-top-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(220px, 280px) 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .safety-top-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.safety-counter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-lg);
+  padding: 20px 16px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+}
+
+.safety-counter__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.9;
+}
+
+.safety-counter__value {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.safety-kpi-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  align-self: start;
+}
+
+.safety-kpi-table th,
+.safety-kpi-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.85rem;
+}
+
+.safety-kpi-table th {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.safety-kpi-table td {
+  font-weight: 700;
+  color: var(--color-primary);
+  text-align: right;
+}
+
+/* --- Cruz de seguridad --- */
+
+.safety-cross {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.safety-cross__row {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.safety-cross__cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+}
+
+.safety-cross__cell--verde {
+  background: var(--color-ok);
+}
+
+.safety-cross__cell--amarillo {
+  background: #f2c94c;
+  color: #5B4B00;
+}
+
+.safety-cross__cell--rojo {
+  background: var(--color-fail);
+}
+
+/* --- Segunda fila: pirámide + contadores --- */
+
+.safety-second-row {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(220px, 300px);
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .safety-second-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.heinrich-pyramid {
+  display: grid;
+  grid-template-columns: minmax(160px, 280px) 1fr;
+  gap: 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+}
+
+.heinrich-pyramid__visual {
+  display: flex;
+  flex-direction: column;
+  height: 220px;
+}
+
+.heinrich-band {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heinrich-band--fatal {
+  background: var(--color-fail);
+  clip-path: polygon(50% 0%, 62.5% 100%, 37.5% 100%);
+}
+
+.heinrich-band--serio {
+  background: var(--color-orange);
+  clip-path: polygon(37.5% 0%, 62.5% 0%, 75% 100%, 25% 100%);
+}
+
+.heinrich-band--leve {
+  background: #f2c94c;
+  clip-path: polygon(25% 0%, 75% 0%, 87.5% 100%, 12.5% 100%);
+}
+
+.heinrich-band--base {
+  background: var(--color-ok);
+  clip-path: polygon(12.5% 0%, 87.5% 0%, 100% 100%, 0% 100%);
+}
+
+.heinrich-band__count {
+  background: white;
+  color: var(--color-text);
+  font-weight: 800;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.heinrich-pyramid__legend {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 220px;
+}
+
+.heinrich-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.heinrich-legend-row__ratio {
+  font-weight: 800;
+  text-decoration: underline;
+  min-width: 28px;
+}
+
+.heinrich-legend-row__label {
+  color: var(--color-text-muted);
+}
+
+.safety-unsafe-counters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.safety-unsafe-counter {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.safety-unsafe-counter strong {
+  font-size: 1.4rem;
+  color: var(--color-primary);
+}
+
+.safety-summary {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* --- Formulario y lista de eventos --- */
+
+.safety-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.safety-card h2 {
+  font-size: 1rem;
+  margin-bottom: 14px;
+}
+
+.safety-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.safety-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.safety-form input,
+.safety-form select,
+.safety-form textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-weight: 400;
+  font-family: inherit;
+}
+
+.safety-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.safety-error {
+  color: var(--color-fail);
+}
+
+.safety-form__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.safety-event-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.safety-event-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.85rem;
+}
+
+.safety-event-list__description {
+  color: var(--color-text-muted);
+  flex: 1;
+}
+
+.safety-event-list button {
+  background: none;
+  border: none;
+  color: var(--color-fail);
+  cursor: pointer;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.safety-event-tag {
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.safety-event-tag--accidente {
+  background: var(--color-fail);
+}
+
+.safety-event-tag--incidente {
+  background: #f2c94c;
+  color: #5B4B00;
+}
+
+.safety-event-tag--acto_inseguro,
+.safety-event-tag--condicion_insegura {
+  background: var(--color-gray);
+}

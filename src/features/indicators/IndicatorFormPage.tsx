@@ -85,6 +85,7 @@ export function IndicatorFormPage() {
     improvement_direction: 'mayor_mejor',
     aggregation_method: 'ultimo',
     responsible_id: null,
+    is_calculated: false,
   })
 
   useEffect(() => {
@@ -115,6 +116,7 @@ export function IndicatorFormPage() {
             improvement_direction: data.improvement_direction,
             aggregation_method: data.aggregation_method,
             responsible_id: data.responsible_id,
+            is_calculated: data.is_calculated,
           })
         }
       })
@@ -304,9 +306,20 @@ export function IndicatorFormPage() {
           </label>
         </div>
 
+        <label className="indicator-form__parent-option">
+          <input
+            type="checkbox"
+            checked={form.is_calculated}
+            onChange={(e) => update('is_calculated', e.target.checked)}
+          />
+          Este indicador se calcula automáticamente a partir de sus indicadores hijo (no se captura a mano)
+        </label>
+
         <div className="indicator-form__target">
           <label>
-            Cómo agregar varias mediciones en un período (semana, mes…)
+            {form.is_calculated
+              ? 'Cómo combinar los indicadores hijo en un período'
+              : 'Cómo agregar varias mediciones en un período (semana, mes…)'}
             <select
               value={form.aggregation_method}
               onChange={(e) => update('aggregation_method', e.target.value as AggregationMethod)}
@@ -318,7 +331,11 @@ export function IndicatorFormPage() {
               ))}
             </select>
           </label>
-          <p className="indicator-form__target-rule">{AGGREGATION_METHOD_HELP[form.aggregation_method]}</p>
+          <p className="indicator-form__target-rule">
+            {form.is_calculated
+              ? 'Cada vez que se muestre este indicador, se combinan (con esta regla) los valores de ese mismo período de los indicadores que lo tengan marcado como padre — no hace falta capturar un valor propio.'
+              : AGGREGATION_METHOD_HELP[form.aggregation_method]}
+          </p>
         </div>
 
         <div className="indicator-form__target">

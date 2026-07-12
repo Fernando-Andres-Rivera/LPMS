@@ -50,6 +50,9 @@ export function AppLayout() {
           <NavLink to="/captura" className={linkClass}>
             Captura de mediciones
           </NavLink>
+          <NavLink to="/seguridad" className={linkClass}>
+            Seguridad y Salud en el Trabajo
+          </NavLink>
 
           {(isManagement || canManageIndicators) && <span className="app-sidebar__section">Gestión</span>}
           {isManagement && (

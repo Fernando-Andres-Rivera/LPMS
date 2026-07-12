@@ -18,9 +18,11 @@ export interface NewOrganizationInput {
 
 // Misma lista sembrada por la migración 20260712000000_indicator_units.sql
 // para organizaciones existentes, así ningún cliente nuevo arranca con el
-// desplegable de unidades vacío.
+// desplegable de unidades vacío. No incluye "unidades" a propósito — es un
+// nombre genérico que no describe nada real y se prestaba a confundirse con
+// "%" al definir el objetivo (ver migración 20260724000000).
 const STARTER_UNITS = [
-  '%', 'unidades', 'horas', 'horas-hombre', 'días', 'turnos',
+  '%', 'horas', 'horas-hombre', 'días', 'turnos',
   'accidentes', 'defectos', 'unidades no conformes', 'paradas',
   'minutos', 'kg', 'litros', '$', 'ppm', 'piezas', 'puntos',
 ]

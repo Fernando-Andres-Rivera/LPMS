@@ -11,6 +11,7 @@ import { GlobalExceptionsPage } from './features/dashboard/GlobalExceptionsPage'
 import { IndicatorsListPage } from './features/indicators/IndicatorsListPage'
 import { IndicatorFormPage } from './features/indicators/IndicatorFormPage'
 import { MeasurementCapturePage } from './features/measurements/MeasurementCapturePage'
+import { SafetyDashboardPage } from './features/safety/SafetyDashboardPage'
 import { CaptureCompliancePage } from './features/measurements/CaptureCompliancePage'
 import { CascadeViewPage } from './features/cascade/CascadeViewPage'
 import { CausalAnalysisPage } from './features/causal-analysis/CausalAnalysisPage'
@@ -39,6 +40,7 @@ function App() {
               <Route path="ejes/:axisId" element={<AxisDashboardPage />} />
               <Route path="niveles/:level" element={<LevelDashboardPage />} />
               <Route path="captura" element={<MeasurementCapturePage />} />
+              <Route path="seguridad" element={<SafetyDashboardPage />} />
               <Route path="cascada/:indicatorId" element={<CascadeViewPage />} />
               <Route path="tablero/:indicatorId" element={<IndicatorBoardPage />} />
               <Route path="analisis-causal/:indicatorId" element={<CausalAnalysisPage />} />
