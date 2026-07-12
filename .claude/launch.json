@@ -5,7 +5,8 @@
       "name": "lpms-dev",
       "runtimeExecutable": "C:\\Users\\ferna\\Documents\\Fernando Rivera\\LEANPROLOGISTIC SAS\\Proyectos Claude Code\\Proyecto Lean Performance Management System\\dev-with-path.cmd",
       "runtimeArgs": [],
-      "port": 5173
+      "port": 5173,
+      "autoPort": true
     }
   ]
 }
