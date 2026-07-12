@@ -48,17 +48,28 @@ export function MeasurementCapturePage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
   const [deviation, setDeviation] = useState<{ estado: SemaforoEstado; measurementId: string } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!profile || !organizationId) return
-    Promise.all([
-      fetchCapturableIndicators(profile, organizationId, siteIds),
-      fetchSites(organizationId),
-    ]).then(([indicatorsData, sitesData]) => {
-      setIndicators(indicatorsData)
-      setSites(sitesData)
-      if (indicatorsData.length && !indicatorId) setIndicatorId(indicatorsData[0].id)
-    })
+    let cancelled = false
+    Promise.all([fetchCapturableIndicators(profile, organizationId, siteIds), fetchSites(organizationId)])
+      .then(([indicatorsData, sitesData]) => {
+        if (cancelled) return
+        setIndicators(indicatorsData)
+        setSites(sitesData)
+        if (indicatorsData.length && !indicatorId) setIndicatorId(indicatorsData[0].id)
+        setLoading(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setLoadError(err instanceof Error ? err.message : 'No se pudieron cargar los indicadores.')
+        setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, organizationId, siteIds])
 
@@ -124,7 +135,11 @@ export function MeasurementCapturePage() {
     <div className="capture-page">
       <h1>Captura de mediciones</h1>
 
-      {indicators.length === 0 ? (
+      {loading ? (
+        <p>Cargando…</p>
+      ) : loadError ? (
+        <p className="capture-message capture-message--error">No se pudo cargar la captura: {loadError}</p>
+      ) : indicators.length === 0 ? (
         <p>No tienes indicadores disponibles para capturar.</p>
       ) : (
         <form className="capture-form" onSubmit={handleSubmit}>
