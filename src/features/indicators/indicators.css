@@ -185,6 +185,12 @@
   flex: none;
 }
 
+.indicator-form__target-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
 .indicator-form__target-rule {
   margin: 0;
   font-size: 0.82rem;

@@ -101,6 +101,12 @@ export function MeasurementCapturePage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!profile || !indicatorId || !selectedIndicator) return
+    // Number('') es 0, no NaN — sin esta validación, enviar el formulario sin
+    // elegir Sí/No registraría silenciosamente "No" por defecto.
+    if (selectedIndicator.value_type === 'binario' && value !== '1' && value !== '0') {
+      setMessage({ type: 'error', text: 'Elige Sí o No antes de guardar.' })
+      return
+    }
     setSaving(true)
     setMessage(null)
     setDeviation(null)
@@ -169,19 +175,41 @@ export function MeasurementCapturePage() {
             />
           </label>
 
-          <label className="capture-label">
-            Valor {selectedIndicator && `(${selectedIndicator.unit})`}
-            <input
-              className="capture-value"
-              type="number"
-              inputMode="decimal"
-              step="any"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              required
-              autoFocus
-            />
-          </label>
+          {selectedIndicator?.value_type === 'binario' ? (
+            <div className="capture-label">
+              ¿Se cumplió?
+              <div className="capture-binary">
+                <button
+                  type="button"
+                  className={`capture-binary__option capture-binary__option--si ${value === '1' ? 'active' : ''}`}
+                  onClick={() => setValue('1')}
+                >
+                  Sí
+                </button>
+                <button
+                  type="button"
+                  className={`capture-binary__option capture-binary__option--no ${value === '0' ? 'active' : ''}`}
+                  onClick={() => setValue('0')}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          ) : (
+            <label className="capture-label">
+              Valor {selectedIndicator && `(${selectedIndicator.unit})`}
+              <input
+                className="capture-value"
+                type="number"
+                inputMode="decimal"
+                step="any"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                required
+                autoFocus
+              />
+            </label>
+          )}
 
           <label className="capture-label">
             Comentario (opcional)

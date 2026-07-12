@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { Semaforo } from '../../components/ui/Semaforo'
 import { calcularSemaforo } from '../../lib/semaforo'
 import { fetchIndicatorStatuses, type IndicatorStatus } from './dashboardApi'
-import type { SemaforoEstado } from '../../lib/types'
+import { formatIndicatorValue, type SemaforoEstado } from '../../lib/types'
 import './dashboard.css'
 
 interface ExceptionRow {
@@ -98,11 +98,11 @@ export function GlobalExceptionsPage() {
                 <td>
                   <Link to={`/tablero/${status.id}`}>{status.name}</Link>
                 </td>
+                <td>{formatIndicatorValue(status.latest_value, status.value_type, status.unit)}</td>
                 <td>
-                  {status.latest_value ?? '—'} {status.unit}
-                </td>
-                <td>
-                  {status.target_value ?? '—'} {status.unit}
+                  {status.value_type === 'binario'
+                    ? 'Sí'
+                    : `${status.target_value ?? '—'} ${status.unit}`}
                 </td>
                 <td>{status.responsible_name ?? 'Sin asignar'}</td>
                 <td>

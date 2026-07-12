@@ -88,6 +88,7 @@ export interface IndicatorStatus {
   latest_value: number | null
   latest_period_date: string | null
   target_value: number | null
+  value_type: Indicator['value_type']
 }
 
 export async function fetchIndicatorStatuses(organizationId: string): Promise<IndicatorStatus[]> {

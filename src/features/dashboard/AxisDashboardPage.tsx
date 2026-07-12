@@ -150,6 +150,7 @@ export function AxisDashboardPage() {
                 unit={indicator.unit}
                 level={indicator.level}
                 improvementDirection={indicator.improvement_direction}
+                valueType={indicator.value_type}
                 latestValue={latestValue}
                 targetValue={targetValue}
                 trend={trend}

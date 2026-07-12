@@ -14,6 +14,28 @@ export type ImprovementDirection = 'mayor_mejor' | 'menor_mejor'
 export type PdcaStatus = 'planificar' | 'hacer' | 'verificar' | 'actuar' | 'cerrado'
 export type CausalMethodology = '5_porques' | 'ishikawa' | 'causas_estandar'
 
+/** 'numerico' = valor contra un umbral (lo de siempre). 'binario' = KPI de
+ * ejecución tipo "¿se hizo?" — se captura Sí/No, se guarda como 1/0, y el
+ * objetivo siempre es "Sí" (no se define un número). */
+export type IndicatorValueType = 'numerico' | 'binario'
+
+export const INDICATOR_VALUE_TYPE_LABEL: Record<IndicatorValueType, string> = {
+  numerico: 'Numérico (contra un objetivo)',
+  binario: 'Cumplimiento (Sí / No)',
+}
+
+/** Formatea el último valor de un indicador para mostrarlo — "Sí"/"No" para
+ * indicadores binarios, número + unidad para el resto. */
+export function formatIndicatorValue(
+  value: number | null,
+  valueType: IndicatorValueType,
+  unit: string,
+): string {
+  if (value === null) return '—'
+  if (valueType === 'binario') return value >= 1 ? 'Sí' : 'No'
+  return unit ? `${value} ${unit}` : String(value)
+}
+
 export const CAUSAL_METHODOLOGY_LABEL: Record<CausalMethodology, string> = {
   ishikawa: 'Ishikawa',
   '5_porques': '5 Porqués',
@@ -155,6 +177,7 @@ export interface Indicator {
   /** Si es true, el valor no se captura a mano: se calcula sumando/promediando
    * (según aggregation_method) los valores de sus indicadores hijo. */
   is_calculated: boolean
+  value_type: IndicatorValueType
 }
 
 export interface Unit {

@@ -118,6 +118,7 @@ export interface IndicatorFormValues {
   aggregation_method: Indicator['aggregation_method']
   responsible_id: string | null
   is_calculated: boolean
+  value_type: Indicator['value_type']
 }
 
 export async function createIndicator(values: IndicatorFormValues, parentIds: string[]): Promise<string> {

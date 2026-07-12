@@ -41,6 +41,35 @@
   text-align: center;
 }
 
+.capture-binary {
+  display: flex;
+  gap: 12px;
+}
+
+.capture-binary__option {
+  flex: 1;
+  padding: 18px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-weight: 700;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.capture-binary__option--si.active {
+  border-color: var(--color-ok);
+  background: rgba(38, 166, 154, 0.12);
+  color: var(--color-ok);
+}
+
+.capture-binary__option--no.active {
+  border-color: var(--color-fail);
+  background: rgba(211, 47, 47, 0.1);
+  color: var(--color-fail);
+}
+
 .capture-submit {
   background: var(--color-teal);
   color: white;

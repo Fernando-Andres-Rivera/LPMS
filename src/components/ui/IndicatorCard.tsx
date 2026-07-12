@@ -2,7 +2,7 @@ import { Line, LineChart, ResponsiveContainer, YAxis } from 'recharts'
 import { Link } from 'react-router-dom'
 import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
 import { Semaforo } from './Semaforo'
-import type { ImprovementDirection } from '../../lib/types'
+import { formatIndicatorValue, type ImprovementDirection, type IndicatorValueType } from '../../lib/types'
 import './IndicatorCard.css'
 
 export interface IndicatorCardTrendPoint {
@@ -16,6 +16,7 @@ interface IndicatorCardProps {
   unit: string
   level: 1 | 2 | 3
   improvementDirection: ImprovementDirection
+  valueType?: IndicatorValueType
   latestValue: number | null
   targetValue: number | null
   trend: IndicatorCardTrendPoint[]
@@ -31,6 +32,7 @@ export function IndicatorCard({
   unit,
   level,
   improvementDirection,
+  valueType = 'numerico',
   latestValue,
   targetValue,
   trend,
@@ -47,12 +49,18 @@ export function IndicatorCard({
       <h3 className="indicator-card__name">{name}</h3>
 
       <div className="indicator-card__values">
-        <span className="indicator-card__value">
-          {latestValue ?? '—'} <span className="indicator-card__unit">{unit}</span>
-        </span>
-        <span className="indicator-card__target">
-          Objetivo: {targetValue ?? '—'} {unit}
-        </span>
+        {valueType === 'binario' ? (
+          <span className="indicator-card__value">{formatIndicatorValue(latestValue, 'binario', '')}</span>
+        ) : (
+          <>
+            <span className="indicator-card__value">
+              {latestValue ?? '—'} <span className="indicator-card__unit">{unit}</span>
+            </span>
+            <span className="indicator-card__target">
+              Objetivo: {targetValue ?? '—'} {unit}
+            </span>
+          </>
+        )}
       </div>
 
       {trend.length > 1 && (

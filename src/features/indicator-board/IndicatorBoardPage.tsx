@@ -17,7 +17,7 @@ import {
   fetchActionPlansForIndicator,
   type ActionPlanWithNames,
 } from '../action-plans/actionPlansApi'
-import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL } from '../../lib/types'
+import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL, formatIndicatorValue } from '../../lib/types'
 import type { PdcaStatus, PeriodType, Profile, Target } from '../../lib/types'
 import './indicator-board.css'
 
@@ -195,12 +195,18 @@ export function IndicatorBoardPage() {
           {estado === 'cumple' ? '✓ CUMPLE' : estado === 'sin_datos' ? 'SIN DATOS' : '✗ NO CUMPLE'}
         </div>
         <div className="board-result__values">
-          <span className="board-result__value">
-            {latestValue ?? '—'} <small>{indicator.unit}</small>
-          </span>
-          <span className="board-result__target">
-            Objetivo: {target?.target_value ?? '—'} {indicator.unit}
-          </span>
+          {indicator.value_type === 'binario' ? (
+            <span className="board-result__value">{formatIndicatorValue(latestValue, 'binario', '')}</span>
+          ) : (
+            <span className="board-result__value">
+              {latestValue ?? '—'} <small>{indicator.unit}</small>
+            </span>
+          )}
+          {indicator.value_type !== 'binario' && (
+            <span className="board-result__target">
+              Objetivo: {target?.target_value ?? '—'} {indicator.unit}
+            </span>
+          )}
           <Semaforo estado={estado} />
         </div>
         {latestLabel && <p className="board-result__period">Período: {latestLabel}</p>}
