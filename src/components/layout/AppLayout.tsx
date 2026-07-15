@@ -89,6 +89,11 @@ export function AppLayout() {
               Estructura organizacional
             </NavLink>
           )}
+          {isManagement && (
+            <NavLink to="/horario-reuniones" className={linkClass}>
+              Horario de reuniones
+            </NavLink>
+          )}
           {isConsultora && (
             <NavLink to="/clientes" className={linkClass}>
               Clientes

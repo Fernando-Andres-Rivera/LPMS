@@ -101,6 +101,47 @@ export interface OrgUnit {
   active: boolean
 }
 
+/** Horario de la reunión de un nivel: hora de inicio + qué día evalúa esa
+ * reunión (0 = hoy, -1 = ayer, -2 = antier…) — no toda reunión evalúa el
+ * dato del mismo día en que ocurre. */
+export interface LevelCaptureCutoff {
+  id: string
+  organization_id: string
+  level: 1 | 2 | 3
+  cutoff_time: string // 'HH:MM:SS'
+  evaluated_day_offset: number // 0, -1, -2…
+  created_by: string | null
+  created_at: string
+}
+
+export const DAY_OFFSET_LABEL: Record<number, string> = {
+  0: 'Hoy (mismo día)',
+  [-1]: 'Ayer (día anterior)',
+  [-2]: 'Antier (2 días antes)',
+  [-3]: 'Hace 3 días',
+}
+
+/** La fecha (YYYY-MM-DD) que la reunión de hoy evalúa, según su desfase. */
+export function evaluatedDateForOffset(offset: number, now: Date): string {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)
+  return d.toISOString().slice(0, 10)
+}
+
+/** true si ya pasó la hora de la reunión del nivel Y la fecha que se quiere
+ * capturar es justo la que esa reunión evalúa. Nunca bloquea fechas más
+ * antiguas que la evaluada (para poder ponerse al día con un dato atrasado). */
+export function isCaptureBlockedByTime(
+  schedule: { cutoff_time: string; evaluated_day_offset: number } | null,
+  periodDate: string,
+  now: Date,
+): boolean {
+  if (!schedule) return false
+  if (periodDate !== evaluatedDateForOffset(schedule.evaluated_day_offset, now)) return false
+  const [hours, minutes] = schedule.cutoff_time.split(':').map(Number)
+  const meetingTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
+  return now >= meetingTime
+}
+
 /** Nivel 5+ (Instalación y más abajo) de la estructura organizacional, colgado de un sitio. */
 export interface SiteLocation {
   id: string

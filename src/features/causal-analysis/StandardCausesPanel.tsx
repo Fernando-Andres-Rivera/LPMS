@@ -144,9 +144,11 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
             indicatorId={indicator.id}
             createdBy={createdBy}
             causes={causes}
+            tags={tags}
             onCausesChange={setCauses}
             selected={selectedCause}
             onSelectedChange={setSelectedCause}
+            onDeleted={reloadTree}
           />
         </label>
 

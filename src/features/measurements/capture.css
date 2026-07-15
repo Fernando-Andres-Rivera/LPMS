@@ -114,6 +114,23 @@
   line-height: 1.5;
 }
 
+.capture-cutoff-warning {
+  margin: 0;
+  background: rgba(211, 47, 47, 0.1);
+  border: 1px solid var(--color-fail);
+  color: var(--color-fail);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.capture-binary__option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .capture-message {
   text-align: center;
   font-weight: 600;

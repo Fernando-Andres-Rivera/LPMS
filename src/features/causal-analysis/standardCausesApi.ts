@@ -45,6 +45,16 @@ export async function tagCausalAnalysisWithIndicatorCause(
   if (error) throw error
 }
 
+/** Borra un nodo mal creado (típico error: escritura, ubicación equivocada
+ * en el árbol). Sus sub-causas se van con él en cascada, y las etiquetas
+ * hacia este nodo o sus sub-causas también — el ANÁLISIS (causa raíz
+ * identificada) no se borra, solo pierde su clasificación en el Pareto.
+ * Por eso siempre se avisa con countCauseImpact antes de confirmar. */
+export async function deleteIndicatorCause(id: string): Promise<void> {
+  const { error } = await supabase.from('indicator_causes').delete().eq('id', id)
+  if (error) throw error
+}
+
 export interface IndicatorCauseTag {
   causal_analysis_id: string
   indicator_cause_id: string
@@ -126,4 +136,39 @@ export function computeIndicatorCauseParetoForParent(
     : 0
 
   return { rows, generalCount }
+}
+
+export interface CauseDeletionImpact {
+  descendantCount: number
+  taggedAnalysesCount: number
+}
+
+/** Cuántas sub-causas y cuántos análisis distintos quedarían afectados (no
+ * borrados — pierden su clasificación) si se elimina este nodo. Se calcula
+ * antes de confirmar el borrado, porque el borrado en sí no lanza ningún
+ * error — la cascada es silenciosa a nivel de base de datos. */
+export function countCauseImpact(
+  causes: IndicatorCause[],
+  tags: IndicatorCauseTag[],
+  nodeId: string,
+): CauseDeletionImpact {
+  const childrenOf = (id: string) => causes.filter((c) => c.parent_id === id)
+  const descendantIds = new Set<string>()
+  const stack = [nodeId]
+  while (stack.length > 0) {
+    const current = stack.pop()!
+    for (const child of childrenOf(current)) {
+      if (!descendantIds.has(child.id)) {
+        descendantIds.add(child.id)
+        stack.push(child.id)
+      }
+    }
+  }
+
+  const affectedIds = new Set([nodeId, ...descendantIds])
+  const taggedAnalysesCount = new Set(
+    tags.filter((t) => affectedIds.has(t.indicator_cause_id)).map((t) => t.causal_analysis_id),
+  ).size
+
+  return { descendantCount: descendantIds.size, taggedAnalysesCount }
 }

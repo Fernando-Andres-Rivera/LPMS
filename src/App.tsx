@@ -19,6 +19,7 @@ import { ParetoPage } from './features/pareto/ParetoPage'
 import { IndicatorBoardPage } from './features/indicator-board/IndicatorBoardPage'
 import { OrgStructurePage } from './features/org-structure/OrgStructurePage'
 import { OrgResultsPage } from './features/org-structure/OrgResultsPage'
+import { MeetingScheduleConfigPage } from './features/org-structure/MeetingScheduleConfigPage'
 import { NewOrganizationPage } from './features/onboarding/NewOrganizationPage'
 import { ClientsPage } from './features/onboarding/ClientsPage'
 import { LinkUserPage } from './features/onboarding/LinkUserPage'
@@ -57,6 +58,7 @@ function App() {
                 <Route path="panorama-global" element={<GlobalExceptionsPage />} />
                 <Route path="estructura-organizacional" element={<OrgStructurePage />} />
                 <Route path="resultados-organizacion" element={<OrgResultsPage />} />
+                <Route path="horario-reuniones" element={<MeetingScheduleConfigPage />} />
               </Route>
 
               <Route element={<RequireRole allowed={['admin_consultora']} />}>

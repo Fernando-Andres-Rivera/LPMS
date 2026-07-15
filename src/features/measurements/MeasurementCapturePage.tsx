@@ -1,11 +1,21 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import type { Indicator, SemaforoEstado, Site, SiteLocation } from '../../lib/types'
+import {
+  DAY_OFFSET_LABEL,
+  isCaptureBlockedByTime,
+  type Axis,
+  type Indicator,
+  type LevelCaptureCutoff,
+  type SemaforoEstado,
+  type Site,
+  type SiteLocation,
+} from '../../lib/types'
 import { fetchCapturableIndicators, fetchMeasurementForPeriod, saveMeasurement } from './measurementsApi'
-import { fetchCurrentTarget } from '../dashboard/dashboardApi'
+import { fetchActiveAxes, fetchCurrentTarget } from '../dashboard/dashboardApi'
 import { fetchSites } from '../indicators/indicatorsApi'
 import { fetchSiteLocations } from '../org-structure/orgStructureApi'
+import { fetchLevelCutoffs } from '../org-structure/captureCutoffsApi'
 import { calcularSemaforo } from '../../lib/semaforo'
 import './capture.css'
 
@@ -38,6 +48,9 @@ function buildLocationOptions(locations: SiteLocation[]): { id: string; label: s
 export function MeasurementCapturePage() {
   const { profile, siteIds, organizationId } = useAuth()
   const [indicators, setIndicators] = useState<Indicator[]>([])
+  const [axes, setAxes] = useState<Axis[]>([])
+  const [axisId, setAxisId] = useState('')
+  const [cutoffs, setCutoffs] = useState<LevelCaptureCutoff[]>([])
   const [sites, setSites] = useState<Site[]>([])
   const [indicatorId, setIndicatorId] = useState('')
   const [periodDate, setPeriodDate] = useState(today())
@@ -54,11 +67,18 @@ export function MeasurementCapturePage() {
   useEffect(() => {
     if (!profile || !organizationId) return
     let cancelled = false
-    Promise.all([fetchCapturableIndicators(profile, organizationId, siteIds), fetchSites(organizationId)])
-      .then(([indicatorsData, sitesData]) => {
+    Promise.all([
+      fetchCapturableIndicators(profile, organizationId, siteIds),
+      fetchSites(organizationId),
+      fetchActiveAxes(organizationId),
+      fetchLevelCutoffs(organizationId),
+    ])
+      .then(([indicatorsData, sitesData, axesData, cutoffsData]) => {
         if (cancelled) return
         setIndicators(indicatorsData)
         setSites(sitesData)
+        setAxes(axesData)
+        setCutoffs(cutoffsData)
         if (indicatorsData.length && !indicatorId) setIndicatorId(indicatorsData[0].id)
         setLoading(false)
       })
@@ -73,9 +93,20 @@ export function MeasurementCapturePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, organizationId, siteIds])
 
+  const filteredIndicators = axisId ? indicators.filter((i) => i.axis_id === axisId) : indicators
   const selectedIndicator = indicators.find((i) => i.id === indicatorId)
   const selectedSite = sites.find((s) => s.id === selectedIndicator?.site_id) ?? null
   const locationOptions = buildLocationOptions(siteLocations)
+  const levelCutoff = cutoffs.find((c) => c.level === selectedIndicator?.level)
+  const blockedByTime = isCaptureBlockedByTime(levelCutoff ?? null, periodDate, new Date())
+
+  function handleAxisChange(nextAxisId: string) {
+    setAxisId(nextAxisId)
+    const nextList = nextAxisId ? indicators.filter((i) => i.axis_id === nextAxisId) : indicators
+    if (!nextList.some((i) => i.id === indicatorId)) {
+      setIndicatorId(nextList[0]?.id ?? '')
+    }
+  }
 
   useEffect(() => {
     if (!indicatorId || !periodDate) return
@@ -101,6 +132,10 @@ export function MeasurementCapturePage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!profile || !indicatorId || !selectedIndicator) return
+    if (blockedByTime) {
+      setMessage({ type: 'error', text: 'Ya pasó la hora límite de captura de hoy para este nivel.' })
+      return
+    }
     // Number('') es 0, no NaN — sin esta validación, enviar el formulario sin
     // elegir Sí/No registraría silenciosamente "No" por defecto.
     if (selectedIndicator.value_type === 'binario' && value !== '1' && value !== '0') {
@@ -149,19 +184,37 @@ export function MeasurementCapturePage() {
         <p>No tienes indicadores disponibles para capturar.</p>
       ) : (
         <form className="capture-form" onSubmit={handleSubmit}>
+          {axes.length > 0 && (
+            <label className="capture-label">
+              Pilar
+              <select className="capture-select" value={axisId} onChange={(e) => handleAxisChange(e.target.value)}>
+                <option value="">Todos los pilares</option>
+                {axes.map((axis) => (
+                  <option key={axis.id} value={axis.id}>
+                    {axis.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <label className="capture-label">
             Indicador
-            <select
-              className="capture-select"
-              value={indicatorId}
-              onChange={(e) => setIndicatorId(e.target.value)}
-            >
-              {indicators.map((indicator) => (
-                <option key={indicator.id} value={indicator.id}>
-                  {indicator.name}
-                </option>
-              ))}
-            </select>
+            {filteredIndicators.length === 0 ? (
+              <p className="capture-location__empty">Ningún indicador de este pilar está disponible para capturar.</p>
+            ) : (
+              <select
+                className="capture-select"
+                value={indicatorId}
+                onChange={(e) => setIndicatorId(e.target.value)}
+              >
+                {filteredIndicators.map((indicator) => (
+                  <option key={indicator.id} value={indicator.id}>
+                    {indicator.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
 
           <label className="capture-label">
@@ -175,6 +228,15 @@ export function MeasurementCapturePage() {
             />
           </label>
 
+          {blockedByTime && levelCutoff && (
+            <p className="capture-cutoff-warning">
+              Ya pasó la hora de la reunión de Nivel {selectedIndicator?.level} ({levelCutoff.cutoff_time.slice(0, 5)}
+              ) — se bloqueó la captura del {DAY_OFFSET_LABEL[levelCutoff.evaluated_day_offset]?.toLowerCase()}.
+              Elige una fecha anterior si necesitas ponerte al día, o pide a gerencia que ajuste el horario en
+              Horario de reuniones.
+            </p>
+          )}
+
           {selectedIndicator?.value_type === 'binario' ? (
             <div className="capture-label">
               ¿Se cumplió?
@@ -183,6 +245,7 @@ export function MeasurementCapturePage() {
                   type="button"
                   className={`capture-binary__option capture-binary__option--si ${value === '1' ? 'active' : ''}`}
                   onClick={() => setValue('1')}
+                  disabled={blockedByTime}
                 >
                   Sí
                 </button>
@@ -190,6 +253,7 @@ export function MeasurementCapturePage() {
                   type="button"
                   className={`capture-binary__option capture-binary__option--no ${value === '0' ? 'active' : ''}`}
                   onClick={() => setValue('0')}
+                  disabled={blockedByTime}
                 >
                   No
                 </button>
@@ -207,6 +271,7 @@ export function MeasurementCapturePage() {
                 onChange={(e) => setValue(e.target.value)}
                 required
                 autoFocus
+                disabled={blockedByTime}
               />
             </label>
           )}
@@ -269,8 +334,8 @@ export function MeasurementCapturePage() {
             </div>
           )}
 
-          <button className="capture-submit" type="submit" disabled={saving}>
-            {saving ? 'Guardando…' : 'Guardar medición'}
+          <button className="capture-submit" type="submit" disabled={saving || blockedByTime}>
+            {saving ? 'Guardando…' : blockedByTime ? 'Captura bloqueada' : 'Guardar medición'}
           </button>
         </form>
       )}
