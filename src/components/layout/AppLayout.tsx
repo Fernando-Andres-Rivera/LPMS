@@ -80,6 +80,11 @@ export function AppLayout() {
               Pareto de causas
             </NavLink>
           )}
+          {canManageIndicators && (
+            <NavLink to="/dashboard" className={linkClass}>
+              Dashboard
+            </NavLink>
+          )}
 
           {(isManagement || isConsultora || canOnboardUsers) && (
             <span className="app-sidebar__section">Configuración</span>

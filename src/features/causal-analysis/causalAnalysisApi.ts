@@ -44,6 +44,7 @@ export interface NewCausalAnalysis {
   description: string | null
   root_cause: string
   data: Record<string, unknown>
+  impact_value?: number
   created_by: string
 }
 

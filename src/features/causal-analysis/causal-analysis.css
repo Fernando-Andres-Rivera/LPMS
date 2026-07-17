@@ -91,9 +91,49 @@
   color: var(--color-fail);
 }
 
+.causal-success {
+  color: var(--color-ok);
+}
+
+.causal-form__hint {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
 .causal-form__actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.causal-history-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.causal-history-sort {
+  display: flex;
+  gap: 8px;
+}
+
+.causal-history-sort button {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.causal-history-sort button.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
 }
 
 .causal-history {

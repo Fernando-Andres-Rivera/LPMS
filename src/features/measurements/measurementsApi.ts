@@ -9,6 +9,7 @@ export interface IndicatorWithSiteName extends Indicator {
 export async function fetchDailyIndicators(
   organizationId: string,
   siteId: string | null,
+  axisId: string | null,
 ): Promise<IndicatorWithSiteName[]> {
   let query = supabase
     .from('indicators')
@@ -18,6 +19,7 @@ export async function fetchDailyIndicators(
     .eq('active', true)
 
   if (siteId) query = query.eq('site_id', siteId)
+  if (axisId) query = query.eq('axis_id', axisId)
 
   const { data, error } = await query.order('name')
   if (error) throw error
@@ -93,6 +95,11 @@ export async function saveMeasurement(params: {
   comment: string | null
   siteLocationId: string | null
   capturedBy: string
+  // Solo para indicadores de razón (programado vs real) — value ya trae el
+  // % calculado; estos dos quedan aparte para poder mostrarlos/editarlos
+  // desglosados en la pantalla de captura.
+  plannedValue?: number | null
+  realValue?: number | null
 }) {
   const { error } = await supabase.from('measurements').upsert(
     {
@@ -102,6 +109,8 @@ export async function saveMeasurement(params: {
       comment: params.comment,
       site_location_id: params.siteLocationId,
       captured_by: params.capturedBy,
+      planned_value: params.plannedValue ?? null,
+      real_value: params.realValue ?? null,
     },
     { onConflict: 'indicator_id,period_date' },
   )

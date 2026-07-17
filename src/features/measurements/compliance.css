@@ -1,5 +1,12 @@
-.compliance-site-select {
+.compliance-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 20px;
+}
+
+.compliance-site-select {
+  margin-bottom: 0;
 }
 
 .compliance-table {

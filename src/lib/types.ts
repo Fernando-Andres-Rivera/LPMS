@@ -9,23 +9,29 @@ export type UserRole =
   | 'administrativo'
   | 'operativo'
 
-export type IndicatorFrequency = 'diaria' | 'semanal' | 'quincenal' | 'mensual'
+export type IndicatorFrequency = 'diaria' | 'semanal' | 'quincenal' | 'mensual' | 'trimestral'
 export type ImprovementDirection = 'mayor_mejor' | 'menor_mejor'
 export type PdcaStatus = 'planificar' | 'hacer' | 'verificar' | 'actuar' | 'cerrado'
 export type CausalMethodology = '5_porques' | 'ishikawa' | 'causas_estandar'
 
 /** 'numerico' = valor contra un umbral (lo de siempre). 'binario' = KPI de
  * ejecución tipo "¿se hizo?" — se captura Sí/No, se guarda como 1/0, y el
- * objetivo siempre es "Sí" (no se define un número). */
-export type IndicatorValueType = 'numerico' | 'binario'
+ * objetivo siempre es "Sí" (no se define un número). 'razon' = programado
+ * vs. real (ej. efectivos programados vs. asistieron, capacidad o
+ * disponibilidad de equipos) — la meta VARÍA cada período, así que se
+ * captura junto con el resultado en vez de fijarse de antemano; `value`
+ * guarda el % ya calculado y el objetivo siempre es 100. */
+export type IndicatorValueType = 'numerico' | 'binario' | 'razon'
 
 export const INDICATOR_VALUE_TYPE_LABEL: Record<IndicatorValueType, string> = {
   numerico: 'Numérico (contra un objetivo)',
   binario: 'Cumplimiento (Sí / No)',
+  razon: 'Programado vs Real (%)',
 }
 
 /** Formatea el último valor de un indicador para mostrarlo — "Sí"/"No" para
- * indicadores binarios, número + unidad para el resto. */
+ * indicadores binarios, porcentaje para razón, número + unidad para el
+ * resto. */
 export function formatIndicatorValue(
   value: number | null,
   valueType: IndicatorValueType,
@@ -33,6 +39,7 @@ export function formatIndicatorValue(
 ): string {
   if (value === null) return '—'
   if (valueType === 'binario') return value >= 1 ? 'Sí' : 'No'
+  if (valueType === 'razon') return `${Math.round(value * 10) / 10}%`
   return unit ? `${value} ${unit}` : String(value)
 }
 
@@ -141,6 +148,25 @@ export function isCaptureBlockedByTime(
   const meetingTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
   return now >= meetingTime
 }
+
+export type ExposureFrequency = 'semanal' | 'quincenal' | 'mensual'
+
+/** Periodicidad de exposición/reporte del Dashboard — una sola cadencia por
+ * organización (no por pilar). weekday sigue Date.getDay(): 0=domingo…
+ * 6=sábado; solo aplica a semanal/quincenal. day_of_month solo aplica a
+ * mensual (se recorta al último día si el mes es más corto). */
+export interface ExposureSchedule {
+  id: string
+  organization_id: string
+  frequency: ExposureFrequency
+  weekday: number | null
+  day_of_month: number | null
+  start_date: string
+  exposure_time: string | null // 'HH:MM:SS' o null
+  created_by: string | null
+}
+
+export const WEEKDAY_LABEL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
 /** Nivel 5+ (Instalación y más abajo) de la estructura organizacional, colgado de un sitio. */
 export interface SiteLocation {
@@ -326,6 +352,10 @@ export interface CausalAnalysis {
   description: string | null
   root_cause: string | null
   data: Partial<IshikawaData & FiveWhysData>
+  // Solo tiene sentido para metodología 'causas_estandar': ponderación libre
+  // (costo, horas, unidades afectadas…) para que el Pareto por indicador
+  // ordene por impacto acumulado, no solo por número de ocurrencias.
+  impact_value: number
   created_by: string | null
   created_at: string
 }
@@ -366,6 +396,16 @@ export interface CausalAnalysisIndicatorCause {
   id: string
   causal_analysis_id: string
   indicator_cause_id: string
+}
+
+/** Frase de "causa raíz identificada" ya usada antes para este indicador —
+ * catálogo para que el campo sea un desplegable, no texto libre sin control. */
+export interface IndicatorRootCause {
+  id: string
+  indicator_id: string
+  text: string
+  created_by: string | null
+  created_at: string
 }
 
 export interface ActionPlan {

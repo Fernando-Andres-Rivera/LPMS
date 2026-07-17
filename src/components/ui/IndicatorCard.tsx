@@ -51,6 +51,8 @@ export function IndicatorCard({
       <div className="indicator-card__values">
         {valueType === 'binario' ? (
           <span className="indicator-card__value">{formatIndicatorValue(latestValue, 'binario', '')}</span>
+        ) : valueType === 'razon' ? (
+          <span className="indicator-card__value">{formatIndicatorValue(latestValue, 'razon', '')}</span>
         ) : (
           <>
             <span className="indicator-card__value">

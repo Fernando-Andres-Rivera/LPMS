@@ -17,6 +17,7 @@ import { fetchSites } from '../indicators/indicatorsApi'
 import { fetchSiteLocations } from '../org-structure/orgStructureApi'
 import { fetchLevelCutoffs } from '../org-structure/captureCutoffsApi'
 import { calcularSemaforo } from '../../lib/semaforo'
+import { PeriodPicker } from './PeriodPicker'
 import './capture.css'
 
 function today(): string {
@@ -55,6 +56,8 @@ export function MeasurementCapturePage() {
   const [indicatorId, setIndicatorId] = useState('')
   const [periodDate, setPeriodDate] = useState(today())
   const [value, setValue] = useState('')
+  const [plannedValue, setPlannedValue] = useState('')
+  const [realValue, setRealValue] = useState('')
   const [comment, setComment] = useState('')
   const [siteLocations, setSiteLocations] = useState<SiteLocation[]>([])
   const [siteLocationId, setSiteLocationId] = useState('')
@@ -99,6 +102,12 @@ export function MeasurementCapturePage() {
   const locationOptions = buildLocationOptions(siteLocations)
   const levelCutoff = cutoffs.find((c) => c.level === selectedIndicator?.level)
   const blockedByTime = isCaptureBlockedByTime(levelCutoff ?? null, periodDate, new Date())
+  // Para indicadores de razón, value no se escribe directo — se deriva de
+  // programado/real, igual que se compara siempre contra un objetivo de 100.
+  const razonPercent =
+    plannedValue.trim() && realValue.trim() && Number(plannedValue) > 0
+      ? (Number(realValue) / Number(plannedValue)) * 100
+      : null
 
   function handleAxisChange(nextAxisId: string) {
     setAxisId(nextAxisId)
@@ -112,6 +121,8 @@ export function MeasurementCapturePage() {
     if (!indicatorId || !periodDate) return
     fetchMeasurementForPeriod(indicatorId, periodDate).then((existing) => {
       setValue(existing ? String(existing.value) : '')
+      setPlannedValue(existing?.planned_value != null ? String(existing.planned_value) : '')
+      setRealValue(existing?.real_value != null ? String(existing.real_value) : '')
       setComment(existing?.comment ?? '')
       setSiteLocationId(existing?.site_location_id ?? selectedIndicator?.site_location_id ?? '')
     })
@@ -142,6 +153,11 @@ export function MeasurementCapturePage() {
       setMessage({ type: 'error', text: 'Elige Sí o No antes de guardar.' })
       return
     }
+    if (selectedIndicator.value_type === 'razon' && razonPercent === null) {
+      setMessage({ type: 'error', text: 'Escribe cuántos se programaron y cuántos ocurrieron realmente.' })
+      return
+    }
+    const effectiveValue = selectedIndicator.value_type === 'razon' ? (razonPercent as number) : Number(value)
     setSaving(true)
     setMessage(null)
     setDeviation(null)
@@ -149,10 +165,12 @@ export function MeasurementCapturePage() {
       await saveMeasurement({
         indicatorId,
         periodDate,
-        value: Number(value),
+        value: effectiveValue,
         comment: comment || null,
         siteLocationId: siteLocationId || null,
         capturedBy: profile.id,
+        plannedValue: selectedIndicator.value_type === 'razon' ? Number(plannedValue) : undefined,
+        realValue: selectedIndicator.value_type === 'razon' ? Number(realValue) : undefined,
       })
       setMessage({ type: 'ok', text: 'Medición guardada correctamente.' })
 
@@ -161,7 +179,7 @@ export function MeasurementCapturePage() {
         fetchMeasurementForPeriod(indicatorId, periodDate),
         fetchCurrentTarget(indicatorId, now.getFullYear(), now.getMonth() + 1),
       ])
-      const estado = calcularSemaforo(Number(value), target?.target_value, selectedIndicator.improvement_direction)
+      const estado = calcularSemaforo(effectiveValue, target?.target_value, selectedIndicator.improvement_direction)
       if (saved && (estado === 'riesgo' || estado === 'incumple')) {
         setDeviation({ estado, measurementId: saved.id })
       }
@@ -218,13 +236,11 @@ export function MeasurementCapturePage() {
           </label>
 
           <label className="capture-label">
-            Fecha
-            <input
-              className="capture-date"
-              type="date"
+            {selectedIndicator?.frequency === 'diaria' || !selectedIndicator ? 'Fecha' : 'Período'}
+            <PeriodPicker
+              frequency={selectedIndicator?.frequency ?? 'diaria'}
               value={periodDate}
-              max={today()}
-              onChange={(e) => setPeriodDate(e.target.value)}
+              onChange={setPeriodDate}
             />
           </label>
 
@@ -258,6 +274,45 @@ export function MeasurementCapturePage() {
                   No
                 </button>
               </div>
+            </div>
+          ) : selectedIndicator?.value_type === 'razon' ? (
+            <div className="capture-label">
+              Programado vs Real {selectedIndicator.unit && `(${selectedIndicator.unit})`}
+              <div className="capture-razon">
+                <label className="capture-razon__field">
+                  Programado
+                  <input
+                    className="capture-value"
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    min={0}
+                    value={plannedValue}
+                    onChange={(e) => setPlannedValue(e.target.value)}
+                    required
+                    autoFocus
+                    disabled={blockedByTime}
+                  />
+                </label>
+                <label className="capture-razon__field">
+                  Real
+                  <input
+                    className="capture-value"
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    min={0}
+                    value={realValue}
+                    onChange={(e) => setRealValue(e.target.value)}
+                    required
+                    disabled={blockedByTime}
+                  />
+                </label>
+              </div>
+              <span className="capture-razon__hint">
+                Cumplimiento:{' '}
+                {razonPercent !== null ? `${Math.round(razonPercent * 10) / 10}%` : 'escribe ambos valores'}
+              </span>
             </div>
           ) : (
             <label className="capture-label">

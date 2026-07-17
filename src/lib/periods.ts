@@ -6,25 +6,25 @@ export interface PeriodBucket {
   endDate: string
 }
 
-const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+export const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
-function toIso(d: Date): string {
+export function toIso(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-function startOfWeek(d: Date): Date {
+export function startOfWeek(d: Date): Date {
   const day = d.getDay() // 0 = domingo
   const diff = (day === 0 ? -6 : 1) - day // retrocede al lunes
   const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff)
   return monday
 }
 
-function quincenaStart(d: Date): Date {
+export function quincenaStart(d: Date): Date {
   const day = d.getDate() <= 15 ? 1 : 16
   return new Date(d.getFullYear(), d.getMonth(), day)
 }
 
-function quincenaEnd(start: Date): Date {
+export function quincenaEnd(start: Date): Date {
   if (start.getDate() === 1) return new Date(start.getFullYear(), start.getMonth(), 15)
   return new Date(start.getFullYear(), start.getMonth() + 1, 0)
 }

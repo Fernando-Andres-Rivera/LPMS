@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { fetchIndicatorById } from '../indicators/indicatorsApi'
@@ -33,6 +33,21 @@ function linesToList(text: string): string[] {
     .filter(Boolean)
 }
 
+type HistorySortField = 'reporte' | 'registro' | null
+type HistorySortDir = 'asc' | 'desc'
+
+// null cuando el análisis no está ligado a una medición — se empujan al
+// final sin importar la dirección, en vez de fingir que su fecha de
+// reporte es la de registro.
+function reportDate(analysis: CausalAnalysisWithAuthor): number | null {
+  if (!analysis.measurements?.period_date) return null
+  return new Date(analysis.measurements.period_date + 'T00:00:00').getTime()
+}
+
+function registeredDate(analysis: CausalAnalysisWithAuthor): number {
+  return new Date(analysis.created_at).getTime()
+}
+
 export function CausalAnalysisPage() {
   const { indicatorId } = useParams<{ indicatorId: string }>()
   const [searchParams] = useSearchParams()
@@ -42,7 +57,22 @@ export function CausalAnalysisPage() {
   const [indicator, setIndicator] = useState<Indicator | null>(null)
   const [requiresRigor, setRequiresRigor] = useState(false)
   const [history, setHistory] = useState<CausalAnalysisWithAuthor[]>([])
+  const [historySortField, setHistorySortField] = useState<HistorySortField>(null)
+  const [historySortDir, setHistorySortDir] = useState<HistorySortDir>('asc')
   const [loading, setLoading] = useState(true)
+
+  // Cada botón cicla sus propios 3 estados (↑ → ↓ → desactivado); activar
+  // uno desactiva al otro, porque solo un campo puede mandar el orden.
+  function cycleHistorySort(field: 'reporte' | 'registro') {
+    if (historySortField !== field) {
+      setHistorySortField(field)
+      setHistorySortDir('asc')
+    } else if (historySortDir === 'asc') {
+      setHistorySortDir('desc')
+    } else {
+      setHistorySortField(null)
+    }
+  }
 
   const [methodology, setMethodology] = useState<CausalMethodology>('ishikawa')
   const [categoryText, setCategoryText] = useState<Record<IshikawaCategoryKey, string>>({
@@ -85,9 +115,13 @@ export function CausalAnalysisPage() {
     }
   }
 
+  // Refresco silencioso tras guardar un análisis: a propósito NO toca
+  // `loading` (eso desmontaría toda la página, incluida esta misma pestaña,
+  // borrando el mensaje de confirmación y el formulario justo reiniciado —
+  // dando la impresión de que el guardado "no quedó" y llevando a
+  // reintentar con la misma causa).
   async function loadAll() {
     if (!indicatorId) return
-    setLoading(true)
     const [indicatorData, analyses, causeHistory] = await Promise.all([
       fetchIndicatorById(indicatorId),
       fetchCausalAnalyses(indicatorId),
@@ -102,7 +136,6 @@ export function CausalAnalysisPage() {
       const target = await fetchCurrentTarget(indicatorId, now.getFullYear(), now.getMonth() + 1)
       setRequiresRigor(await checkRequiresRigor(indicatorData, target))
     }
-    setLoading(false)
   }
 
   useEffect(() => {
@@ -208,6 +241,20 @@ export function CausalAnalysisPage() {
     }
   }
 
+  const sortedHistory = useMemo(() => {
+    if (!historySortField) return history
+    const dateOf = historySortField === 'reporte' ? reportDate : registeredDate
+    return [...history].sort((a, b) => {
+      const da = dateOf(a)
+      const db = dateOf(b)
+      // Sin fecha de reporte: siempre al final, sin importar la dirección.
+      if (da === null && db === null) return 0
+      if (da === null) return 1
+      if (db === null) return -1
+      return historySortDir === 'desc' ? db - da : da - db
+    })
+  }, [history, historySortField, historySortDir])
+
   if (loading) return <p>Cargando análisis causal…</p>
   if (!indicator) return <p>Indicador no encontrado.</p>
 
@@ -215,7 +262,8 @@ export function CausalAnalysisPage() {
     <div className="causal-page">
       <h1>Análisis causal</h1>
       <p className="page-subtitle">
-        {indicator.name} · <Link to={`/tablero/${indicator.id}`}>Volver al tablero</Link> ·{' '}
+        {indicator.name} · <Link to="/captura">Seguir capturando mediciones</Link> ·{' '}
+        <Link to={`/tablero/${indicator.id}`}>Volver al tablero</Link> ·{' '}
         <Link to={`/pareto?indicator=${indicator.id}`}>Ver Pareto de este indicador</Link>
       </p>
 
@@ -326,22 +374,55 @@ export function CausalAnalysisPage() {
       </form>
       )}
 
-      <h2>Historial</h2>
+      <div className="causal-history-header">
+        <h2>Historial</h2>
+        {history.length > 0 && (
+          <div className="causal-history-sort">
+            <button
+              type="button"
+              className={historySortField === 'reporte' ? 'active' : ''}
+              onClick={() => cycleHistorySort('reporte')}
+            >
+              Fecha del reporte{historySortField === 'reporte' && (historySortDir === 'asc' ? ' ↑' : ' ↓')}
+            </button>
+            <button
+              type="button"
+              className={historySortField === 'registro' ? 'active' : ''}
+              onClick={() => cycleHistorySort('registro')}
+            >
+              Fecha de registro{historySortField === 'registro' && (historySortDir === 'asc' ? ' ↑' : ' ↓')}
+            </button>
+          </div>
+        )}
+      </div>
       {history.length === 0 && <p>Todavía no hay análisis registrados para este indicador.</p>}
       <div className="causal-history">
-        {history.map((analysis) => (
+        {sortedHistory.map((analysis) => (
           <details key={analysis.id} className="causal-history-item">
             <summary>
               <span className="causal-history-methodology">{CAUSAL_METHODOLOGY_LABEL[analysis.methodology]}</span>
               <span className="causal-history-root">{analysis.root_cause}</span>
               <span className="causal-history-meta">
-                {analysis.profiles?.full_name ?? 'Usuario'} · {new Date(analysis.created_at).toLocaleDateString('es-CO')}
+                {analysis.measurements?.period_date && (
+                  <>
+                    Reporte del{' '}
+                    {new Date(analysis.measurements.period_date + 'T00:00:00').toLocaleDateString('es-CO')} ·{' '}
+                  </>
+                )}
+                {analysis.profiles?.full_name ?? 'Usuario'} · Registrado el{' '}
+                {new Date(analysis.created_at).toLocaleDateString('es-CO')}
               </span>
             </summary>
             {analysis.description && <p>{analysis.description}</p>}
-            {analysis.methodology === 'causas_estandar' && indicatorCauseByAnalysis.has(analysis.id) && (
+            {analysis.methodology === 'causas_estandar' && (
               <p className="causal-history-detail">
-                <strong>Causa:</strong> {indicatorCauseByAnalysis.get(analysis.id)}
+                {indicatorCauseByAnalysis.has(analysis.id) && (
+                  <>
+                    <strong>Causa:</strong> {indicatorCauseByAnalysis.get(analysis.id)}
+                    {' · '}
+                  </>
+                )}
+                <strong>Valor:</strong> {analysis.impact_value}
               </p>
             )}
             {analysis.methodology === 'ishikawa' && analysis.data.categories && (

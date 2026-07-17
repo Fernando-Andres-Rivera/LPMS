@@ -34,7 +34,7 @@ import './indicators.css'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
-const FRECUENCIAS: IndicatorFrequency[] = ['diaria', 'semanal', 'quincenal', 'mensual']
+const FRECUENCIAS: IndicatorFrequency[] = ['diaria', 'semanal', 'quincenal', 'mensual', 'trimestral']
 const DIRECCIONES: { value: ImprovementDirection; label: string }[] = [
   { value: 'mayor_mejor', label: 'Mayor es mejor' },
   { value: 'menor_mejor', label: 'Menor es mejor' },
@@ -65,7 +65,7 @@ const BINARY_AGGREGATION_HELP: Record<AggregationMethod, string> = {
   suma: '',
   promedio: '',
 }
-const VALUE_TYPES: IndicatorValueType[] = ['numerico', 'binario']
+const VALUE_TYPES: IndicatorValueType[] = ['numerico', 'binario', 'razon']
 
 // Cómo nombrar el objetivo según la frecuencia de captura del indicador —
 // un objetivo "diario" no se lee igual que uno "mensual", aunque ambos se
@@ -75,12 +75,14 @@ const FRECUENCIA_ADJETIVO: Record<IndicatorFrequency, string> = {
   semanal: 'semanal',
   quincenal: 'quincenal',
   mensual: 'mensual',
+  trimestral: 'trimestral',
 }
 const FRECUENCIA_SUSTANTIVO: Record<IndicatorFrequency, string> = {
   diaria: 'día',
   semanal: 'semana',
   quincenal: 'quincena',
   mensual: 'mes',
+  trimestral: 'trimestre',
 }
 
 export function IndicatorFormPage() {
@@ -184,11 +186,15 @@ export function IndicatorFormPage() {
       ...f,
       value_type: nextType,
       unit: nextType === 'binario' ? 'Sí/No' : f.unit === 'Sí/No' ? '' : f.unit,
-      improvement_direction: nextType === 'binario' ? 'mayor_mejor' : f.improvement_direction,
+      // razón siempre mide "real sobre programado" — más real es mejor,
+      // sin importar qué se esté contando.
+      improvement_direction: nextType === 'binario' || nextType === 'razon' ? 'mayor_mejor' : f.improvement_direction,
       aggregation_method:
         nextType === 'binario' && !BINARY_AGGREGATION_METHODS.includes(f.aggregation_method)
           ? 'ultimo'
-          : f.aggregation_method,
+          : nextType === 'razon'
+            ? 'ultimo'
+            : f.aggregation_method,
     }))
   }
 
@@ -212,9 +218,17 @@ export function IndicatorFormPage() {
 
       // El objetivo de un indicador binario no es un número que el usuario
       // escriba: es "Sí" o "No" según el sentido de mejora elegido arriba
-      // (mayor_mejor = la meta es Sí, menor_mejor = la meta es No).
+      // (mayor_mejor = la meta es Sí, menor_mejor = la meta es No). El de
+      // uno de razón tampoco: siempre es 100% (real alcanzó lo programado),
+      // se recalcula solo con lo que se capture cada período.
       const effectiveTarget =
-        form.value_type === 'binario' ? (form.improvement_direction === 'mayor_mejor' ? '1' : '0') : targetValue
+        form.value_type === 'binario'
+          ? form.improvement_direction === 'mayor_mejor'
+            ? '1'
+            : '0'
+          : form.value_type === 'razon'
+            ? '100'
+            : targetValue
       if (effectiveTarget.trim()) {
         await saveAnnualTarget({
           indicatorId,
@@ -334,9 +348,9 @@ export function IndicatorFormPage() {
         </div>
 
         <div className="indicator-form__row">
-          {form.value_type === 'numerico' && (
+          {(form.value_type === 'numerico' || form.value_type === 'razon') && (
             <label>
-              Unidad de medida
+              Unidad de medida {form.value_type === 'razon' && '(qué se cuenta, ej. personas, equipos)'}
               {organizationId && profile && (
                 <UnitPicker
                   organizationId={organizationId}
@@ -359,19 +373,21 @@ export function IndicatorFormPage() {
             </select>
           </label>
 
-          <label>
-            {form.value_type === 'binario' ? 'Objetivo' : 'Sentido de mejora'}
-            <select
-              value={form.improvement_direction}
-              onChange={(e) => update('improvement_direction', e.target.value as ImprovementDirection)}
-            >
-              {(form.value_type === 'binario' ? BINARY_DIRECCIONES : DIRECCIONES).map((dir) => (
-                <option key={dir.value} value={dir.value}>
-                  {dir.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {form.value_type !== 'razon' && (
+            <label>
+              {form.value_type === 'binario' ? 'Objetivo' : 'Sentido de mejora'}
+              <select
+                value={form.improvement_direction}
+                onChange={(e) => update('improvement_direction', e.target.value as ImprovementDirection)}
+              >
+                {(form.value_type === 'binario' ? BINARY_DIRECCIONES : DIRECCIONES).map((dir) => (
+                  <option key={dir.value} value={dir.value}>
+                    {dir.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
 
         <label className="indicator-form__parent-option">
@@ -383,32 +399,42 @@ export function IndicatorFormPage() {
           Este indicador se calcula automáticamente a partir de sus indicadores hijo (no se captura a mano)
         </label>
 
-        <div className="indicator-form__target">
-          <label>
-            {form.is_calculated
-              ? 'Cómo combinar los indicadores hijo en un período'
-              : form.value_type === 'binario'
-                ? 'Cómo resolver varios registros Sí/No en un período'
-                : 'Cómo agregar varias mediciones en un período (semana, mes…)'}
-            <select
-              value={form.aggregation_method}
-              onChange={(e) => update('aggregation_method', e.target.value as AggregationMethod)}
-            >
-              {(form.value_type === 'binario' ? BINARY_AGGREGATION_METHODS : AGGREGATION_METHODS).map((method) => (
-                <option key={method} value={method}>
-                  {form.value_type === 'binario' ? BINARY_AGGREGATION_LABEL[method] : AGGREGATION_METHOD_LABEL[method]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <p className="indicator-form__target-rule">
-            {form.is_calculated
-              ? 'Cada vez que se muestre este indicador, se combinan (con esta regla) los valores de ese mismo período de los indicadores que lo tengan marcado como padre — no hace falta capturar un valor propio.'
-              : form.value_type === 'binario'
-                ? BINARY_AGGREGATION_HELP[form.aggregation_method]
-                : AGGREGATION_METHOD_HELP[form.aggregation_method]}
-          </p>
-        </div>
+        {form.value_type === 'razon' ? (
+          <div className="indicator-form__target">
+            <span className="indicator-form__target-label">Cómo resolver varios registros en un período</span>
+            <p className="indicator-form__target-rule">
+              Se usa el valor más reciente capturado del período — un indicador de razón no se presta a
+              sumar/promediar programado y real de días distintos.
+            </p>
+          </div>
+        ) : (
+          <div className="indicator-form__target">
+            <label>
+              {form.is_calculated
+                ? 'Cómo combinar los indicadores hijo en un período'
+                : form.value_type === 'binario'
+                  ? 'Cómo resolver varios registros Sí/No en un período'
+                  : 'Cómo agregar varias mediciones en un período (semana, mes…)'}
+              <select
+                value={form.aggregation_method}
+                onChange={(e) => update('aggregation_method', e.target.value as AggregationMethod)}
+              >
+                {(form.value_type === 'binario' ? BINARY_AGGREGATION_METHODS : AGGREGATION_METHODS).map((method) => (
+                  <option key={method} value={method}>
+                    {form.value_type === 'binario' ? BINARY_AGGREGATION_LABEL[method] : AGGREGATION_METHOD_LABEL[method]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="indicator-form__target-rule">
+              {form.is_calculated
+                ? 'Cada vez que se muestre este indicador, se combinan (con esta regla) los valores de ese mismo período de los indicadores que lo tengan marcado como padre — no hace falta capturar un valor propio.'
+                : form.value_type === 'binario'
+                  ? BINARY_AGGREGATION_HELP[form.aggregation_method]
+                  : AGGREGATION_METHOD_HELP[form.aggregation_method]}
+            </p>
+          </div>
+        )}
 
         {form.value_type === 'binario' ? (
           <div className="indicator-form__target">
@@ -419,6 +445,16 @@ export function IndicatorFormPage() {
               {form.improvement_direction === 'mayor_mejor' ? 'Sí' : 'No'}{' '}
               <Semaforo estado="cumple" size="sm" />, o{' '}
               {form.improvement_direction === 'mayor_mejor' ? 'No' : 'Sí'} <Semaforo estado="incumple" size="sm" />.
+            </p>
+          </div>
+        ) : form.value_type === 'razon' ? (
+          <div className="indicator-form__target">
+            <span className="indicator-form__target-label">Objetivo</span>
+            <p className="indicator-form__target-rule">
+              La meta siempre es <strong>100%</strong> (real sobre programado) — no hay un número que definir. Cada
+              captura pide cuántos se programaron y cuántos ocurrieron realmente (ej. 7 programados, 6 asistieron =
+              85.7%); si el % alcanza o supera 100 se muestra <Semaforo estado="cumple" size="sm" />, si no,{' '}
+              <Semaforo estado="incumple" size="sm" />.
             </p>
           </div>
         ) : (

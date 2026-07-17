@@ -5,6 +5,7 @@ import { RequireRole } from './features/auth/RequireRole'
 import { LoginPage } from './features/auth/LoginPage'
 import { AppLayout } from './components/layout/AppLayout'
 import { AxesOverviewPage } from './features/dashboard/AxesOverviewPage'
+import { GeneralDashboardPage } from './features/dashboard/GeneralDashboardPage'
 import { AxisDashboardPage } from './features/dashboard/AxisDashboardPage'
 import { LevelDashboardPage } from './features/dashboard/LevelDashboardPage'
 import { GlobalExceptionsPage } from './features/dashboard/GlobalExceptionsPage'
@@ -52,6 +53,7 @@ function App() {
                 <Route path="indicadores/:id/editar" element={<IndicatorFormPage />} />
                 <Route path="cumplimiento-captura" element={<CaptureCompliancePage />} />
                 <Route path="pareto" element={<ParetoPage />} />
+                <Route path="dashboard" element={<GeneralDashboardPage />} />
               </Route>
 
               <Route element={<RequireRole allowed={[...MANAGEMENT_ROLES]} />}>

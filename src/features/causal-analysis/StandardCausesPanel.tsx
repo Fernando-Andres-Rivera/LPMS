@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { createCausalAnalysis } from './causalAnalysisApi'
 import { IndicatorCausePicker } from './IndicatorCausePicker'
+import { RootCausePicker } from './RootCausePicker'
 import {
   computeIndicatorCauseParetoForParent,
   fetchIndicatorCauseTags,
@@ -31,12 +32,20 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
 
   const [selectedCause, setSelectedCause] = useState<IndicatorCause | null>(null)
   const [rootCause, setRootCause] = useState('')
+  const [impactValue, setImpactValue] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [savedMessage, setSavedMessage] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const [path, setPath] = useState<IndicatorCause[]>([])
+  // Cambia después de cada guardado exitoso para forzar el remount de
+  // RootCausePicker: su cuadro de texto libre ("Otra, especificar") guarda
+  // lo escrito en estado LOCAL, y limpiar rootCause aquí no lo toca — sin
+  // este remount, el texto de la causa anterior queda visualmente y se
+  // reenvía tal cual si el usuario vuelve a guardar sin notarlo.
+  const [rootCauseResetKey, setRootCauseResetKey] = useState(0)
 
   async function fetchTree(): Promise<{ causes: IndicatorCause[]; tags: IndicatorCauseTag[] }> {
     const [causesData, tagsData] = await Promise.all([
@@ -76,10 +85,12 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
     e.preventDefault()
     if (!rootCause.trim() || !selectedCause) {
       setError('Describe la causa raíz y elige un nodo del árbol de causas antes de guardar.')
+      setSavedMessage(null)
       return
     }
     setSaving(true)
     setError(null)
+    setSavedMessage(null)
     try {
       const newAnalysisId = await createCausalAnalysis({
         organization_id: indicator.organization_id,
@@ -89,13 +100,17 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
         description: description || null,
         root_cause: rootCause,
         data: {},
+        impact_value: impactValue.trim() ? Number(impactValue) : undefined,
         created_by: createdBy,
       })
       await tagCausalAnalysisWithIndicatorCause(newAnalysisId, selectedCause.id)
 
       setRootCause('')
+      setImpactValue('')
       setDescription('')
       setSelectedCause(null)
+      setRootCauseResetKey((k) => k + 1)
+      setSavedMessage('Causa registrada. Si el incumplimiento tuvo más de una causa, agrégala aquí mismo: elige otro nodo del árbol y describe la siguiente causa raíz.')
       await reloadTree()
       onSaved()
     } catch (err) {
@@ -106,18 +121,19 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
   }
 
   const currentParentId = path.length ? path[path.length - 1].id : null
-  const { rows, generalCount } = useMemo(
+  const { rows, generalCount, generalImpact } = useMemo(
     () => computeIndicatorCauseParetoForParent(causes, tags, currentParentId),
     [causes, tags, currentParentId],
   )
 
-  const totalCount = rows.reduce((sum, r) => sum + r.count, 0) + generalCount
+  const totalImpact = rows.reduce((sum, r) => sum + r.impactTotal, 0) + generalImpact
   const chartData = rows.map((row, index) => {
-    const cumulativeCount = rows.slice(0, index + 1).reduce((sum, r) => sum + r.count, 0)
+    const cumulativeImpact = rows.slice(0, index + 1).reduce((sum, r) => sum + r.impactTotal, 0)
     return {
       name: row.cause.name,
       count: row.count,
-      cumulativePercent: totalCount ? Math.round((cumulativeCount / totalCount) * 1000) / 10 : 0,
+      impactTotal: row.impactTotal,
+      cumulativePercent: totalImpact ? Math.round((cumulativeImpact / totalImpact) * 1000) / 10 : 0,
       causeId: row.cause.id,
     }
   })
@@ -154,7 +170,29 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
 
         <label>
           Causa raíz identificada
-          <input value={rootCause} onChange={(e) => setRootCause(e.target.value)} required />
+          <RootCausePicker
+            key={rootCauseResetKey}
+            indicatorId={indicator.id}
+            createdBy={createdBy}
+            value={rootCause}
+            onChange={setRootCause}
+          />
+        </label>
+
+        <label>
+          Valor de esta causa (opcional)
+          <input
+            type="number"
+            step="any"
+            min={0}
+            placeholder="Ej. costo, horas perdidas, unidades afectadas…"
+            value={impactValue}
+            onChange={(e) => setImpactValue(e.target.value)}
+          />
+          <span className="causal-form__hint">
+            Si no lo llenas, cuenta como 1 en el Pareto — úsalo para ponderar hallazgos que no pesan lo mismo (ej.
+            varias novedades de un mismo gemba walk).
+          </span>
         </label>
 
         <label>
@@ -163,6 +201,7 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
         </label>
 
         {error && <p className="causal-error">{error}</p>}
+        {savedMessage && <p className="causal-success">{savedMessage}</p>}
 
         <div className="causal-form__actions">
           <button type="submit" className="button-primary" disabled={saving}>
@@ -173,8 +212,9 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
 
       <h2>Pareto de causas de este indicador</h2>
       <p className="page-subtitle">
-        El nivel más alto muestra el nodo raíz que más se repite; entra a uno para ver el Pareto de sus hijos —
-        ej. la máquina que más para, y al entrar, los componentes que más fallan de esa máquina en específico.
+        El nivel más alto muestra el nodo raíz con más valor acumulado (no solo más casos); entra a uno para ver el
+        Pareto de sus hijos — ej. la máquina que más para, y al entrar, los componentes que más fallan de esa
+        máquina en específico.
       </p>
 
       <div className="pareto-breadcrumb">
@@ -193,7 +233,7 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
 
       {loading ? (
         <p>Cargando…</p>
-      ) : totalCount === 0 ? (
+      ) : totalImpact === 0 ? (
         <p>Todavía no hay ocurrencias registradas en este nivel del árbol.</p>
       ) : (
         <>
@@ -211,7 +251,7 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
                 <YAxis yAxisId="left" allowDecimals={false} />
                 <YAxis yAxisId="right" orientation="right" domain={[0, 100]} unit="%" />
                 <Tooltip />
-                <Bar yAxisId="left" dataKey="count" fill="var(--color-primary)" name="Casos" cursor="pointer" />
+                <Bar yAxisId="left" dataKey="impactTotal" fill="var(--color-primary)" name="Valor" cursor="pointer" />
                 <Line
                   yAxisId="right"
                   type="monotone"
@@ -229,6 +269,7 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
               <thead>
                 <tr>
                   <th>Causa</th>
+                  <th>Valor</th>
                   <th>Casos</th>
                   <th>%</th>
                   <th>% acumulado</th>
@@ -239,8 +280,9 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
                 {chartData.map((row) => (
                   <tr key={row.causeId}>
                     <td>{row.name}</td>
+                    <td>{row.impactTotal}</td>
                     <td>{row.count}</td>
-                    <td>{totalCount ? Math.round((row.count / totalCount) * 1000) / 10 : 0}%</td>
+                    <td>{totalImpact ? Math.round((row.impactTotal / totalImpact) * 1000) / 10 : 0}%</td>
                     <td>{row.cumulativePercent}%</td>
                     <td>
                       <button type="button" onClick={() => drillInto(row.causeId)}>
@@ -252,8 +294,9 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
                 {generalCount > 0 && (
                   <tr>
                     <td>General (sin desglosar)</td>
+                    <td>{generalImpact}</td>
                     <td>{generalCount}</td>
-                    <td>{totalCount ? Math.round((generalCount / totalCount) * 1000) / 10 : 0}%</td>
+                    <td>{totalImpact ? Math.round((generalImpact / totalImpact) * 1000) / 10 : 0}%</td>
                     <td>100%</td>
                     <td></td>
                   </tr>

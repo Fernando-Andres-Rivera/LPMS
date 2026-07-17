@@ -102,7 +102,9 @@ export function GlobalExceptionsPage() {
                 <td>
                   {status.value_type === 'binario'
                     ? 'Sí'
-                    : `${status.target_value ?? '—'} ${status.unit}`}
+                    : status.value_type === 'razon'
+                      ? '100%'
+                      : `${status.target_value ?? '—'} ${status.unit}`}
                 </td>
                 <td>{status.responsible_name ?? 'Sin asignar'}</td>
                 <td>

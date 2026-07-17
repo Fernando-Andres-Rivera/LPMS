@@ -17,7 +17,7 @@ import {
   fetchActionPlansForIndicator,
   type ActionPlanWithNames,
 } from '../action-plans/actionPlansApi'
-import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL, formatIndicatorValue } from '../../lib/types'
+import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL, CAUSAL_METHODOLOGY_LABEL, formatIndicatorValue } from '../../lib/types'
 import type { PdcaStatus, PeriodType, Profile, Target } from '../../lib/types'
 import './indicator-board.css'
 
@@ -197,12 +197,14 @@ export function IndicatorBoardPage() {
         <div className="board-result__values">
           {indicator.value_type === 'binario' ? (
             <span className="board-result__value">{formatIndicatorValue(latestValue, 'binario', '')}</span>
+          ) : indicator.value_type === 'razon' ? (
+            <span className="board-result__value">{formatIndicatorValue(latestValue, 'razon', '')}</span>
           ) : (
             <span className="board-result__value">
               {latestValue ?? '—'} <small>{indicator.unit}</small>
             </span>
           )}
-          {indicator.value_type !== 'binario' && (
+          {indicator.value_type === 'numerico' && (
             <span className="board-result__target">
               Objetivo: {target?.target_value ?? '—'} {indicator.unit}
             </span>
@@ -218,7 +220,7 @@ export function IndicatorBoardPage() {
           <div className="board-cause">
             <p className="board-cause__root">{latestCause.root_cause}</p>
             <p className="board-cause__meta">
-              {latestCause.methodology === 'ishikawa' ? 'Ishikawa' : '5 Porqués'} · {latestCause.profiles?.full_name} ·{' '}
+              {CAUSAL_METHODOLOGY_LABEL[latestCause.methodology]} · {latestCause.profiles?.full_name} ·{' '}
               {new Date(latestCause.created_at).toLocaleDateString('es-CO')}
               {eventLocationName && <> · 📍 {eventLocationName}</>}
             </p>
