@@ -102,6 +102,49 @@ export async function fetchIndicatorStatuses(organizationId: string): Promise<In
   return (data ?? []) as IndicatorStatus[]
 }
 
+/**
+ * Igual que fetchIndicatorStatuses, pero latest_value/latest_period_date se
+ * calculan a partir de las mediciones DENTRO del rango dado (agregadas según
+ * la regla de cada indicador), en vez de "la última medición sin importar
+ * cuándo" — y target_value usa el objetivo vigente al final del rango. Así
+ * el semáforo de estas pantallas responde "cómo íbamos en ese período", no
+ * siempre el estado de hoy. Si un indicador no tiene mediciones dentro del
+ * rango, queda en sin_datos aunque sí tenga un valor más reciente fuera de él.
+ */
+export async function fetchIndicatorStatusesInRange(
+  organizationId: string,
+  range: { from: string; to: string },
+): Promise<IndicatorStatus[]> {
+  const statuses = await fetchIndicatorStatuses(organizationId)
+  if (statuses.length === 0) return []
+
+  const ids = statuses.map((s) => s.id)
+  const [measurementRows, targetMap] = await Promise.all([
+    fetchMeasurementsInRange(ids, range.from, range.to),
+    fetchCurrentTargetsForIndicators(ids, Number(range.to.slice(0, 4)), Number(range.to.slice(5, 7))),
+  ])
+
+  const measByIndicator = new Map<string, { period_date: string; value: number }[]>()
+  for (const m of measurementRows) {
+    const list = measByIndicator.get(m.indicator_id) ?? []
+    list.push({ period_date: m.period_date, value: m.value })
+    measByIndicator.set(m.indicator_id, list)
+  }
+
+  return statuses.map((status) => {
+    const rows = measByIndicator.get(status.id) ?? []
+    const latestPeriodDate = rows.length
+      ? rows.reduce((max, r) => (r.period_date > max ? r.period_date : max), rows[0].period_date)
+      : null
+    return {
+      ...status,
+      latest_value: aggregateValues(rows, status.aggregation_method),
+      latest_period_date: latestPeriodDate,
+      target_value: targetMap.get(status.id) ?? status.target_value,
+    }
+  })
+}
+
 /** Todas las mediciones de varios indicadores dentro de un rango, en una sola
  * consulta — para agregar por período en el cliente sin un round-trip por indicador. */
 export async function fetchMeasurementsInRange(

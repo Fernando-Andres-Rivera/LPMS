@@ -3,8 +3,10 @@ import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { PeriodTypeSelector } from '../../components/ui/PeriodTypeSelector'
+import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo } from '../../lib/semaforo'
-import { aggregateValues, buildPeriodBuckets } from '../../lib/periods'
+import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
+import { defaultRange } from '../../lib/dateRange'
 import {
   fetchAxisById,
   fetchCurrentTargetsForIndicators,
@@ -53,6 +55,7 @@ export function AxisDashboardPage() {
   const { organizationId } = useAuth()
   const [axis, setAxis] = useState<Axis | null>(null)
   const [periodType, setPeriodType] = useState<PeriodType>('dia')
+  const [range, setRange] = useState(defaultRange())
   const [rows, setRows] = useState<IndicatorRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -70,15 +73,16 @@ export function AxisDashboardPage() {
       if (cancelled) return
       setAxis(axisData)
 
-      const now = new Date()
-      const buckets = buildPeriodBuckets(periodType, now)
+      const from = new Date(`${range.from}T00:00:00`)
+      const to = new Date(`${range.to}T00:00:00`)
+      const buckets = buildPeriodBucketsInRange(periodType, from, to)
       const ids = indicators.map((i) => i.id)
 
       // 4 consultas en total (mediciones del rango, objetivos, causas, conteo de
       // planes) sin importar cuántos indicadores haya — antes eran ~5 por indicador.
       const [measRows, targetMap, causeMap, planCountMap] = await Promise.all([
-        fetchMeasurementsInRange(ids, buckets[0].startDate, buckets[buckets.length - 1].endDate),
-        fetchCurrentTargetsForIndicators(ids, now.getFullYear(), now.getMonth() + 1),
+        fetchMeasurementsInRange(ids, range.from, range.to),
+        fetchCurrentTargetsForIndicators(ids, to.getFullYear(), to.getMonth() + 1),
         fetchLatestRootCauses(ids),
         fetchActionPlanCounts(ids),
       ])
@@ -121,7 +125,7 @@ export function AxisDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [organizationId, axisId, periodType])
+  }, [organizationId, axisId, periodType, range])
 
   if (loading) return <p>Cargando indicadores…</p>
 
@@ -134,6 +138,7 @@ export function AxisDashboardPage() {
       </p>
 
       <div className="period-row">
+        <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
         <PeriodTypeSelector value={periodType} onChange={setPeriodType} />
       </div>
 

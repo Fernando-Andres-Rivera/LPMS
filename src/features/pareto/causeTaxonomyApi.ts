@@ -62,8 +62,7 @@ export interface TaggedCause {
  */
 export async function fetchTaggedCauses(params: {
   organizationId: string
-  year: number
-  month: number
+  range: { from: string; to: string }
   axisId: string | null
   indicatorId: string | null
   siteIds: string[] | null
@@ -87,16 +86,13 @@ export async function fetchTaggedCauses(params: {
   const indicatorIds = indicatorRows.map((row) => row.id)
   const defaultLocationByIndicator = new Map(indicatorRows.map((row) => [row.id, row.site_location_id]))
 
-  const startDate = new Date(Date.UTC(params.year, params.month - 1, 1)).toISOString()
-  const endDate = new Date(Date.UTC(params.year, params.month, 1)).toISOString()
-
   const { data: analyses, error: analysesError } = await supabase
     .from('causal_analyses')
     .select('id, indicator_id, measurements(site_location_id)')
     .eq('organization_id', params.organizationId)
     .in('indicator_id', indicatorIds)
-    .gte('created_at', startDate)
-    .lt('created_at', endDate)
+    .gte('created_at', params.range.from)
+    .lte('created_at', `${params.range.to}T23:59:59`)
 
   if (analysesError) throw analysesError
 

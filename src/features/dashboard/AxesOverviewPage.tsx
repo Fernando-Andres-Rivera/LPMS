@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Legend, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { Semaforo } from '../../components/ui/Semaforo'
+import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
-import { fetchActiveAxes, fetchIndicatorStatuses, type IndicatorStatus } from './dashboardApi'
+import { defaultRange } from '../../lib/dateRange'
+import { fetchActiveAxes, fetchIndicatorStatusesInRange, type IndicatorStatus } from './dashboardApi'
 import type { Axis, SemaforoEstado } from '../../lib/types'
 import './dashboard.css'
 
@@ -28,6 +30,7 @@ interface AxisBreakdown {
 export function AxesOverviewPage() {
   const { organizationId } = useAuth()
   const [axes, setAxes] = useState<Axis[]>([])
+  const [range, setRange] = useState(defaultRange())
   const [evaluated, setEvaluated] = useState<EvaluatedIndicator[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -36,10 +39,15 @@ export function AxesOverviewPage() {
     const orgId = organizationId
     let cancelled = false
 
-    // Una sola consulta a la vista indicator_status resuelve todo el
-    // resumen (último valor + objetivo por indicador), en vez de 2+
-    // consultas por indicador como antes.
-    Promise.all([fetchActiveAxes(orgId), fetchIndicatorStatuses(orgId)]).then(([axesData, statuses]) => {
+    // Una sola consulta a la vista indicator_status resuelve el catálogo de
+    // indicadores; el estado (último valor dentro del rango + objetivo) se
+    // recalcula en el cliente cada vez que cambia el rango elegido.
+    async function load() {
+      setLoading(true)
+      const [axesData, statuses] = await Promise.all([
+        fetchActiveAxes(orgId),
+        fetchIndicatorStatusesInRange(orgId, range),
+      ])
       if (cancelled) return
       setAxes(axesData)
       setEvaluated(
@@ -49,12 +57,13 @@ export function AxesOverviewPage() {
         })),
       )
       setLoading(false)
-    })
+    }
 
+    load()
     return () => {
       cancelled = true
     }
-  }, [organizationId])
+  }, [organizationId, range])
 
   const statusCounts = useMemo(() => {
     const counts: Record<SemaforoEstado, number> = { cumple: 0, riesgo: 0, incumple: 0, sin_datos: 0 }
@@ -85,17 +94,19 @@ export function AxesOverviewPage() {
     return [...map.values()].sort((a, b) => b.incumple + b.riesgo - (a.incumple + a.riesgo))
   }, [evaluated])
 
-  if (loading) return <p>Cargando ejes…</p>
-
   return (
     <div>
       <h1>Ejes de desempeño</h1>
       <p className="page-subtitle">
-        El estado real de la organización de un vistazo, y qué ejes están arrastrando el resultado — luego elige
-        un eje para ver sus indicadores, causas y planes de acción en detalle.
+        El estado de la organización dentro del período elegido, y qué ejes están arrastrando el resultado — luego
+        elige un eje para ver sus indicadores, causas y planes de acción en detalle.
       </p>
 
-      {total > 0 && (
+      <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+
+      {loading ? (
+        <p>Cargando ejes…</p>
+      ) : total > 0 ? (
         <>
           <div className="panorama-kpis">
             <div className="panorama-kpi">
@@ -188,6 +199,8 @@ export function AxesOverviewPage() {
             </section>
           )}
         </>
+      ) : (
+        <p>No hay indicadores evaluados en este período.</p>
       )}
 
       <h2 className="panorama-section-title">Selecciona un eje</h2>

@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Semaforo } from '../../components/ui/Semaforo'
+import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo } from '../../lib/semaforo'
-import { fetchIndicatorStatuses, type IndicatorStatus } from './dashboardApi'
+import { defaultRange } from '../../lib/dateRange'
+import { fetchIndicatorStatusesInRange, type IndicatorStatus } from './dashboardApi'
 import { formatIndicatorValue, type SemaforoEstado } from '../../lib/types'
 import './dashboard.css'
 
@@ -21,6 +23,7 @@ const ESTADO_ORDEN: Record<SemaforoEstado, number> = {
 
 export function GlobalExceptionsPage() {
   const { organizationId } = useAuth()
+  const [range, setRange] = useState(defaultRange())
   const [rows, setRows] = useState<ExceptionRow[]>([])
   const [sinDatosCount, setSinDatosCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -30,9 +33,9 @@ export function GlobalExceptionsPage() {
     const orgId = organizationId
     let cancelled = false
 
-    // Una sola consulta a indicator_status resuelve el estado de todos los
-    // indicadores; antes era 2+ consultas por indicador (patrón N+1).
-    fetchIndicatorStatuses(orgId).then((statuses) => {
+    async function load() {
+      setLoading(true)
+      const statuses = await fetchIndicatorStatusesInRange(orgId, range)
       if (cancelled) return
 
       const evaluated = statuses.map((status) => ({
@@ -47,24 +50,27 @@ export function GlobalExceptionsPage() {
       )
       setSinDatosCount(evaluated.filter((row) => row.estado === 'sin_datos').length)
       setLoading(false)
-    })
+    }
 
+    load()
     return () => {
       cancelled = true
     }
-  }, [organizationId])
-
-  if (loading) return <p>Cargando panorama global…</p>
+  }, [organizationId, range])
 
   return (
     <div>
       <h1>Panorama global — indicadores en excepción</h1>
       <p className="page-subtitle">
-        Indicadores que no están cumpliendo su objetivo, en todos los ejes y sitios de la organización.
-        Úsalo para dirigir la atención del despliegue hacia dónde está el problema.
+        Indicadores que no cumplieron su objetivo dentro del período elegido, en todos los ejes y sitios de la
+        organización. Úsalo para dirigir la atención del despliegue hacia dónde está el problema.
       </p>
 
-      {rows.length === 0 ? (
+      <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+
+      {loading ? (
+        <p>Cargando panorama global…</p>
+      ) : rows.length === 0 ? (
         <p>No hay indicadores en riesgo o incumplimiento en este momento.</p>
       ) : (
         <div className="table-scroll">
@@ -119,7 +125,8 @@ export function GlobalExceptionsPage() {
 
       {sinDatosCount > 0 && (
         <p className="exceptions-footnote">
-          Además, hay {sinDatosCount} indicador{sinDatosCount === 1 ? '' : 'es'} sin mediciones capturadas todavía.
+          Además, hay {sinDatosCount} indicador{sinDatosCount === 1 ? '' : 'es'} sin mediciones dentro de este
+          período.
         </p>
       )}
     </div>

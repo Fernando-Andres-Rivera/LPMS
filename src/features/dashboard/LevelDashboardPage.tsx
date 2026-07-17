@@ -3,7 +3,9 @@ import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { PeriodTypeSelector } from '../../components/ui/PeriodTypeSelector'
-import { aggregateValues, buildPeriodBuckets } from '../../lib/periods'
+import { RangePicker } from '../../components/ui/RangePicker'
+import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
+import { defaultRange } from '../../lib/dateRange'
 import {
   fetchActiveAxes,
   fetchCurrentTargetsForIndicators,
@@ -11,6 +13,7 @@ import {
   fetchMeasurementsInRange,
 } from './dashboardApi'
 import { fetchSites } from '../indicators/indicatorsApi'
+import { computeDaysWithoutAccidents, fetchLatestAccident, isDaysWithoutAccidentsIndicatorName } from '../safety/safetyApi'
 import type { Axis, Indicator, PeriodType, Site } from '../../lib/types'
 import './dashboard.css'
 
@@ -35,6 +38,7 @@ export function LevelDashboardPage() {
   const [siteTouched, setSiteTouched] = useState(false)
   const selectedSite = siteTouched ? siteOverride : (siteIds[0] ?? null)
   const [periodType, setPeriodType] = useState<PeriodType>('dia')
+  const [range, setRange] = useState(defaultRange())
   const [rows, setRows] = useState<IndicatorRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -56,14 +60,15 @@ export function LevelDashboardPage() {
       const indicators = await fetchIndicatorsByLevel(orgId, level, selectedSite)
       if (cancelled) return
 
-      const now = new Date()
-      const buckets = buildPeriodBuckets(periodType, now)
+      const from = new Date(`${range.from}T00:00:00`)
+      const to = new Date(`${range.to}T00:00:00`)
+      const buckets = buildPeriodBucketsInRange(periodType, from, to)
       const ids = indicators.map((i) => i.id)
 
       // 2 consultas en total en vez de 2 por indicador (patrón N+1).
       const [measRows, targetMap] = await Promise.all([
-        fetchMeasurementsInRange(ids, buckets[0].startDate, buckets[buckets.length - 1].endDate),
-        fetchCurrentTargetsForIndicators(ids, now.getFullYear(), now.getMonth() + 1),
+        fetchMeasurementsInRange(ids, range.from, range.to),
+        fetchCurrentTargetsForIndicators(ids, to.getFullYear(), to.getMonth() + 1),
       ])
       if (cancelled) return
 
@@ -73,6 +78,27 @@ export function LevelDashboardPage() {
         list.push({ period_date: m.period_date, value: m.value })
         measByIndicator.set(m.indicator_id, list)
       }
+
+      // "Días sin accidentes" no se captura a mano — se calcula igual que en
+      // Seguridad y Salud en el Trabajo, a partir de la fecha de inicio de
+      // operación o el último accidente del sitio del indicador.
+      const daysWithoutAccidentsIndicators = indicators.filter(
+        (i) => i.site_id && isDaysWithoutAccidentsIndicatorName(i.name),
+      )
+      const daysWithoutAccidentsMap = new Map<string, number | null>()
+      if (daysWithoutAccidentsIndicators.length > 0) {
+        await Promise.all(
+          daysWithoutAccidentsIndicators.map(async (indicator) => {
+            const site = sites.find((s) => s.id === indicator.site_id)
+            const latestAccident = await fetchLatestAccident([indicator.site_id!])
+            daysWithoutAccidentsMap.set(
+              indicator.id,
+              computeDaysWithoutAccidents(site?.operation_start_date ?? null, latestAccident?.event_date ?? null, to),
+            )
+          }),
+        )
+      }
+      if (cancelled) return
 
       const rowsData = indicators.map((indicator) => {
         const indMeas = measByIndicator.get(indicator.id) ?? []
@@ -84,9 +110,14 @@ export function LevelDashboardPage() {
           ),
         }))
         const withData = series.filter((p) => p.value !== null)
+        const latestValue = daysWithoutAccidentsMap.has(indicator.id)
+          ? (daysWithoutAccidentsMap.get(indicator.id) ?? null)
+          : withData.length
+            ? (withData[withData.length - 1].value as number)
+            : null
         return {
           indicator,
-          latestValue: withData.length ? (withData[withData.length - 1].value as number) : null,
+          latestValue,
           targetValue: targetMap.get(indicator.id) ?? null,
           trend: withData.map((p) => ({ period_date: p.label, value: p.value as number })),
         }
@@ -99,7 +130,7 @@ export function LevelDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [organizationId, level, selectedSite, periodType])
+  }, [organizationId, level, selectedSite, periodType, range, sites])
 
   const axisById = new Map(axes.map((a) => [a.id, a]))
   const rowsByAxis = new Map<string, IndicatorRow[]>()
@@ -123,6 +154,7 @@ export function LevelDashboardPage() {
           ))}
         </div>
 
+        <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
         <PeriodTypeSelector value={periodType} onChange={setPeriodType} />
 
         {sites.length > 0 && (

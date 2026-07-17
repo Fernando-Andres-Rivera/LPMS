@@ -30,6 +30,10 @@
 }
 
 .period-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
   margin-bottom: 20px;
 }
 

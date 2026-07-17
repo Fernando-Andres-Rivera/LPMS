@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
+import { RangePicker } from '../../components/ui/RangePicker'
+import { defaultRange } from '../../lib/dateRange'
 import { fetchOrgUnits, fetchSitesWithOrgUnit } from './orgStructureApi'
 import { fetchIndicatorStatusBySite, sumCounts, type SiteStatusCounts } from './orgResultsApi'
 import type { OrgUnit, Site } from '../../lib/types'
@@ -22,6 +24,7 @@ function StatusBadges({ counts }: { counts: SiteStatusCounts }) {
 
 export function OrgResultsPage() {
   const { organizationId } = useAuth()
+  const [range, setRange] = useState(defaultRange())
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([])
   const [sites, setSites] = useState<Site[]>([])
   const [siteCounts, setSiteCounts] = useState<Record<string, SiteStatusCounts>>({})
@@ -29,24 +32,29 @@ export function OrgResultsPage() {
 
   useEffect(() => {
     if (!organizationId) return
+    const orgId = organizationId
     let cancelled = false
 
-    Promise.all([
-      fetchOrgUnits(organizationId),
-      fetchSitesWithOrgUnit(organizationId),
-      fetchIndicatorStatusBySite(organizationId),
-    ]).then(([orgUnitsData, sitesData, counts]) => {
+    async function load() {
+      setLoading(true)
+      const [orgUnitsData, sitesData, counts] = await Promise.all([
+        fetchOrgUnits(orgId),
+        fetchSitesWithOrgUnit(orgId),
+        fetchIndicatorStatusBySite(orgId, range),
+      ])
       if (cancelled) return
       setOrgUnits(orgUnitsData)
       setSites(sitesData)
       setSiteCounts(counts)
       setLoading(false)
-    })
+    }
+
+    load()
 
     return () => {
       cancelled = true
     }
-  }, [organizationId])
+  }, [organizationId, range])
 
   function countsForSite(siteId: string): SiteStatusCounts {
     return siteCounts[siteId] ?? emptyCounts()
@@ -67,13 +75,11 @@ export function OrgResultsPage() {
   const businessUnits = orgUnits.filter((u) => u.level === 2)
   const unassignedSites = sites.filter((s) => !s.org_unit_id)
 
-  if (loading) return <p>Cargando resultados…</p>
-
   return (
     <div className="org-structure-page">
       <h1>Resultados por organización</h1>
       <p className="page-subtitle">
-        Indicadores por Unidad de Negocio → Región → Sitio.{' '}
+        Indicadores por Unidad de Negocio → Región → Sitio, dentro del período elegido.{' '}
         <span className="org-results-legend">
           <span className="org-results-badge org-results-badge--cumple">0</span> cumple ·{' '}
           <span className="org-results-badge org-results-badge--riesgo">0</span> riesgo ·{' '}
@@ -82,11 +88,15 @@ export function OrgResultsPage() {
         </span>
       </p>
 
-      {businessUnits.length === 0 && unassignedSites.length === 0 && (
+      <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+
+      {loading && <p>Cargando resultados…</p>}
+
+      {!loading && businessUnits.length === 0 && unassignedSites.length === 0 && (
         <p>Todavía no hay unidades de negocio ni sitios configurados.</p>
       )}
 
-      {businessUnits.map((bu) => (
+      {!loading && businessUnits.map((bu) => (
         <section className="org-structure-card" key={bu.id}>
           <div className="org-results-row org-results-row--bu">
             <strong>{bu.name}</strong>
@@ -127,7 +137,7 @@ export function OrgResultsPage() {
         </section>
       ))}
 
-      {unassignedSites.length > 0 && (
+      {!loading && unassignedSites.length > 0 && (
         <section className="org-structure-card">
           <div className="org-results-row org-results-row--bu">
             <strong>Sitios sin asignar</strong>

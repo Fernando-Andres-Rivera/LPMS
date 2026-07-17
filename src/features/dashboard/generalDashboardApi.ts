@@ -18,18 +18,26 @@ export interface AxisActionPlan {
  * Planes de acción de varios indicadores (ej. todos los de un eje), con la
  * causa raíz del análisis al que quedaron vinculados (si lo están) — para
  * poder mostrar en una sola lista si la acción tiene un análisis detrás o
- * quedó "suelta".
+ * quedó "suelta". `range` acota a cuándo se REGISTRÓ la acción (created_at)
+ * — es el rango de tiempo que se está revisando en la gestión, no de
+ * ejecución.
  */
-export async function fetchAxisActionPlans(indicatorIds: string[]): Promise<AxisActionPlan[]> {
+export async function fetchAxisActionPlans(
+  indicatorIds: string[],
+  range?: { from: string; to: string },
+): Promise<AxisActionPlan[]> {
   if (indicatorIds.length === 0) return []
-  const { data, error } = await supabase
+  let query = supabase
     .from('action_plans')
     .select(
       'id, indicator_id, description, status, causal_analysis_id, created_at, due_date, closed_at, ' +
         'causal_analyses(root_cause), responsible:profiles!action_plans_responsible_id_fkey(full_name)',
     )
     .in('indicator_id', indicatorIds)
-    .order('created_at', { ascending: false })
+
+  if (range) query = query.gte('created_at', range.from).lte('created_at', `${range.to}T23:59:59`)
+
+  const { data, error } = await query.order('created_at', { ascending: false })
 
   if (error) throw error
 
@@ -64,14 +72,23 @@ export async function fetchAxisActionPlans(indicatorIds: string[]): Promise<Axis
  * Días entre la fecha del período que originó cada análisis causal
  * (measurement.period_date) y cuándo quedó registrado ese análisis
  * (causal_analyses.created_at) — la métrica "< 5 días" de velocidad de
- * reacción. Solo cuenta análisis ligados a una medición puntual.
+ * reacción. Solo cuenta análisis ligados a una medición puntual. `range`
+ * acota a cuándo se REGISTRÓ el análisis (created_at), igual criterio que
+ * fetchAxisActionPlans — el período de gestión que se está revisando.
  */
-export async function fetchAnalysisSpeedDays(indicatorIds: string[]): Promise<number[]> {
+export async function fetchAnalysisSpeedDays(
+  indicatorIds: string[],
+  range?: { from: string; to: string },
+): Promise<number[]> {
   if (indicatorIds.length === 0) return []
-  const { data, error } = await supabase
+  let query = supabase
     .from('causal_analyses')
     .select('created_at, measurements(period_date)')
     .in('indicator_id', indicatorIds)
+
+  if (range) query = query.gte('created_at', range.from).lte('created_at', `${range.to}T23:59:59`)
+
+  const { data, error } = await query
 
   if (error) throw error
 

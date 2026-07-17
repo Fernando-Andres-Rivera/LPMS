@@ -29,6 +29,55 @@ export function quincenaEnd(start: Date): Date {
   return new Date(start.getFullYear(), start.getMonth() + 1, 0)
 }
 
+/** Dado el inicio de un bucket, arma su {label, startDate, endDate} — la
+ * misma regla de etiquetado para las dos formas de generar buckets (los
+ * últimos N terminando en una fecha, o los que caben dentro de un rango). */
+function describeBucket(type: PeriodType, start: Date): PeriodBucket {
+  if (type === 'dia') {
+    return { label: `${start.getDate()} ${MESES_CORTOS[start.getMonth()]}`, startDate: toIso(start), endDate: toIso(start) }
+  }
+  if (type === 'semana') {
+    const sunday = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6)
+    return {
+      label: `${start.getDate()} ${MESES_CORTOS[start.getMonth()]} - ${sunday.getDate()} ${MESES_CORTOS[sunday.getMonth()]}`,
+      startDate: toIso(start),
+      endDate: toIso(sunday),
+    }
+  }
+  if (type === 'quincena') {
+    const end = quincenaEnd(start)
+    const half = start.getDate() === 1 ? '1ra' : '2da'
+    return { label: `${half} quincena ${MESES_CORTOS[start.getMonth()]}`, startDate: toIso(start), endDate: toIso(end) }
+  }
+  if (type === 'mes') {
+    const end = new Date(start.getFullYear(), start.getMonth() + 1, 0)
+    return { label: `${MESES_CORTOS[start.getMonth()]} ${start.getFullYear()}`, startDate: toIso(start), endDate: toIso(end) }
+  }
+  const quarter = Math.floor(start.getMonth() / 3)
+  const end = new Date(start.getFullYear(), quarter * 3 + 3, 0)
+  return { label: `T${quarter + 1} ${start.getFullYear()}`, startDate: toIso(start), endDate: toIso(end) }
+}
+
+/** Inicio del bucket que contiene `reference`, desplazado `i` buckets hacia
+ * atrás en el tiempo (i=0 es el bucket que contiene `reference`). */
+function bucketStartAtOffset(type: PeriodType, reference: Date, i: number): Date {
+  if (type === 'dia') return new Date(reference.getFullYear(), reference.getMonth(), reference.getDate() - i)
+  if (type === 'semana') {
+    const monday = startOfWeek(reference)
+    monday.setDate(monday.getDate() - i * 7)
+    return monday
+  }
+  if (type === 'quincena') {
+    const approx = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate() - i * 15)
+    return quincenaStart(approx)
+  }
+  if (type === 'mes') return new Date(reference.getFullYear(), reference.getMonth() - i, 1)
+  const currentQuarterIndex = reference.getFullYear() * 4 + Math.floor(reference.getMonth() / 3) - i
+  const year = Math.floor(currentQuarterIndex / 4)
+  const quarter = currentQuarterIndex - year * 4
+  return new Date(year, quarter * 3, 1)
+}
+
 /**
  * Genera los últimos `count` períodos del tipo dado, terminando en el que
  * contiene `reference` (normalmente "hoy"). No navega a períodos futuros ni
@@ -37,48 +86,32 @@ export function quincenaEnd(start: Date): Date {
  */
 export function buildPeriodBuckets(type: PeriodType, reference: Date, count = 6): PeriodBucket[] {
   const buckets: PeriodBucket[] = []
-
   for (let i = count - 1; i >= 0; i--) {
-    if (type === 'dia') {
-      const d = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate() - i)
-      buckets.push({ label: `${d.getDate()} ${MESES_CORTOS[d.getMonth()]}`, startDate: toIso(d), endDate: toIso(d) })
-    } else if (type === 'semana') {
-      const monday = startOfWeek(reference)
-      monday.setDate(monday.getDate() - i * 7)
-      const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6)
-      buckets.push({
-        label: `${monday.getDate()} ${MESES_CORTOS[monday.getMonth()]} - ${sunday.getDate()} ${MESES_CORTOS[sunday.getMonth()]}`,
-        startDate: toIso(monday),
-        endDate: toIso(sunday),
-      })
-    } else if (type === 'quincena') {
-      const approx = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate() - i * 15)
-      const start = quincenaStart(approx)
-      const end = quincenaEnd(start)
-      const half = start.getDate() === 1 ? '1ra' : '2da'
-      buckets.push({
-        label: `${half} quincena ${MESES_CORTOS[start.getMonth()]}`,
-        startDate: toIso(start),
-        endDate: toIso(end),
-      })
-    } else if (type === 'mes') {
-      const start = new Date(reference.getFullYear(), reference.getMonth() - i, 1)
-      const end = new Date(start.getFullYear(), start.getMonth() + 1, 0)
-      buckets.push({
-        label: `${MESES_CORTOS[start.getMonth()]} ${start.getFullYear()}`,
-        startDate: toIso(start),
-        endDate: toIso(end),
-      })
-    } else {
-      const currentQuarterIndex = reference.getFullYear() * 4 + Math.floor(reference.getMonth() / 3) - i
-      const year = Math.floor(currentQuarterIndex / 4)
-      const quarter = currentQuarterIndex - year * 4
-      const start = new Date(year, quarter * 3, 1)
-      const end = new Date(year, quarter * 3 + 3, 0)
-      buckets.push({ label: `T${quarter + 1} ${year}`, startDate: toIso(start), endDate: toIso(end) })
-    }
+    buckets.push(describeBucket(type, bucketStartAtOffset(type, reference, i)))
   }
+  return buckets
+}
 
+/**
+ * Igual que buildPeriodBuckets, pero anclado a un rango [from, to] explícito
+ * en vez de "las últimas N terminando hoy" — para pantallas donde el rango
+ * de análisis lo elige el usuario. Itera hacia adelante desde el bucket que
+ * contiene `from` hasta cubrir `to`; maxBuckets es un tope de seguridad para
+ * no generar cientos de barras con una granularidad fina sobre un rango
+ * amplio (ej. "diaria" sobre varios años).
+ */
+export function buildPeriodBucketsInRange(type: PeriodType, from: Date, to: Date, maxBuckets = 400): PeriodBucket[] {
+  const buckets: PeriodBucket[] = []
+  let start = bucketStartAtOffset(type, from, 0)
+  const toIsoValue = toIso(to)
+  let guard = 0
+  while (toIso(start) <= toIsoValue && guard < maxBuckets) {
+    const bucket = describeBucket(type, start)
+    buckets.push(bucket)
+    const end = new Date(`${bucket.endDate}T00:00:00`)
+    start = new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1)
+    guard++
+  }
   return buckets
 }
 

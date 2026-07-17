@@ -11,7 +11,8 @@ import {
   YAxis,
 } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
-import { PeriodSelector, type Period } from '../../components/ui/PeriodSelector'
+import { RangePicker } from '../../components/ui/RangePicker'
+import { defaultRange } from '../../lib/dateRange'
 import { fetchActiveAxes } from '../dashboard/dashboardApi'
 import { fetchIndicators, fetchSites } from '../indicators/indicatorsApi'
 import { fetchOrgUnits, fetchSiteLocationsForSites } from '../org-structure/orgStructureApi'
@@ -34,8 +35,7 @@ export function ParetoPage() {
   const [locationScope, setLocationScope] = useState<LocationScope>(WHOLE_ORG_SCOPE)
   const [indicatorId, setIndicatorId] = useState<string | null>(searchParams.get('indicator'))
 
-  const now = new Date()
-  const [period, setPeriod] = useState<Period>({ year: now.getFullYear(), month: now.getMonth() + 1 })
+  const [range, setRange] = useState(defaultRange())
 
   const [categories, setCategories] = useState<CauseCategory[]>([])
   const [tagged, setTagged] = useState<TaggedCause[]>([])
@@ -60,30 +60,33 @@ export function ParetoPage() {
 
   useEffect(() => {
     if (!organizationId) return
+    const orgId = organizationId
     let cancelled = false
 
-    Promise.all([
-      fetchCauseCategories(organizationId),
-      fetchTaggedCauses({
-        organizationId,
-        year: period.year,
-        month: period.month,
-        axisId,
-        indicatorId,
-        siteIds: locationScope.siteIds,
-        locationIds: locationScope.locationIds,
-      }),
-    ]).then(([categoriesData, taggedData]) => {
+    async function load() {
+      setLoading(true)
+      const [categoriesData, taggedData] = await Promise.all([
+        fetchCauseCategories(orgId),
+        fetchTaggedCauses({
+          organizationId: orgId,
+          range,
+          axisId,
+          indicatorId,
+          siteIds: locationScope.siteIds,
+          locationIds: locationScope.locationIds,
+        }),
+      ])
       if (cancelled) return
       setCategories(categoriesData)
       setTagged(taggedData)
       setLoading(false)
-    })
+    }
 
+    load()
     return () => {
       cancelled = true
     }
-  }, [organizationId, period, axisId, locationScope, indicatorId])
+  }, [organizationId, range, axisId, locationScope, indicatorId])
 
   const currentParentId = path.length ? path[path.length - 1].id : null
   const { rows, generalCount } = useMemo(
@@ -139,8 +142,8 @@ export function ParetoPage() {
     setSearchParams(params)
   }
 
-  function handlePeriodChange(next: Period) {
-    setPeriod(next)
+  function handleRangeChange(from: string, to: string) {
+    setRange({ from, to })
     setPath([])
   }
 
@@ -153,12 +156,12 @@ export function ParetoPage() {
     <div>
       <h1>Pareto evolutivo de causas</h1>
       <p className="page-subtitle">
-        Elige el período y ve de dónde vienen los incumplimientos — luego entra a la categoría con más peso para
-        desglosarla por sus sub-causas, mes a mes.
+        Elige el rango de fechas y ve de dónde vienen los incumplimientos — luego entra a la categoría con más peso
+        para desglosarla por sus sub-causas.
       </p>
 
       <div className="pareto-filters">
-        <PeriodSelector value={period} onChange={handlePeriodChange} yearsBack={2} />
+        <RangePicker from={range.from} to={range.to} onChange={handleRangeChange} />
 
         <select value={axisId ?? ''} onChange={(e) => handleAxisChange(e.target.value)}>
           <option value="">Todos los ejes</option>

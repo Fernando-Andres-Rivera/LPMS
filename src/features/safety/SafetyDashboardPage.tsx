@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { PeriodSelector, type Period } from '../../components/ui/PeriodSelector'
+import { RangePicker } from '../../components/ui/RangePicker'
+import { defaultRange } from '../../lib/dateRange'
 import { fetchSites } from '../indicators/indicatorsApi'
 import {
   computeDaysWithoutAccidents,
@@ -41,17 +42,22 @@ function monthRange(year: number, month: number): { start: string; endExclusive:
 export function SafetyDashboardPage() {
   const { profile, organizationId, siteIds } = useAuth()
   const [sites, setSites] = useState<Site[]>([])
-  const [siteId, setSiteId] = useState('')
+  const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([])
+  const [formSiteId, setFormSiteId] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const now = new Date()
-  const [period, setPeriod] = useState<Period>({ year: now.getFullYear(), month: now.getMonth() + 1 })
+  const [referenceDate, setReferenceDate] = useState(today())
+  const refDate = new Date(`${referenceDate}T00:00:00`)
+  const refYear = refDate.getFullYear()
+  const refMonth = refDate.getMonth() + 1
+
+  const [range, setRange] = useState(defaultRange())
 
   const [monthEvents, setMonthEvents] = useState<SafetyEvent[]>([])
   const [yearEvents, setYearEvents] = useState<SafetyEvent[]>([])
+  const [rangeEvents, setRangeEvents] = useState<SafetyEvent[]>([])
   const [daysWithoutAccidents, setDaysWithoutAccidents] = useState<number | null>(null)
-  const [operationStartDate, setOperationStartDateValue] = useState('')
-  const [lastSiteId, setLastSiteId] = useState('')
+  const [pendingStartDates, setPendingStartDates] = useState<Record<string, string>>({})
   const [lastLoadKey, setLastLoadKey] = useState('')
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -72,26 +78,27 @@ export function SafetyDashboardPage() {
           ? data.filter((s) => siteIds.includes(s.id))
           : data
       setSites(visible)
-      if (visible.length && !siteId) setSiteId(visible[0].id)
-      // Sin sitios no hay nada más que cargar — evita que la página se quede
-      // en "Cargando…" para siempre esperando un siteId que nunca llega.
-      else if (!visible.length) setLoading(false)
+      if (visible.length) {
+        setSelectedSiteIds((current) =>
+          current.length ? current.filter((id) => visible.some((s) => s.id === id)) : visible.map((s) => s.id),
+        )
+        setFormSiteId((current) => (current && visible.some((s) => s.id === current) ? current : visible[0].id))
+      } else {
+        // Sin sitios no hay nada más que cargar — evita que la página se quede
+        // en "Cargando…" para siempre esperando sitios que nunca llegan.
+        setLoading(false)
+      }
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [organizationId, profile, siteIds])
 
-  const selectedSite = sites.find((s) => s.id === siteId) ?? null
-  const loadKey = `${siteId}|${period.year}|${period.month}`
+  const selectedSites = sites.filter((s) => selectedSiteIds.includes(s.id))
+  const sortedSelection = [...selectedSiteIds].sort().join(',')
+  const loadKey = `${sortedSelection}|${referenceDate}|${range.from}|${range.to}`
 
-  // Resetea el campo de fecha de inicio de operación (al cambiar de sitio) y
-  // vuelve a mostrar "Cargando…" (al cambiar sitio o período) — ajuste de
-  // estado durante el render, no en un efecto (ver AppLayout.tsx para el
-  // mismo patrón).
-  if (siteId !== lastSiteId) {
-    setLastSiteId(siteId)
-    setOperationStartDateValue(selectedSite?.operation_start_date ?? '')
-  }
-  if (siteId && loadKey !== lastLoadKey) {
+  // Vuelve a mostrar "Cargando…" cuando cambia la selección de sitios o la
+  // fecha de referencia — ajuste de estado durante el render, no en un
+  // efecto (ver AppLayout.tsx para el mismo patrón).
+  if (sites.length > 0 && loadKey !== lastLoadKey) {
     setLastLoadKey(loadKey)
     setLoading(true)
     setLoadError(null)
@@ -100,33 +107,50 @@ export function SafetyDashboardPage() {
   async function fetchSafetyData(): Promise<{
     monthEvents: SafetyEvent[]
     yearEvents: SafetyEvent[]
+    rangeEvents: SafetyEvent[]
     daysWithoutAccidents: number | null
   }> {
-    const { start, endExclusive } = monthRange(period.year, period.month)
-    const yearRange = monthRange(period.year, 12)
-    const [monthData, yearData, latestAccident] = await Promise.all([
-      fetchSafetyEventsInRange(siteId, start, endExclusive),
-      fetchSafetyEventsInRange(siteId, `${period.year}-01-01`, yearRange.endExclusive),
-      fetchLatestAccident(siteId),
+    if (selectedSiteIds.length === 0) {
+      return { monthEvents: [], yearEvents: [], rangeEvents: [], daysWithoutAccidents: null }
+    }
+    const { start, endExclusive } = monthRange(refYear, refMonth)
+    const yearRange = monthRange(refYear, 12)
+    const rangeEndExclusive = (() => {
+      const d = new Date(`${range.to}T00:00:00`)
+      d.setDate(d.getDate() + 1)
+      return d.toISOString().slice(0, 10)
+    })()
+    const [monthData, yearData, rangeData, latestAccident] = await Promise.all([
+      fetchSafetyEventsInRange(selectedSiteIds, start, endExclusive),
+      fetchSafetyEventsInRange(selectedSiteIds, `${refYear}-01-01`, yearRange.endExclusive),
+      fetchSafetyEventsInRange(selectedSiteIds, range.from, rangeEndExclusive),
+      fetchLatestAccident(selectedSiteIds),
     ])
+    // Con varios sitios seleccionados, la base "sin accidentes" es el sitio
+    // que arrancó operación más tarde — no se puede reclamar como seguro un
+    // tramo en el que ese sitio todavía no operaba.
+    const starts = selectedSites.map((s) => s.operation_start_date).filter((d): d is string => !!d)
+    const operationStartBase = starts.length ? starts.sort().at(-1)! : null
     return {
       monthEvents: monthData,
       yearEvents: yearData,
+      rangeEvents: rangeData,
       daysWithoutAccidents: computeDaysWithoutAccidents(
-        selectedSite?.operation_start_date ?? null,
+        operationStartBase,
         latestAccident?.event_date ?? null,
+        refDate,
       ),
     }
   }
 
   async function loadAll() {
-    if (!siteId) return
     setLoading(true)
     setLoadError(null)
     try {
       const data = await fetchSafetyData()
       setMonthEvents(data.monthEvents)
       setYearEvents(data.yearEvents)
+      setRangeEvents(data.rangeEvents)
       setDaysWithoutAccidents(data.daysWithoutAccidents)
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'No se pudo cargar la información de seguridad.')
@@ -136,13 +160,14 @@ export function SafetyDashboardPage() {
   }
 
   useEffect(() => {
-    if (!siteId) return
+    if (sites.length === 0) return
     let cancelled = false
     fetchSafetyData()
       .then((data) => {
         if (cancelled) return
         setMonthEvents(data.monthEvents)
         setYearEvents(data.yearEvents)
+        setRangeEvents(data.rangeEvents)
         setDaysWithoutAccidents(data.daysWithoutAccidents)
         setLoading(false)
       })
@@ -155,25 +180,28 @@ export function SafetyDashboardPage() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [siteId, period, selectedSite?.operation_start_date])
+  }, [sortedSelection, referenceDate, range, sites])
 
-  async function handleSaveOperationStart() {
-    if (!siteId) return
-    await setSiteOperationStartDate(siteId, operationStartDate || null)
-    setSites((current) =>
-      current.map((s) => (s.id === siteId ? { ...s, operation_start_date: operationStartDate || null } : s)),
-    )
+  function toggleSite(id: string) {
+    setSelectedSiteIds((current) => (current.includes(id) ? current.filter((s) => s !== id) : [...current, id]))
+  }
+
+  async function handleSaveOperationStart(siteId: string) {
+    const value = pendingStartDates[siteId]
+    if (!value) return
+    await setSiteOperationStartDate(siteId, value)
+    setSites((current) => current.map((s) => (s.id === siteId ? { ...s, operation_start_date: value } : s)))
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!profile || !organizationId || !siteId) return
+    if (!profile || !organizationId || !formSiteId) return
     setSaving(true)
     setError(null)
     try {
       await createSafetyEvent({
         organizationId,
-        siteId,
+        siteId: formSiteId,
         eventType,
         eventDate,
         severity: eventType === 'accidente' ? severity : null,
@@ -207,9 +235,10 @@ export function SafetyDashboardPage() {
     return <p className="safety-error">No se pudo cargar el módulo de seguridad: {loadError}</p>
   }
 
-  const crossColors = computeSafetyCross(monthEvents, period.year, period.month)
+  const crossColors = computeSafetyCross(monthEvents, refYear, refMonth, refDate)
   const monthlyStats = computeMonthlyStats(monthEvents)
   const pyramid = computeHeinrichPyramid(yearEvents)
+  const sitesMissingStart = selectedSites.filter((s) => !s.operation_start_date)
 
   return (
     <div className="safety-page">
@@ -220,23 +249,58 @@ export function SafetyDashboardPage() {
       </p>
 
       <div className="safety-filters">
-        <select value={siteId} onChange={(e) => setSiteId(e.target.value)}>
+        <div className="safety-site-filter">
+          <button
+            type="button"
+            className={`safety-site-chip safety-site-chip--all${
+              selectedSiteIds.length === sites.length ? ' safety-site-chip--active' : ''
+            }`}
+            onClick={() => setSelectedSiteIds(sites.map((s) => s.id))}
+          >
+            Todos los sitios
+          </button>
           {sites.map((site) => (
-            <option key={site.id} value={site.id}>
+            <button
+              key={site.id}
+              type="button"
+              className={`safety-site-chip${selectedSiteIds.includes(site.id) ? ' safety-site-chip--active' : ''}`}
+              onClick={() => toggleSite(site.id)}
+            >
               {site.name}
-            </option>
+            </button>
           ))}
-        </select>
-        <PeriodSelector value={period} onChange={setPeriod} yearsBack={2} />
+        </div>
+        <label className="safety-date-filter">
+          Fecha de referencia
+          <input type="date" value={referenceDate} max={today()} onChange={(e) => setReferenceDate(e.target.value)} />
+        </label>
       </div>
 
-      {!selectedSite?.operation_start_date && (
+      {selectedSiteIds.length === 0 && <p className="safety-error">Selecciona al menos un sitio para ver los datos.</p>}
+
+      {sitesMissingStart.length > 0 && (
         <div className="safety-operation-start">
-          <span>Este sitio no tiene fecha de inicio de operación configurada — "días sin accidentes" no se puede calcular hasta que la definas.</span>
-          <input type="date" value={operationStartDate} onChange={(e) => setOperationStartDateValue(e.target.value)} />
-          <button type="button" onClick={handleSaveOperationStart} disabled={!operationStartDate}>
-            Guardar
-          </button>
+          <span>
+            Estos sitios no tienen fecha de inicio de operación configurada — "días sin accidentes" no los tiene en
+            cuenta hasta que la definas:
+          </span>
+          {sitesMissingStart.map((site) => (
+            <div key={site.id} className="safety-operation-start__row">
+              <span>{site.name}</span>
+              <input
+                type="date"
+                value={pendingStartDates[site.id] ?? ''}
+                onChange={(e) => setPendingStartDates((cur) => ({ ...cur, [site.id]: e.target.value }))}
+              />
+              <button
+                type="button"
+                onClick={() => handleSaveOperationStart(site.id)}
+                disabled={!pendingStartDates[site.id]}
+              >
+                Guardar
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -244,59 +308,64 @@ export function SafetyDashboardPage() {
         <p>Cargando…</p>
       ) : (
         <>
-          <div className="safety-top-row">
+          <div className="safety-summary-row">
             <div className="safety-counter">
-              <span className="safety-counter__label">HOY CUMPLIMOS</span>
+              <span className="safety-counter__label">CUMPLIMOS AL {referenceDate}</span>
               <span className="safety-counter__value">{daysWithoutAccidents ?? '—'}</span>
               <span className="safety-counter__label">Días sin accidentes</span>
             </div>
 
-            <table className="safety-kpi-table">
-              <tbody>
-                <tr>
-                  <th>Mes</th>
-                  <td>
-                    {period.month}/{period.year}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Total trabajadores accidentados</th>
-                  <td>{monthlyStats.workersInjured}</td>
-                </tr>
-                <tr>
-                  <th>Días de ausentismo por incapacidad AT</th>
-                  <td>{monthlyStats.disabilityDays}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <SafetyCross year={period.year} month={period.month} colors={crossColors} />
-          </div>
-
-          <div className="safety-second-row">
-            <HeinrichPyramid data={pyramid} />
-
-            <div className="safety-unsafe-counters">
-              <div className="safety-unsafe-counter">
-                <span>Actos inseguros reportados</span>
-                <strong>{monthlyStats.unsafeActsReported}</strong>
+            <div className="safety-stats-grid">
+              <div className="safety-stat">
+                <span className="safety-stat__value">
+                  {refMonth}/{refYear}
+                </span>
+                <span className="safety-stat__label">Mes evaluado</span>
               </div>
-              <div className="safety-unsafe-counter">
-                <span>Condiciones inseguras reportadas</span>
-                <strong>{monthlyStats.unsafeConditionsReported}</strong>
+              <div className="safety-stat">
+                <span className="safety-stat__value">{monthlyStats.accidentCount}</span>
+                <span className="safety-stat__label">Accidentes del mes</span>
               </div>
-              <p className="safety-summary">
-                Accidentes presentados en el mes: {monthlyStats.accidentCount}
-                <br />
-                Días de incapacidad totales: {monthlyStats.disabilityDays}
-              </p>
+              <div className="safety-stat">
+                <span className="safety-stat__value">{monthlyStats.workersInjured}</span>
+                <span className="safety-stat__label">Trabajadores accidentados</span>
+              </div>
+              <div className="safety-stat">
+                <span className="safety-stat__value">{monthlyStats.disabilityDays}</span>
+                <span className="safety-stat__label">Días de incapacidad</span>
+              </div>
+              <div className="safety-stat">
+                <span className="safety-stat__value">{monthlyStats.unsafeActsReported}</span>
+                <span className="safety-stat__label">Actos inseguros</span>
+              </div>
+              <div className="safety-stat">
+                <span className="safety-stat__value">{monthlyStats.unsafeConditionsReported}</span>
+                <span className="safety-stat__label">Condiciones inseguras</span>
+              </div>
             </div>
+
+            <SafetyCross year={refYear} month={refMonth} colors={crossColors} />
           </div>
+
+          <section className="safety-card">
+            <h2>Pirámide de Heinrich</h2>
+            <HeinrichPyramid data={pyramid} />
+          </section>
 
           <section className="safety-card">
             <h2>Registrar evento</h2>
             <form className="safety-form" onSubmit={handleSubmit}>
               <div className="safety-form__row">
+                <label>
+                  Sitio
+                  <select value={formSiteId} onChange={(e) => setFormSiteId(e.target.value)}>
+                    {sites.map((site) => (
+                      <option key={site.id} value={site.id}>
+                        {site.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label>
                   Tipo
                   <select value={eventType} onChange={(e) => setEventType(e.target.value as SafetyEventType)}>
@@ -362,15 +431,19 @@ export function SafetyDashboardPage() {
           </section>
 
           <section className="safety-card">
-            <h2>Eventos del mes</h2>
-            {monthEvents.length === 0 && <p>Sin eventos registrados este mes.</p>}
+            <div className="safety-card__header">
+              <h2>Eventos</h2>
+              <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+            </div>
+            {rangeEvents.length === 0 && <p>Sin eventos registrados en este rango.</p>}
             <ul className="safety-event-list">
-              {monthEvents.map((ev) => (
+              {rangeEvents.map((ev) => (
                 <li key={ev.id}>
                   <span className={`safety-event-tag safety-event-tag--${ev.event_type}`}>
                     {SAFETY_EVENT_TYPE_LABEL[ev.event_type]}
                   </span>
                   <span>{ev.event_date}</span>
+                  <span className="safety-event-list__site">{sites.find((s) => s.id === ev.site_id)?.name}</span>
                   {ev.severity && <span>{ACCIDENT_SEVERITY_LABEL[ev.severity]}</span>}
                   {ev.description && <span className="safety-event-list__description">{ev.description}</span>}
                   <button type="button" onClick={() => handleDeleteEvent(ev.id)}>

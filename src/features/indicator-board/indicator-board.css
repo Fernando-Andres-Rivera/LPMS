@@ -68,6 +68,13 @@
   margin-bottom: 0;
 }
 
+.board-result__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
 .board-result__period {
   margin: 10px 0 0;
   color: var(--color-text-muted);

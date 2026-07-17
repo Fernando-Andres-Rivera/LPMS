@@ -4,8 +4,10 @@ import { useAuth } from '../../hooks/useAuth'
 import { Semaforo } from '../../components/ui/Semaforo'
 import { ActionPlanProgress } from '../../components/ui/ActionPlanProgress'
 import { PeriodTypeSelector } from '../../components/ui/PeriodTypeSelector'
+import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo } from '../../lib/semaforo'
-import { buildPeriodBuckets, type PeriodBucket } from '../../lib/periods'
+import { buildPeriodBucketsInRange, type PeriodBucket } from '../../lib/periods'
+import { defaultRange } from '../../lib/dateRange'
 import { fetchIndicatorWithRelationsById, fetchProfiles } from '../indicators/indicatorsApi'
 import type { IndicatorWithRelations } from '../indicators/indicatorsApi'
 import { computeIndicatorSeries, fetchCurrentTarget, fetchIndicatorPeriodSeries } from '../dashboard/dashboardApi'
@@ -43,6 +45,7 @@ export function IndicatorBoardPage() {
 
   const [indicator, setIndicator] = useState<IndicatorWithRelations | null>(null)
   const [periodType, setPeriodType] = useState<PeriodType>('dia')
+  const [range, setRange] = useState(defaultRange())
   const [latestValue, setLatestValue] = useState<number | null>(null)
   const [latestLabel, setLatestLabel] = useState<string | null>(null)
   const [target, setTarget] = useState<Target | null>(null)
@@ -63,7 +66,9 @@ export function IndicatorBoardPage() {
     if (!indicatorId || !organizationId) return
     setLoading(true)
     const indicatorData = await fetchIndicatorWithRelationsById(indicatorId)
-    const buckets = buildPeriodBuckets(periodType, new Date())
+    const from = new Date(`${range.from}T00:00:00`)
+    const to = new Date(`${range.to}T00:00:00`)
+    const buckets = buildPeriodBucketsInRange(periodType, from, to)
     const [series, causesData, plansData, profilesData] = await Promise.all([
       indicatorData ? fetchSeries(indicatorData, buckets, organizationId) : Promise.resolve([]),
       fetchCausalAnalyses(indicatorId),
@@ -80,8 +85,7 @@ export function IndicatorBoardPage() {
     setProfiles(profilesData)
 
     if (indicatorData) {
-      const now = new Date()
-      setTarget(await fetchCurrentTarget(indicatorId, now.getFullYear(), now.getMonth() + 1))
+      setTarget(await fetchCurrentTarget(indicatorId, to.getFullYear(), to.getMonth() + 1))
     }
     setLoading(false)
   }
@@ -92,7 +96,9 @@ export function IndicatorBoardPage() {
 
     fetchIndicatorWithRelationsById(indicatorId).then(async (indicatorData) => {
       if (cancelled) return
-      const buckets = buildPeriodBuckets(periodType, new Date())
+      const from = new Date(`${range.from}T00:00:00`)
+      const to = new Date(`${range.to}T00:00:00`)
+      const buckets = buildPeriodBucketsInRange(periodType, from, to)
       const [series, causesData, plansData, profilesData] = await Promise.all([
         indicatorData ? fetchSeries(indicatorData, buckets, organizationId) : Promise.resolve([]),
         fetchCausalAnalyses(indicatorId),
@@ -110,8 +116,7 @@ export function IndicatorBoardPage() {
       setProfiles(profilesData)
 
       if (indicatorData) {
-        const now = new Date()
-        const targetData = await fetchCurrentTarget(indicatorId, now.getFullYear(), now.getMonth() + 1)
+        const targetData = await fetchCurrentTarget(indicatorId, to.getFullYear(), to.getMonth() + 1)
         if (cancelled) return
         setTarget(targetData)
       }
@@ -121,7 +126,7 @@ export function IndicatorBoardPage() {
     return () => {
       cancelled = true
     }
-  }, [indicatorId, organizationId, periodType])
+  }, [indicatorId, organizationId, periodType, range])
 
   const estado = calcularSemaforo(latestValue, target?.target_value, indicator?.improvement_direction ?? 'mayor_mejor')
   const latestCause = causes[0]
@@ -183,7 +188,10 @@ export function IndicatorBoardPage() {
       <section className="board-card board-result">
         <div className="board-result__header">
           <h2>Resultado</h2>
-          <PeriodTypeSelector value={periodType} onChange={setPeriodType} />
+          <div className="board-result__filters">
+            <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+            <PeriodTypeSelector value={periodType} onChange={setPeriodType} />
+          </div>
         </div>
         {indicator.is_calculated && (
           <p className="board-result__calculated-note">

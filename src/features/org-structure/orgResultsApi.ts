@@ -1,5 +1,5 @@
 import { calcularSemaforo } from '../../lib/semaforo'
-import { fetchIndicatorStatuses } from '../dashboard/dashboardApi'
+import { fetchIndicatorStatusesInRange } from '../dashboard/dashboardApi'
 import type { SemaforoEstado } from '../../lib/types'
 
 export type SiteStatusCounts = Record<SemaforoEstado, number>
@@ -8,10 +8,13 @@ function emptyCounts(): SiteStatusCounts {
   return { cumple: 0, riesgo: 0, incumple: 0, sin_datos: 0 }
 }
 
-/** Cuenta el estado (semáforo) de los indicadores activos de la organización,
- * agrupados por sitio — en una sola consulta a la vista indicator_status. */
-export async function fetchIndicatorStatusBySite(organizationId: string): Promise<Record<string, SiteStatusCounts>> {
-  const statuses = await fetchIndicatorStatuses(organizationId)
+/** Cuenta el estado (semáforo) de los indicadores activos de la organización
+ * dentro del rango dado, agrupados por sitio. */
+export async function fetchIndicatorStatusBySite(
+  organizationId: string,
+  range: { from: string; to: string },
+): Promise<Record<string, SiteStatusCounts>> {
+  const statuses = await fetchIndicatorStatusesInRange(organizationId, range)
   const counts: Record<string, SiteStatusCounts> = {}
 
   for (const status of statuses) {

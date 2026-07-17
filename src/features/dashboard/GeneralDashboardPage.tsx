@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { Semaforo } from '../../components/ui/Semaforo'
+import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
+import { daysAgo, today, DEFAULT_RANGE_DAYS } from '../../lib/dateRange'
 import { formatIndicatorValue, type Axis, type Indicator } from '../../lib/types'
 import {
   fetchActiveAxes,
@@ -27,13 +29,6 @@ import './general-dashboard.css'
 const CAN_EDIT_EXPOSURE_ROLES = ['admin_consultora', 'admin_cliente', 'gerente']
 
 const TOP_CAUSES = 3
-const TREND_DAYS = 90
-
-function daysAgo(n: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
-}
 
 interface KpiTileProps {
   indicator: Indicator
@@ -192,6 +187,8 @@ export function GeneralDashboardPage() {
   const canEditExposure = !!profile && CAN_EDIT_EXPOSURE_ROLES.includes(profile.role)
   const [exposureSchedule, setExposureSchedule] = useState<ExposureSchedule | null>(null)
   const [exposureLoading, setExposureLoading] = useState(true)
+  const [rangeFrom, setRangeFrom] = useState(daysAgo(DEFAULT_RANGE_DAYS))
+  const [rangeTo, setRangeTo] = useState(today())
   const [axes, setAxes] = useState<Axis[]>([])
   const [axisId, setAxisId] = useState('')
   const [allIndicators, setAllIndicators] = useState<Indicator[]>([])
@@ -252,6 +249,7 @@ export function GeneralDashboardPage() {
   useEffect(() => {
     if (!organizationId || !axisId) return
     let cancelled = false
+    const range = { from: rangeFrom, to: rangeTo }
 
     async function load() {
       setLoading(true)
@@ -262,10 +260,10 @@ export function GeneralDashboardPage() {
 
         const [causesData, tagsData, actionPlansData, speedData, measurementsData] = await Promise.all([
           fetchIndicatorCausesForMany(indicatorIds),
-          fetchIndicatorCauseTagsForMany(indicatorIds),
-          fetchAxisActionPlans(indicatorIds),
-          fetchAnalysisSpeedDays(indicatorIds),
-          fetchMeasurementsInRange(indicatorIds, daysAgo(TREND_DAYS), daysAgo(0)),
+          fetchIndicatorCauseTagsForMany(indicatorIds, range),
+          fetchAxisActionPlans(indicatorIds, range),
+          fetchAnalysisSpeedDays(indicatorIds, range),
+          fetchMeasurementsInRange(indicatorIds, range.from, range.to),
         ])
         if (cancelled) return
 
@@ -288,7 +286,7 @@ export function GeneralDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [organizationId, axisId])
+  }, [organizationId, axisId, rangeFrom, rangeTo])
 
   const statusByIndicator = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
   const indicatorById = useMemo(() => new Map(allIndicators.map((i) => [i.id, i])), [allIndicators])
@@ -377,18 +375,22 @@ export function GeneralDashboardPage() {
         />
       )}
 
-      {axes.length > 0 && (
-        <label className="gdash-axis-select">
-          Pilar
-          <select value={axisId} onChange={(e) => setAxisId(e.target.value)}>
-            {axes.map((axis) => (
-              <option key={axis.id} value={axis.id}>
-                {axis.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
+      <div className="gdash-filters-row">
+        {axes.length > 0 && (
+          <label className="gdash-axis-select">
+            Pilar
+            <select value={axisId} onChange={(e) => setAxisId(e.target.value)}>
+              {axes.map((axis) => (
+                <option key={axis.id} value={axis.id}>
+                  {axis.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        <RangePicker from={rangeFrom} to={rangeTo} onChange={(from, to) => { setRangeFrom(from); setRangeTo(to) }} />
+      </div>
 
       {loadError && <p className="gdash-error">No se pudo cargar el dashboard: {loadError}</p>}
 
@@ -417,8 +419,8 @@ export function GeneralDashboardPage() {
           <section className="gdash-section">
             <h2>Causas más relevantes por indicador</h2>
             <p className="page-subtitle">
-              Ordenadas por peso acumulado (no solo por cuántas veces se repitieron) — registra el valor de cada
-              causa en "Causas posibles" para que este ranking sea preciso.
+              Del {rangeFrom} al {rangeTo} — ordenadas por peso acumulado (no solo por cuántas veces se repitieron)
+              — registra el valor de cada causa en "Causas posibles" para que este ranking sea preciso.
             </p>
             {allIndicators.length === 0 ? (
               <p>—</p>
@@ -438,6 +440,7 @@ export function GeneralDashboardPage() {
 
           <section className="gdash-section">
             <h2>Acciones</h2>
+            <p className="page-subtitle">Del {rangeFrom} al {rangeTo}</p>
             <div className="gdash-actions-summary">
               <div className={`gdash-stat ${linkedRate !== null && linkedRate >= 60 ? 'gdash-stat--ok' : ''}`}>
                 <span className="gdash-stat__value">{linkedRate !== null ? `${linkedRate}%` : '—'}</span>

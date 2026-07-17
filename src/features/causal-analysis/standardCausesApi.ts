@@ -157,16 +157,24 @@ export async function fetchIndicatorCauseTags(indicatorId: string): Promise<Indi
 }
 
 /** Igual que fetchIndicatorCauseTags pero para varios indicadores a la vez —
- * evita N consultas al armar un resumen de todo un eje (ej. el Dashboard). */
+ * evita N consultas al armar un resumen de todo un eje (ej. el Dashboard).
+ * `range` acota a cuándo se REGISTRÓ el análisis (created_at) — permite que
+ * el Pareto responda "qué pesó más en este período de gestión", no siempre
+ * el histórico completo. */
 export async function fetchIndicatorCauseTagsForMany(
   indicatorIds: string[],
+  range?: { from: string; to: string },
 ): Promise<Map<string, IndicatorCauseTag[]>> {
   if (indicatorIds.length === 0) return new Map()
-  const { data: analyses, error: analysesError } = await supabase
+  let analysesQuery = supabase
     .from('causal_analyses')
     .select('id, indicator_id, impact_value')
     .in('indicator_id', indicatorIds)
     .eq('methodology', 'causas_estandar')
+
+  if (range) analysesQuery = analysesQuery.gte('created_at', range.from).lte('created_at', `${range.to}T23:59:59`)
+
+  const { data: analyses, error: analysesError } = await analysesQuery
 
   if (analysesError) throw analysesError
   const impactById = new Map((analyses ?? []).map((a) => [a.id, a.impact_value ?? 1]))

@@ -39,14 +39,15 @@ export async function deleteSafetyEvent(id: string): Promise<void> {
 }
 
 export async function fetchSafetyEventsInRange(
-  siteId: string,
+  siteIds: string[],
   startDate: string,
   endDateExclusive: string,
 ): Promise<SafetyEvent[]> {
+  if (siteIds.length === 0) return []
   const { data, error } = await supabase
     .from('safety_events')
     .select('*')
-    .eq('site_id', siteId)
+    .in('site_id', siteIds)
     .gte('event_date', startDate)
     .lt('event_date', endDateExclusive)
     .order('event_date', { ascending: false })
@@ -55,13 +56,15 @@ export async function fetchSafetyEventsInRange(
   return data ?? []
 }
 
-/** El accidente más reciente del sitio (de cualquier año) — junto con
- * operation_start_date, es la base para calcular "días sin accidentes". */
-export async function fetchLatestAccident(siteId: string): Promise<SafetyEvent | null> {
+/** El accidente más reciente entre los sitios dados (de cualquier año) —
+ * junto con operation_start_date, es la base para calcular "días sin
+ * accidentes". */
+export async function fetchLatestAccident(siteIds: string[]): Promise<SafetyEvent | null> {
+  if (siteIds.length === 0) return null
   const { data, error } = await supabase
     .from('safety_events')
     .select('*')
-    .eq('site_id', siteId)
+    .in('site_id', siteIds)
     .eq('event_type', 'accidente')
     .order('event_date', { ascending: false })
     .limit(1)
@@ -71,40 +74,66 @@ export async function fetchLatestAccident(siteId: string): Promise<SafetyEvent |
   return data
 }
 
-/** "Días sin accidentes" cuenta desde el accidente más reciente; si nunca ha
- * habido uno, cuenta desde que arrancó la operación. Sin ninguna de las dos
- * fechas no hay nada que calcular (operación sin fecha de inicio configurada). */
+/** "Días sin accidentes" cuenta desde el accidente más reciente hasta la
+ * fecha de referencia (el filtro que eligió el usuario, no necesariamente
+ * hoy); si nunca ha habido uno, cuenta desde que arrancó la operación. Sin
+ * ninguna de las dos fechas no hay nada que calcular (operación sin fecha de
+ * inicio configurada). */
 export function computeDaysWithoutAccidents(
   operationStartDate: string | null,
   latestAccidentDate: string | null,
+  referenceDate: Date,
 ): number | null {
   const base = latestAccidentDate ?? operationStartDate
   if (!base) return null
   const baseDate = new Date(`${base}T00:00:00`)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const diffMs = today.getTime() - baseDate.getTime()
+  const ref = new Date(referenceDate)
+  ref.setHours(0, 0, 0, 0)
+  const diffMs = ref.getTime() - baseDate.getTime()
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
 }
 
-export type SafetyCrossColor = 'verde' | 'amarillo' | 'rojo'
+/** Detecta indicadores "días sin accidentes" por su nombre — es una
+ * convención de nombramiento del cliente, no un campo del esquema. Permite
+ * que otras pantallas (ej. Reunión por nivel) muestren el mismo cálculo que
+ * esta pantalla (fecha de inicio de operación o último accidente del sitio)
+ * en vez de depender de mediciones manuales que nunca se cargan para este
+ * tipo de indicador. */
+export function isDaysWithoutAccidentsIndicatorName(name: string): boolean {
+  const normalized = name
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+  return normalized.includes('dias sin accidentes')
+}
+
+export type SafetyCrossColor = 'verde' | 'amarillo' | 'rojo' | 'blanco'
 
 /** Un accidente pinta el día de rojo; un incidente sin daño lo pinta de
  * amarillo (a menos que ese mismo día ya haya un accidente, que manda);
- * cualquier otro día del mes queda verde por defecto. Actos y condiciones
- * inseguras no pintan la cruz — son observaciones proactivas, no eventos con
- * consecuencia ese día. */
+ * cualquier otro día ya transcurrido (hasta referenceDate) queda verde por
+ * defecto — no hace falta registrar explícitamente los días seguros. Los
+ * días posteriores a referenceDate quedan en blanco: no cuentan como
+ * "seguros" todavía porque, desde el punto de vista del filtro elegido, no
+ * han pasado. Actos y condiciones inseguras no pintan la cruz — son
+ * observaciones proactivas, no eventos con consecuencia ese día. */
 export function computeSafetyCross(
   events: SafetyEvent[],
   year: number,
   month: number,
+  referenceDate: Date,
 ): Record<number, SafetyCrossColor> {
   const daysInMonth = new Date(year, month, 0).getDate()
   const colors: Record<number, SafetyCrossColor> = {}
-  for (let day = 1; day <= daysInMonth; day++) colors[day] = 'verde'
+  const ref = new Date(referenceDate)
+  ref.setHours(0, 0, 0, 0)
+  for (let day = 1; day <= daysInMonth; day++) {
+    colors[day] = new Date(year, month - 1, day) > ref ? 'blanco' : 'verde'
+  }
 
   for (const event of events) {
     const day = Number(event.event_date.slice(8, 10))
+    if (colors[day] === 'blanco') continue
     if (event.event_type === 'accidente') colors[day] = 'rojo'
     else if (event.event_type === 'incidente' && colors[day] !== 'rojo') colors[day] = 'amarillo'
   }
