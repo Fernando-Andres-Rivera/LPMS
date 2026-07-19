@@ -17,6 +17,7 @@ export async function setLevelCutoff(params: {
   level: 1 | 2 | 3
   cutoffTime: string | null
   evaluatedDayOffset: number
+  weekdays: number[]
   createdBy: string
 }): Promise<void> {
   if (params.cutoffTime === null) {
@@ -35,6 +36,7 @@ export async function setLevelCutoff(params: {
       level: params.level,
       cutoff_time: params.cutoffTime,
       evaluated_day_offset: params.evaluatedDayOffset,
+      weekdays: params.weekdays,
       created_by: params.createdBy,
     },
     { onConflict: 'organization_id,level' },

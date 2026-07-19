@@ -47,6 +47,50 @@
   font-family: inherit;
 }
 
+.meeting-schedule-weekdays {
+  margin-bottom: 14px;
+}
+
+.meeting-schedule-weekdays__label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.meeting-schedule-weekdays__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meeting-schedule-weekday {
+  min-width: 48px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.meeting-schedule-weekday.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.meeting-schedule-weekdays__warning {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--color-fail);
+  font-weight: 600;
+}
+
 .meeting-schedule-actions {
   display: flex;
   gap: 10px;

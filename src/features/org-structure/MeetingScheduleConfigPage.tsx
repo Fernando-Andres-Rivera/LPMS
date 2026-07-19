@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { fetchLevelCutoffs, setLevelCutoff } from './captureCutoffsApi'
-import { DAY_OFFSET_LABEL, type LevelCaptureCutoff } from '../../lib/types'
+import { DAY_OFFSET_LABEL, WEEKDAY_OPTIONS, type LevelCaptureCutoff } from '../../lib/types'
 import './meeting-schedule.css'
 
 const LEVELS: { level: 1 | 2 | 3; label: string }[] = [
@@ -12,15 +12,45 @@ const LEVELS: { level: 1 | 2 | 3; label: string }[] = [
 
 const OFFSET_OPTIONS = [0, -1, -2, -3]
 
+// Lunes a sábado por defecto para un nivel recién configurado — el caso más
+// común en operaciones industriales; el usuario quita los días que no
+// aplican con un clic (ej. dejar solo lunes y viernes).
+const DEFAULT_WEEKDAYS = [1, 2, 3, 4, 5, 6]
+
 interface Draft {
   time: string
   offset: number
+  weekdays: number[]
 }
 
 function draftsFromCutoffs(data: LevelCaptureCutoff[]): Record<number, Draft> {
   const drafts: Record<number, Draft> = {}
-  for (const c of data) drafts[c.level] = { time: c.cutoff_time.slice(0, 5), offset: c.evaluated_day_offset }
+  for (const c of data) {
+    drafts[c.level] = {
+      time: c.cutoff_time.slice(0, 5),
+      offset: c.evaluated_day_offset,
+      weekdays: c.weekdays,
+    }
+  }
   return drafts
+}
+
+/** "Lun-Vie", "Lun, Mié y Vie", etc. — un resumen legible del patrón elegido,
+ * en el mismo orden en que se muestran los botones (lunes primero). */
+function summarizeWeekdays(weekdays: number[]): string {
+  const ordered = WEEKDAY_OPTIONS.filter((opt) => weekdays.includes(opt.value))
+  if (ordered.length === 0) return 'ningún día'
+  if (ordered.length === 7) return 'todos los días'
+
+  // Detecta un tramo continuo (ej. lunes a viernes) en el orden de la semana.
+  const values = ordered.map((opt) => opt.value)
+  const weekOrder = WEEKDAY_OPTIONS.map((opt) => opt.value)
+  const indices = values.map((v) => weekOrder.indexOf(v))
+  const isConsecutive = indices.every((idx, i) => i === 0 || idx === indices[i - 1] + 1)
+  if (isConsecutive && ordered.length > 1) {
+    return `${ordered[0].label}-${ordered[ordered.length - 1].label}`
+  }
+  return ordered.map((opt) => opt.label).join(', ')
 }
 
 export function MeetingScheduleConfigPage() {
@@ -54,13 +84,28 @@ export function MeetingScheduleConfigPage() {
   }, [organizationId])
 
   function updateDraft(level: number, patch: Partial<Draft>) {
-    setDrafts((d) => ({ ...d, [level]: { time: d[level]?.time ?? '', offset: d[level]?.offset ?? 0, ...patch } }))
+    setDrafts((d) => ({
+      ...d,
+      [level]: {
+        time: d[level]?.time ?? '',
+        offset: d[level]?.offset ?? 0,
+        weekdays: d[level]?.weekdays ?? DEFAULT_WEEKDAYS,
+        ...patch,
+      },
+    }))
+  }
+
+  function toggleWeekday(level: number, day: number) {
+    const current = drafts[level]?.weekdays ?? DEFAULT_WEEKDAYS
+    const next = current.includes(day) ? current.filter((d) => d !== day) : [...current, day]
+    updateDraft(level, { weekdays: next })
   }
 
   async function handleSave(level: 1 | 2 | 3) {
     if (!profile || !organizationId) return
     const draft = drafts[level]
     if (!draft?.time?.trim()) return
+    if (draft.weekdays.length === 0) return
     setSavingLevel(level)
     try {
       await setLevelCutoff({
@@ -68,6 +113,7 @@ export function MeetingScheduleConfigPage() {
         level,
         cutoffTime: draft.time,
         evaluatedDayOffset: draft.offset,
+        weekdays: draft.weekdays,
         createdBy: profile.id,
       })
       await loadAll()
@@ -80,7 +126,14 @@ export function MeetingScheduleConfigPage() {
     if (!profile || !organizationId) return
     setSavingLevel(level)
     try {
-      await setLevelCutoff({ organizationId, level, cutoffTime: null, evaluatedDayOffset: 0, createdBy: profile.id })
+      await setLevelCutoff({
+        organizationId,
+        level,
+        cutoffTime: null,
+        evaluatedDayOffset: 0,
+        weekdays: [],
+        createdBy: profile.id,
+      })
       await loadAll()
     } finally {
       setSavingLevel(null)
@@ -102,7 +155,7 @@ export function MeetingScheduleConfigPage() {
       <div className="meeting-schedule-list">
         {LEVELS.map(({ level, label }) => {
           const current = cutoffs.find((c) => c.level === level)
-          const draft = drafts[level] ?? { time: '', offset: 0 }
+          const draft = drafts[level] ?? { time: '', offset: 0, weekdays: DEFAULT_WEEKDAYS }
           return (
             <section key={level} className="meeting-schedule-card">
               <h2>{label}</h2>
@@ -129,12 +182,30 @@ export function MeetingScheduleConfigPage() {
                   </select>
                 </label>
               </div>
+              <div className="meeting-schedule-weekdays">
+                <span className="meeting-schedule-weekdays__label">Qué días de la semana se reúne</span>
+                <div className="meeting-schedule-weekdays__grid">
+                  {WEEKDAY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`meeting-schedule-weekday ${draft.weekdays.includes(opt.value) ? 'active' : ''}`}
+                      onClick={() => toggleWeekday(level, opt.value)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {draft.weekdays.length === 0 && (
+                  <span className="meeting-schedule-weekdays__warning">Elige al menos un día para guardar.</span>
+                )}
+              </div>
               <div className="meeting-schedule-actions">
                 <button
                   type="button"
                   className="button-primary"
                   onClick={() => handleSave(level)}
-                  disabled={savingLevel === level || !draft.time.trim()}
+                  disabled={savingLevel === level || !draft.time.trim() || draft.weekdays.length === 0}
                 >
                   {savingLevel === level ? 'Guardando…' : 'Guardar'}
                 </button>
@@ -151,7 +222,8 @@ export function MeetingScheduleConfigPage() {
               </div>
               {current && (
                 <p className="meeting-schedule-summary">
-                  Hoy a las {current.cutoff_time.slice(0, 5)}, se bloquea la captura del{' '}
+                  {summarizeWeekdays(current.weekdays)}, a las {current.cutoff_time.slice(0, 5)}, se bloquea la
+                  captura del{' '}
                   {DAY_OFFSET_LABEL[current.evaluated_day_offset]?.toLowerCase() ?? 'día evaluado'} para este nivel.
                 </p>
               )}

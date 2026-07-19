@@ -109,7 +109,8 @@ export interface OrgUnit {
 }
 
 /** Horario de la reunión de un nivel: hora de inicio + qué día evalúa esa
- * reunión (0 = hoy, -1 = ayer, -2 = antier…) — no toda reunión evalúa el
+ * reunión (0 = hoy, -1 = ayer, -2 = antier…) + en qué días de la semana se
+ * reúne (no toda cascada se reúne a diario) — no toda reunión evalúa el
  * dato del mismo día en que ocurre. */
 export interface LevelCaptureCutoff {
   id: string
@@ -117,6 +118,8 @@ export interface LevelCaptureCutoff {
   level: 1 | 2 | 3
   cutoff_time: string // 'HH:MM:SS'
   evaluated_day_offset: number // 0, -1, -2…
+  /** Sigue Date.getDay(): 0=domingo, 1=lunes … 6=sábado. */
+  weekdays: number[]
   created_by: string | null
   created_at: string
 }
@@ -128,21 +131,39 @@ export const DAY_OFFSET_LABEL: Record<number, string> = {
   [-3]: 'Hace 3 días',
 }
 
+/** Días de la semana en el orden en que se muestran en pantalla (lunes
+ * primero) — el `value` es el que usa Date.getDay() internamente. */
+export const WEEKDAY_OPTIONS: { value: number; label: string }[] = [
+  { value: 1, label: 'Lun' },
+  { value: 2, label: 'Mar' },
+  { value: 3, label: 'Mié' },
+  { value: 4, label: 'Jue' },
+  { value: 5, label: 'Vie' },
+  { value: 6, label: 'Sáb' },
+  { value: 0, label: 'Dom' },
+]
+
 /** La fecha (YYYY-MM-DD) que la reunión de hoy evalúa, según su desfase. */
 export function evaluatedDateForOffset(offset: number, now: Date): string {
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)
   return d.toISOString().slice(0, 10)
 }
 
-/** true si ya pasó la hora de la reunión del nivel Y la fecha que se quiere
- * capturar es justo la que esa reunión evalúa. Nunca bloquea fechas más
- * antiguas que la evaluada (para poder ponerse al día con un dato atrasado). */
+/** true si ya pasó la hora de la reunión del nivel, HOY es uno de los días
+ * en que ese nivel se reúne, Y la fecha que se quiere capturar es justo la
+ * que esa reunión evalúa. Nunca bloquea fechas más antiguas que la
+ * evaluada (para poder ponerse al día con un dato atrasado). */
 export function isCaptureBlockedByTime(
-  schedule: { cutoff_time: string; evaluated_day_offset: number } | null,
+  schedule: { cutoff_time: string; evaluated_day_offset: number; weekdays: number[] } | null,
   periodDate: string,
   now: Date,
 ): boolean {
   if (!schedule) return false
+  // `weekdays` puede venir undefined si la migración que agrega la columna
+  // todavía no corrió contra esta base — en ese caso, mismo comportamiento
+  // de antes (bloquea todos los días) en vez de reventar.
+  const weekdays = schedule.weekdays ?? []
+  if (weekdays.length > 0 && !weekdays.includes(now.getDay())) return false
   if (periodDate !== evaluatedDateForOffset(schedule.evaluated_day_offset, now)) return false
   const [hours, minutes] = schedule.cutoff_time.split(':').map(Number)
   const meetingTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
