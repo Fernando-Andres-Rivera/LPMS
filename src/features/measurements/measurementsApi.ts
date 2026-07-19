@@ -76,6 +76,12 @@ export async function fetchCapturableIndicators(
   return data ?? []
 }
 
+export async function fetchMeasurementById(id: string) {
+  const { data, error } = await supabase.from('measurements').select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  return data
+}
+
 export async function fetchMeasurementForPeriod(indicatorId: string, periodDate: string) {
   const { data, error } = await supabase
     .from('measurements')

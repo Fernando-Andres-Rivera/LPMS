@@ -1,13 +1,19 @@
-import { Line, LineChart, ResponsiveContainer, YAxis } from 'recharts'
 import { Link } from 'react-router-dom'
 import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
 import { Semaforo } from './Semaforo'
-import { formatIndicatorValue, type ImprovementDirection, type IndicatorValueType } from '../../lib/types'
+import { TrendSparkline } from './TrendSparkline'
+import {
+  formatIndicatorValue,
+  type ImprovementDirection,
+  type IndicatorValueType,
+  type SemaforoEstado,
+} from '../../lib/types'
 import './IndicatorCard.css'
 
 export interface IndicatorCardTrendPoint {
+  /** Fecha ISO (yyyy-mm-dd) del día; null en `value` = sin registro ese día. */
   period_date: string
-  value: number
+  value: number | null
 }
 
 interface IndicatorCardProps {
@@ -20,6 +26,11 @@ interface IndicatorCardProps {
   latestValue: number | null
   targetValue: number | null
   trend: IndicatorCardTrendPoint[]
+  /** Para indicadores cuyo semáforo no se decide comparando valor vs.
+   * objetivo (ej. "días sin accidentes": el conteo siempre "cumple" un
+   * objetivo de 0, pero lo que importa es si hubo un accidente DENTRO del
+   * rango elegido) — cuando se da, reemplaza el cálculo genérico. */
+  estadoOverride?: SemaforoEstado
 }
 
 /**
@@ -36,11 +47,16 @@ export function IndicatorCard({
   latestValue,
   targetValue,
   trend,
+  estadoOverride,
 }: IndicatorCardProps) {
-  const estado = calcularSemaforo(latestValue, targetValue, improvementDirection)
+  const estado = estadoOverride ?? calcularSemaforo(latestValue, targetValue, improvementDirection)
 
   return (
-    <Link to={`/tablero/${id}`} className="indicator-card">
+    <Link
+      to={`/tablero/${id}`}
+      className="indicator-card"
+      style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
+    >
       <div className="indicator-card__header">
         <span className="indicator-card__level">Nivel {level}</span>
         <Semaforo estado={estado} showLabel={false} size="sm" />
@@ -65,20 +81,13 @@ export function IndicatorCard({
         )}
       </div>
 
-      {trend.length > 1 && (
+      {trend.length > 0 && (
         <div className="indicator-card__sparkline">
-          <ResponsiveContainer width="100%" height={40}>
-            <LineChart data={trend}>
-              <YAxis hide domain={['dataMin', 'dataMax']} />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke={SEMAFORO_COLOR[estado]}
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <TrendSparkline
+            data={trend.map((p) => ({ date: p.period_date, value: p.value }))}
+            color={SEMAFORO_COLOR[estado]}
+            height={40}
+          />
         </div>
       )}
     </Link>

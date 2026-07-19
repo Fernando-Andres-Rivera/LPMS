@@ -74,7 +74,10 @@ export function CausalAnalysisPage() {
     }
   }
 
-  const [methodology, setMethodology] = useState<CausalMethodology>('ishikawa')
+  // Si llega con una medición puntual (ej. redirigido desde Captura porque
+  // el valor incumplió el objetivo), arranca directo en "Causas posibles" —
+  // es la lista estandarizada, no un texto libre por metodología distinta.
+  const [methodology, setMethodology] = useState<CausalMethodology>(measurementId ? 'causas_estandar' : 'ishikawa')
   const [categoryText, setCategoryText] = useState<Record<IshikawaCategoryKey, string>>({
     mano_de_obra: '',
     metodo: '',

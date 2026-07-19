@@ -197,6 +197,7 @@ export async function fetchCurrentTargetsForIndicators(
 
 export interface PeriodResult {
   label: string
+  date: string
   value: number | null
 }
 
@@ -225,6 +226,7 @@ export async function fetchIndicatorPeriodSeries(
 
   return buckets.map((bucket) => ({
     label: bucket.label,
+    date: bucket.startDate,
     value: aggregateValues(
       rows.filter((r) => r.period_date >= bucket.startDate && r.period_date <= bucket.endDate),
       method,
@@ -253,7 +255,7 @@ export async function computeIndicatorSeries(
 
   const childIds = allLinks.filter((l) => l.parent_indicator_id === indicator.id).map((l) => l.child_indicator_id)
   const children = allIndicators.filter((i) => childIds.includes(i.id))
-  if (children.length === 0) return buckets.map((b) => ({ label: b.label, value: null }))
+  if (children.length === 0) return buckets.map((b) => ({ label: b.label, date: b.startDate, value: null }))
 
   const childSeries = await Promise.all(
     children.map((child) => computeIndicatorSeries(child, allIndicators, allLinks, buckets)),
@@ -264,7 +266,7 @@ export async function computeIndicatorSeries(
       .map((series) => series[i]?.value)
       .filter((v): v is number => v !== null && v !== undefined)
       .map((value) => ({ period_date: bucket.endDate, value }))
-    return { label: bucket.label, value: aggregateValues(values, indicator.aggregation_method) }
+    return { label: bucket.label, date: bucket.startDate, value: aggregateValues(values, indicator.aggregation_method) }
   })
 }
 

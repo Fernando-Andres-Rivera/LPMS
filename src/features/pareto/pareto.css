@@ -84,3 +84,55 @@
   color: var(--color-text-muted);
   font-size: 0.85rem;
 }
+
+.pareto-evidence {
+  margin-top: 20px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px;
+}
+
+.pareto-evidence h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.pareto-evidence__list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pareto-evidence__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pareto-evidence__item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.pareto-evidence__impact {
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--color-primary);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+}
+
+.pareto-evidence__cause {
+  color: var(--color-text);
+  font-size: 0.9rem;
+}

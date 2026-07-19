@@ -1,0 +1,15 @@
+.trend-sparkline {
+  width: 100%;
+}
+
+.trend-sparkline__tick {
+  font-size: 8px;
+  fill: var(--color-text-muted);
+  opacity: 0.4;
+}
+
+.trend-sparkline__tick--sunday {
+  fill: var(--color-fail);
+  opacity: 0.85;
+  font-weight: 700;
+}

@@ -4,12 +4,15 @@ import type { ActionPlan, PdcaStatus } from '../../lib/types'
 export interface ActionPlanWithNames extends ActionPlan {
   responsible: { full_name: string } | null
   creator: { full_name: string } | null
+  causal_analysis: { root_cause: string | null } | null
 }
 
 export async function fetchActionPlansForIndicator(indicatorId: string): Promise<ActionPlanWithNames[]> {
   const { data, error } = await supabase
     .from('action_plans')
-    .select('*, responsible:profiles!action_plans_responsible_id_fkey(full_name), creator:profiles!action_plans_created_by_fkey(full_name)')
+    .select(
+      '*, responsible:profiles!action_plans_responsible_id_fkey(full_name), creator:profiles!action_plans_created_by_fkey(full_name), causal_analysis:causal_analyses(root_cause)',
+    )
     .eq('indicator_id', indicatorId)
     .order('created_at', { ascending: false })
 

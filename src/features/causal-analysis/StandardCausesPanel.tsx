@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { createCausalAnalysis } from './causalAnalysisApi'
+import { ParetoAxisTick } from '../../components/ui/ParetoAxisTick'
+import {
+  createCausalAnalysis,
+  deleteCausalAnalysis,
+  fetchCausesForMeasurement,
+  type MeasurementCause,
+} from './causalAnalysisApi'
+import { fetchMeasurementById } from '../measurements/measurementsApi'
 import { IndicatorCausePicker } from './IndicatorCausePicker'
 import { RootCausePicker } from './RootCausePicker'
 import {
@@ -47,6 +54,50 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
   // reenvía tal cual si el usuario vuelve a guardar sin notarlo.
   const [rootCauseResetKey, setRootCauseResetKey] = useState(0)
 
+  // Distribución del día: valor real de la medición vinculada y las causas
+  // ya registradas contra ella — para repartir "20 inconsistencias" entre
+  // varias causales sin pasarse ni dejar el faltante invisible.
+  const [dayValue, setDayValue] = useState<number | null>(null)
+  const [dayDate, setDayDate] = useState<string | null>(null)
+  const [dayCauses, setDayCauses] = useState<MeasurementCause[]>([])
+
+  async function reloadDay() {
+    if (!measurementId) return
+    const [measurement, causesRows] = await Promise.all([
+      fetchMeasurementById(measurementId),
+      fetchCausesForMeasurement(measurementId),
+    ])
+    setDayValue(measurement ? Number(measurement.value) : null)
+    setDayDate(measurement?.period_date ?? null)
+    setDayCauses(causesRows)
+  }
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      if (!measurementId) {
+        setDayValue(null)
+        setDayDate(null)
+        setDayCauses([])
+        return
+      }
+      const [measurement, causesRows] = await Promise.all([
+        fetchMeasurementById(measurementId),
+        fetchCausesForMeasurement(measurementId),
+      ])
+      if (cancelled) return
+      setDayValue(measurement ? Number(measurement.value) : null)
+      setDayDate(measurement?.period_date ?? null)
+      setDayCauses(causesRows)
+    }
+
+    load().catch((err) => console.error('No se pudo cargar la distribución del día:', err))
+    return () => {
+      cancelled = true
+    }
+  }, [measurementId])
+
   async function fetchTree(): Promise<{ causes: IndicatorCause[]; tags: IndicatorCauseTag[] }> {
     const [causesData, tagsData] = await Promise.all([
       fetchIndicatorCauses(indicator.id),
@@ -81,12 +132,37 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [indicator.id])
 
+  const assignedTotal = dayCauses.reduce((sum, c) => sum + c.impact_value, 0)
+  // Solo tiene sentido "cuadrar" contra el valor del día en KPIs numéricos
+  // (conteos): en razón/binario el valor no es una cantidad repartible.
+  const distributesAgainstDay = indicator.value_type === 'numerico' && dayValue !== null
+  const remaining = distributesAgainstDay ? dayValue - assignedTotal : null
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!rootCause.trim() || !selectedCause) {
       setError('Describe la causa raíz y elige un nodo del árbol de causas antes de guardar.')
       setSavedMessage(null)
       return
+    }
+    // La suma de las causas no puede superar el valor real del KPI ese día:
+    // si hubo 20 inconsistencias, entre todas las causales deben explicar
+    // máximo 20. Al re-registrar la MISMA causa se descuenta la versión que
+    // va a ser reemplazada, para que corregir un valor no cuente doble.
+    if (distributesAgainstDay) {
+      const newValue = impactValue.trim() ? Number(impactValue) : 1
+      const normalized = rootCause.trim().toLowerCase()
+      const replacedSum = dayCauses
+        .filter((c) => (c.root_cause ?? '').trim().toLowerCase() === normalized && !c.hasPlan)
+        .reduce((sum, c) => sum + c.impact_value, 0)
+      const projected = assignedTotal - replacedSum + newValue
+      if (projected > (dayValue as number)) {
+        setError(
+          `La suma de las causas quedaría en ${projected}, pero el KPI de este día registró ${dayValue} ${indicator.unit}. Ajusta el valor de esta causa (o corrige las ya registradas) para que la distribución no supere la cantidad real.`,
+        )
+        setSavedMessage(null)
+        return
+      }
     }
     setSaving(true)
     setError(null)
@@ -111,12 +187,29 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
       setSelectedCause(null)
       setRootCauseResetKey((k) => k + 1)
       setSavedMessage('Causa registrada. Si el incumplimiento tuvo más de una causa, agrégala aquí mismo: elige otro nodo del árbol y describe la siguiente causa raíz.')
-      await reloadTree()
+      await Promise.all([reloadTree(), reloadDay()])
       onSaved()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar el análisis.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDeleteDayCause(cause: MeasurementCause) {
+    if (cause.hasPlan) return
+    const label = cause.root_cause ?? 'esta causa'
+    if (!window.confirm(`¿Eliminar "${label}" (valor ${cause.impact_value}) de este día? El registro se borra definitivamente.`)) {
+      return
+    }
+    setError(null)
+    setSavedMessage(null)
+    try {
+      await deleteCausalAnalysis(cause.id)
+      await Promise.all([reloadTree(), reloadDay()])
+      onSaved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar la causa.')
     }
   }
 
@@ -153,6 +246,52 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
 
   return (
     <div className="standard-causes-panel">
+      {distributesAgainstDay && dayDate && (
+        <div className="causal-day-summary">
+          <h3>
+            Distribución del {new Date(`${dayDate}T00:00:00`).toLocaleDateString('es-CO')} — el KPI registró{' '}
+            {dayValue} {indicator.unit}
+          </h3>
+          <p
+            className={`causal-day-summary__status ${
+              (remaining as number) === 0
+                ? 'causal-day-summary__status--ok'
+                : (remaining as number) > 0
+                  ? 'causal-day-summary__status--pending'
+                  : 'causal-day-summary__status--over'
+            }`}
+          >
+            {(remaining as number) === 0
+              ? `✓ Distribución completa: las causas explican los ${dayValue} ${indicator.unit} del día.`
+              : (remaining as number) > 0
+                ? `Asignado a causas: ${assignedTotal} de ${dayValue} — faltan ${remaining} ${indicator.unit} por explicar con una causal.`
+                : `Las causas suman ${assignedTotal}, más que los ${dayValue} ${indicator.unit} del día — corrige los valores.`}
+          </p>
+          {dayCauses.length > 0 && (
+            <ul className="causal-day-list">
+              {dayCauses.map((cause) => (
+                <li key={cause.id} className="causal-day-item">
+                  <span className="causal-day-item__value">{cause.impact_value}</span>
+                  <span className="causal-day-item__body">
+                    {cause.root_cause}
+                    {cause.causeName && <small> · {cause.causeName}</small>}
+                  </span>
+                  {cause.hasPlan ? (
+                    <span className="causal-day-item__locked" title="Tiene un plan de acción vinculado — no se puede eliminar.">
+                      Con plan
+                    </span>
+                  ) : (
+                    <button type="button" className="causal-day-item__delete" onClick={() => handleDeleteDayCause(cause)}>
+                      Eliminar
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <form className="causal-form" onSubmit={handleSubmit}>
         <label>
           Árbol de causas de este indicador
@@ -190,8 +329,9 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
             onChange={(e) => setImpactValue(e.target.value)}
           />
           <span className="causal-form__hint">
-            Si no lo llenas, cuenta como 1 en el Pareto — úsalo para ponderar hallazgos que no pesan lo mismo (ej.
-            varias novedades de un mismo gemba walk).
+            {distributesAgainstDay && (remaining as number) > 0
+              ? `Cuántas de las ${dayValue} ${indicator.unit} del día corresponden a esta causa — quedan ${remaining} por asignar. Si no lo llenas, cuenta como 1.`
+              : 'Si no lo llenas, cuenta como 1 en el Pareto — úsalo para ponderar hallazgos que no pesan lo mismo (ej. varias novedades de un mismo gemba walk).'}
           </span>
         </label>
 
@@ -241,13 +381,14 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
             <ResponsiveContainer width="100%" height={280}>
               <ComposedChart
                 data={chartData}
+                margin={{ bottom: 12 }}
                 onClick={(state) => {
                   const payload = (state as { activePayload?: { payload: { causeId: string } }[] })?.activePayload
                   if (payload?.[0]) drillInto(payload[0].payload.causeId)
                 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <XAxis dataKey="name" tick={<ParetoAxisTick />} interval={0} height={50} />
                 <YAxis yAxisId="left" allowDecimals={false} />
                 <YAxis yAxisId="right" orientation="right" domain={[0, 100]} unit="%" />
                 <Tooltip />

@@ -24,7 +24,7 @@ interface IndicatorRow {
   indicator: Indicator
   latestValue: number | null
   targetValue: number | null
-  trend: { period_date: string; value: number }[]
+  trend: { period_date: string; value: number | null }[]
   estado: SemaforoEstado
   rootCause: string | null
   actionPlanCount: number
@@ -99,19 +99,22 @@ export function AxisDashboardPage() {
         const indMeas = measByIndicator.get(indicator.id) ?? []
         const series = buckets.map((b) => ({
           label: b.label,
+          date: b.startDate,
           value: aggregateValues(
             indMeas.filter((r) => r.period_date >= b.startDate && r.period_date <= b.endDate),
             indicator.aggregation_method,
           ),
         }))
-        const withData = series.filter((p) => p.value !== null)
-        const latestValue = withData.length ? (withData[withData.length - 1].value as number) : null
+        // El KPI del rango completo (no solo el último bucket): "suma" debe
+        // sumar TODO el rango elegido, igual que el Tablero — antes esto
+        // tomaba el valor del último día, que no reflejaba el rango.
+        const latestValue = aggregateValues(indMeas, indicator.aggregation_method)
         const targetValue = targetMap.get(indicator.id) ?? null
         return {
           indicator,
           latestValue,
           targetValue,
-          trend: withData.map((p) => ({ period_date: p.label, value: p.value as number })),
+          trend: series.map((p) => ({ period_date: p.date, value: p.value })),
           estado: calcularSemaforo(latestValue, targetValue, indicator.improvement_direction),
           rootCause: causeMap.get(indicator.id) ?? null,
           actionPlanCount: planCountMap.get(indicator.id) ?? 0,

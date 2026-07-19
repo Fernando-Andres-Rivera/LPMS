@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import {
   DAY_OFFSET_LABEL,
@@ -7,9 +7,9 @@ import {
   type Axis,
   type Indicator,
   type LevelCaptureCutoff,
-  type SemaforoEstado,
   type Site,
   type SiteLocation,
+  type Target,
 } from '../../lib/types'
 import { fetchCapturableIndicators, fetchMeasurementForPeriod, saveMeasurement } from './measurementsApi'
 import { fetchActiveAxes, fetchCurrentTarget } from '../dashboard/dashboardApi'
@@ -63,9 +63,11 @@ export function MeasurementCapturePage() {
   const [siteLocationId, setSiteLocationId] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
-  const [deviation, setDeviation] = useState<{ estado: SemaforoEstado; measurementId: string } | null>(null)
+  const [deviation, setDeviation] = useState<{ measurementId: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [target, setTarget] = useState<Target | null>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!profile || !organizationId) return
@@ -129,6 +131,29 @@ export function MeasurementCapturePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [indicatorId, periodDate])
 
+  // Objetivo vigente para el período que se está capturando (no "hoy") —
+  // para saber, apenas se guarda, si el valor incumple y hay que mandar al
+  // usuario a registrar la causa en la pantalla estándar (el árbol de
+  // "Causas posibles"), no a escribirla libre aquí.
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      if (!indicatorId || !periodDate) {
+        setTarget(null)
+        return
+      }
+      const [year, month] = periodDate.split('-').map(Number)
+      const data = await fetchCurrentTarget(indicatorId, year, month)
+      if (!cancelled) setTarget(data)
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [indicatorId, periodDate])
+
   useEffect(() => {
     let cancelled = false
     const request = selectedIndicator?.site_id ? fetchSiteLocations(selectedIndicator.site_id) : Promise.resolve([])
@@ -172,16 +197,25 @@ export function MeasurementCapturePage() {
         plannedValue: selectedIndicator.value_type === 'razon' ? Number(plannedValue) : undefined,
         realValue: selectedIndicator.value_type === 'razon' ? Number(realValue) : undefined,
       })
-      setMessage({ type: 'ok', text: 'Medición guardada correctamente.' })
 
-      const now = new Date()
-      const [saved, target] = await Promise.all([
-        fetchMeasurementForPeriod(indicatorId, periodDate),
-        fetchCurrentTarget(indicatorId, now.getFullYear(), now.getMonth() + 1),
-      ])
+      const saved = await fetchMeasurementForPeriod(indicatorId, periodDate)
       const estado = calcularSemaforo(effectiveValue, target?.target_value, selectedIndicator.improvement_direction)
-      if (saved && (estado === 'riesgo' || estado === 'incumple')) {
-        setDeviation({ estado, measurementId: saved.id })
+
+      // No puede haber un KPI incumpliendo el objetivo sin una causa raíz —
+      // sin importar el tipo (numérico, razón o binario, los tres pueden
+      // resolver a "incumple" contra un objetivo real). En vez de dejarlo
+      // como un enlace opcional que se puede ignorar, se manda directo a
+      // "Causas posibles" (el árbol estándar del indicador) a registrarla,
+      // sin inventar un campo de texto libre aparte que rompería la
+      // estandarización de la lista.
+      if (saved && estado === 'incumple') {
+        navigate(`/analisis-causal/${indicatorId}?measurement=${saved.id}`)
+        return
+      }
+
+      setMessage({ type: 'ok', text: 'Medición guardada correctamente.' })
+      if (saved && estado === 'riesgo') {
+        setDeviation({ measurementId: saved.id })
       }
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'No se pudo guardar la medición.' })
@@ -382,7 +416,7 @@ export function MeasurementCapturePage() {
 
           {deviation && (
             <div className="capture-deviation">
-              Este valor está {deviation.estado === 'incumple' ? 'incumpliendo' : 'en riesgo frente a'} el objetivo.
+              Este valor está en riesgo frente al objetivo.
               <Link to={`/analisis-causal/${indicatorId}?measurement=${deviation.measurementId}`}>
                 Registrar análisis de causa
               </Link>

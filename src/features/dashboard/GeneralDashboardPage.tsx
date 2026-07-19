@@ -5,12 +5,13 @@ import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { Semaforo } from '../../components/ui/Semaforo'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
-import { daysAgo, today, DEFAULT_RANGE_DAYS } from '../../lib/dateRange'
+import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
+import { daysAgo, yesterday, DEFAULT_RANGE_DAYS } from '../../lib/dateRange'
 import { formatIndicatorValue, type Axis, type Indicator } from '../../lib/types'
 import {
   fetchActiveAxes,
   fetchIndicatorsByAxis,
-  fetchIndicatorStatuses,
+  fetchIndicatorStatusesInRange,
   fetchMeasurementsInRange,
   type IndicatorStatus,
 } from './dashboardApi'
@@ -33,7 +34,7 @@ const TOP_CAUSES = 3
 interface KpiTileProps {
   indicator: Indicator
   status: IndicatorStatus | undefined
-  trend: { period_date: string; value: number }[]
+  trend: { period_date: string; value: number | null }[]
 }
 
 /**
@@ -67,7 +68,11 @@ function KpiTile({ indicator, status, trend }: KpiTileProps) {
   if (indicator.value_type === 'razon') {
     const pct = latestValue !== null ? Math.max(0, Math.min(100, latestValue)) : 0
     return (
-      <Link to={`/tablero/${indicator.id}`} className="gdash-card gdash-card--bar">
+      <Link
+        to={`/tablero/${indicator.id}`}
+        className="gdash-card gdash-card--bar"
+        style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
+      >
         <div className="gdash-card__header">
           <span className="gdash-card__level">Nivel {indicator.level}</span>
           <Semaforo estado={estado} showLabel={false} size="sm" />
@@ -87,7 +92,11 @@ function KpiTile({ indicator, status, trend }: KpiTileProps) {
   const targetPct = targetValue !== null ? (Math.abs(targetValue) / scale) * 100 : null
 
   return (
-    <Link to={`/tablero/${indicator.id}`} className="gdash-card gdash-card--bar">
+    <Link
+      to={`/tablero/${indicator.id}`}
+      className="gdash-card gdash-card--bar"
+      style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
+    >
       <div className="gdash-card__header">
         <span className="gdash-card__level">Nivel {indicator.level}</span>
         <Semaforo estado={estado} showLabel={false} size="sm" />
@@ -188,7 +197,7 @@ export function GeneralDashboardPage() {
   const [exposureSchedule, setExposureSchedule] = useState<ExposureSchedule | null>(null)
   const [exposureLoading, setExposureLoading] = useState(true)
   const [rangeFrom, setRangeFrom] = useState(daysAgo(DEFAULT_RANGE_DAYS))
-  const [rangeTo, setRangeTo] = useState(today())
+  const [rangeTo, setRangeTo] = useState(yesterday())
   const [axes, setAxes] = useState<Axis[]>([])
   const [axisId, setAxisId] = useState('')
   const [allIndicators, setAllIndicators] = useState<Indicator[]>([])
@@ -228,11 +237,10 @@ export function GeneralDashboardPage() {
   useEffect(() => {
     if (!organizationId) return
     let cancelled = false
-    Promise.all([fetchActiveAxes(organizationId), fetchIndicatorStatuses(organizationId)])
-      .then(([axesData, statusesData]) => {
+    fetchActiveAxes(organizationId)
+      .then((axesData) => {
         if (cancelled) return
         setAxes(axesData)
-        setStatuses(statusesData)
         if (axesData.length && !axisId) setAxisId(axesData[0].id)
       })
       .catch((err) => {
@@ -258,7 +266,8 @@ export function GeneralDashboardPage() {
         if (cancelled) return
         const indicatorIds = indicatorsData.map((i) => i.id)
 
-        const [causesData, tagsData, actionPlansData, speedData, measurementsData] = await Promise.all([
+        const [statusesData, causesData, tagsData, actionPlansData, speedData, measurementsData] = await Promise.all([
+          fetchIndicatorStatusesInRange(organizationId!, range),
           fetchIndicatorCausesForMany(indicatorIds),
           fetchIndicatorCauseTagsForMany(indicatorIds, range),
           fetchAxisActionPlans(indicatorIds, range),
@@ -268,6 +277,7 @@ export function GeneralDashboardPage() {
         if (cancelled) return
 
         setAllIndicators(indicatorsData)
+        setStatuses(statusesData)
         setCausesMap(causesData)
         setTagsMap(tagsData)
         setActionPlans(actionPlansData)
@@ -301,6 +311,32 @@ export function GeneralDashboardPage() {
     for (const list of map.values()) list.sort((a, b) => a.period_date.localeCompare(b.period_date))
     return map
   }, [measurements])
+
+  // Serie densa (un punto por día del rango, incluidos los días sin
+  // registro) solo para la mini-tendencia de las tarjetas — a diferencia de
+  // trendByIndicator (arriba), que debe seguir siendo solo mediciones
+  // reales para que noRecurrenceRate detecte correctamente "sin datos
+  // después del cierre".
+  const sparklineByIndicator = useMemo(() => {
+    const from = new Date(`${rangeFrom}T00:00:00`)
+    const to = new Date(`${rangeTo}T00:00:00`)
+    const buckets = buildPeriodBucketsInRange('dia', from, to)
+    const map = new Map<string, { period_date: string; value: number | null }[]>()
+    for (const indicator of allIndicators) {
+      const indMeas = trendByIndicator.get(indicator.id) ?? []
+      map.set(
+        indicator.id,
+        buckets.map((b) => ({
+          period_date: b.startDate,
+          value: aggregateValues(
+            indMeas.filter((m) => m.period_date >= b.startDate && m.period_date <= b.endDate),
+            indicator.aggregation_method,
+          ),
+        })),
+      )
+    }
+    return map
+  }, [allIndicators, trendByIndicator, rangeFrom, rangeTo])
 
   // Ids de las TOP_CAUSES causas más pesadas por indicador — para marcar en
   // la lista de acciones cuáles sí apuntan a lo que realmente pesa.
@@ -409,7 +445,7 @@ export function GeneralDashboardPage() {
                     key={indicator.id}
                     indicator={indicator}
                     status={statusByIndicator.get(indicator.id)}
-                    trend={trendByIndicator.get(indicator.id) ?? []}
+                    trend={sparklineByIndicator.get(indicator.id) ?? []}
                   />
                 ))}
               </div>

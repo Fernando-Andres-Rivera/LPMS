@@ -13,15 +13,21 @@ import {
   fetchMeasurementsInRange,
 } from './dashboardApi'
 import { fetchSites } from '../indicators/indicatorsApi'
-import { computeDaysWithoutAccidents, fetchLatestAccident, isDaysWithoutAccidentsIndicatorName } from '../safety/safetyApi'
-import type { Axis, Indicator, PeriodType, Site } from '../../lib/types'
+import {
+  computeDaysWithoutAccidents,
+  fetchLatestAccident,
+  fetchSafetyEventsInRange,
+  isDaysWithoutAccidentsIndicatorName,
+} from '../safety/safetyApi'
+import type { Axis, Indicator, PeriodType, SemaforoEstado, Site } from '../../lib/types'
 import './dashboard.css'
 
 interface IndicatorRow {
   indicator: Indicator
   latestValue: number | null
   targetValue: number | null
-  trend: { period_date: string; value: number }[]
+  trend: { period_date: string; value: number | null }[]
+  estadoOverride?: SemaforoEstado
 }
 
 const NIVELES = [1, 2, 3] as const
@@ -86,15 +92,30 @@ export function LevelDashboardPage() {
         (i) => i.site_id && isDaysWithoutAccidentsIndicatorName(i.name),
       )
       const daysWithoutAccidentsMap = new Map<string, number | null>()
+      // El conteo acumulado siempre "cumple" un objetivo de 0 — lo que
+      // realmente indica si el rango elegido estuvo bien o mal es si hubo
+      // un accidente reportado DENTRO de ese rango, sin importar cuántos
+      // días lleva la racha desde entonces.
+      const daysWithoutAccidentsEstadoMap = new Map<string, SemaforoEstado>()
       if (daysWithoutAccidentsIndicators.length > 0) {
+        const rangeEndExclusive = (() => {
+          const d = new Date(`${range.to}T00:00:00`)
+          d.setDate(d.getDate() + 1)
+          return d.toISOString().slice(0, 10)
+        })()
         await Promise.all(
           daysWithoutAccidentsIndicators.map(async (indicator) => {
             const site = sites.find((s) => s.id === indicator.site_id)
-            const latestAccident = await fetchLatestAccident([indicator.site_id!])
+            const [latestAccident, rangeEvents] = await Promise.all([
+              fetchLatestAccident([indicator.site_id!]),
+              fetchSafetyEventsInRange([indicator.site_id!], range.from, rangeEndExclusive),
+            ])
             daysWithoutAccidentsMap.set(
               indicator.id,
               computeDaysWithoutAccidents(site?.operation_start_date ?? null, latestAccident?.event_date ?? null, to),
             )
+            const hasAccidentInRange = rangeEvents.some((e) => e.event_type === 'accidente')
+            daysWithoutAccidentsEstadoMap.set(indicator.id, hasAccidentInRange ? 'incumple' : 'cumple')
           }),
         )
       }
@@ -104,22 +125,24 @@ export function LevelDashboardPage() {
         const indMeas = measByIndicator.get(indicator.id) ?? []
         const series = buckets.map((b) => ({
           label: b.label,
+          date: b.startDate,
           value: aggregateValues(
             indMeas.filter((r) => r.period_date >= b.startDate && r.period_date <= b.endDate),
             indicator.aggregation_method,
           ),
         }))
-        const withData = series.filter((p) => p.value !== null)
+        // El KPI del rango completo (no solo el último bucket): "suma" debe
+        // sumar TODO el rango elegido, igual que el Tablero — antes esto
+        // tomaba el valor del último día, que no reflejaba el rango.
         const latestValue = daysWithoutAccidentsMap.has(indicator.id)
           ? (daysWithoutAccidentsMap.get(indicator.id) ?? null)
-          : withData.length
-            ? (withData[withData.length - 1].value as number)
-            : null
+          : aggregateValues(indMeas, indicator.aggregation_method)
         return {
           indicator,
           latestValue,
           targetValue: targetMap.get(indicator.id) ?? null,
-          trend: withData.map((p) => ({ period_date: p.label, value: p.value as number })),
+          trend: series.map((p) => ({ period_date: p.date, value: p.value })),
+          estadoOverride: daysWithoutAccidentsEstadoMap.get(indicator.id),
         }
       })
       if (!cancelled) setRows(rowsData)
@@ -187,7 +210,7 @@ export function LevelDashboardPage() {
           <div className="level-section" key={axis.id}>
             <h3 style={{ color: axisById.get(axis.id)?.color }}>{axis.name}</h3>
             <div className="indicators-grid">
-              {axisRows.map(({ indicator, latestValue, targetValue, trend }) => (
+              {axisRows.map(({ indicator, latestValue, targetValue, trend, estadoOverride }) => (
                 <IndicatorCard
                   key={indicator.id}
                   id={indicator.id}
@@ -199,6 +222,7 @@ export function LevelDashboardPage() {
                   latestValue={latestValue}
                   targetValue={targetValue}
                   trend={trend}
+                  estadoOverride={estadoOverride}
                 />
               ))}
             </div>

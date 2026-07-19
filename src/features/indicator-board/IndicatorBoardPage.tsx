@@ -1,16 +1,33 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import {
+  Bar,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { Semaforo } from '../../components/ui/Semaforo'
 import { ActionPlanProgress } from '../../components/ui/ActionPlanProgress'
+import { ParetoAxisTick } from '../../components/ui/ParetoAxisTick'
 import { PeriodTypeSelector } from '../../components/ui/PeriodTypeSelector'
 import { RangePicker } from '../../components/ui/RangePicker'
-import { calcularSemaforo } from '../../lib/semaforo'
+import { TrendSparkline } from '../../components/ui/TrendSparkline'
+import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
 import { buildPeriodBucketsInRange, type PeriodBucket } from '../../lib/periods'
 import { defaultRange } from '../../lib/dateRange'
 import { fetchIndicatorWithRelationsById, fetchProfiles } from '../indicators/indicatorsApi'
 import type { IndicatorWithRelations } from '../indicators/indicatorsApi'
-import { computeIndicatorSeries, fetchCurrentTarget, fetchIndicatorPeriodSeries } from '../dashboard/dashboardApi'
+import {
+  computeIndicatorSeries,
+  fetchCurrentTarget,
+  fetchIndicatorPeriodSeries,
+  type PeriodResult,
+} from '../dashboard/dashboardApi'
 import { fetchCascadeData } from '../cascade/cascadeApi'
 import { fetchCausalAnalyses, type CausalAnalysisWithAuthor } from '../causal-analysis/causalAnalysisApi'
 import {
@@ -19,7 +36,7 @@ import {
   fetchActionPlansForIndicator,
   type ActionPlanWithNames,
 } from '../action-plans/actionPlansApi'
-import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL, CAUSAL_METHODOLOGY_LABEL, formatIndicatorValue } from '../../lib/types'
+import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL, formatIndicatorValue } from '../../lib/types'
 import type { PdcaStatus, PeriodType, Profile, Target } from '../../lib/types'
 import './indicator-board.css'
 
@@ -27,16 +44,34 @@ function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-/** Serie de un indicador manual (measurements propios) o calculado (rollup
- * recursivo de sus indicadores hijo — solo trae el árbol completo de la
- * organización cuando realmente hace falta, para no pagar ese costo en el
- * caso común). */
-async function fetchSeries(indicator: IndicatorWithRelations, buckets: PeriodBucket[], organizationId: string) {
+/**
+ * Dos series a la vez para un indicador manual (measurements propios) o
+ * calculado (rollup recursivo de sus indicadores hijo): la del RANGO
+ * completo (un solo bucket [from, to], para el número de Resultado — así
+ * "suma" realmente suma todo el rango, no solo el último período) y la
+ * bucketeada por periodType (para la mini-tendencia). Comparten una sola
+ * consulta del árbol de la organización cuando el indicador es calculado,
+ * en vez de pagar ese costo dos veces.
+ */
+async function fetchRangeAndTrend(
+  indicator: IndicatorWithRelations,
+  rangeBucket: PeriodBucket[],
+  trendBuckets: PeriodBucket[],
+  organizationId: string,
+): Promise<{ rangeSeries: PeriodResult[]; trendSeries: PeriodResult[] }> {
   if (!indicator.is_calculated) {
-    return fetchIndicatorPeriodSeries(indicator.id, buckets, indicator.aggregation_method)
+    const [rangeSeries, trendSeries] = await Promise.all([
+      fetchIndicatorPeriodSeries(indicator.id, rangeBucket, indicator.aggregation_method),
+      fetchIndicatorPeriodSeries(indicator.id, trendBuckets, indicator.aggregation_method),
+    ])
+    return { rangeSeries, trendSeries }
   }
   const { indicators, links } = await fetchCascadeData(organizationId)
-  return computeIndicatorSeries(indicator, indicators, links, buckets)
+  const [rangeSeries, trendSeries] = await Promise.all([
+    computeIndicatorSeries(indicator, indicators, links, rangeBucket),
+    computeIndicatorSeries(indicator, indicators, links, trendBuckets),
+  ])
+  return { rangeSeries, trendSeries }
 }
 
 export function IndicatorBoardPage() {
@@ -47,7 +82,7 @@ export function IndicatorBoardPage() {
   const [periodType, setPeriodType] = useState<PeriodType>('dia')
   const [range, setRange] = useState(defaultRange())
   const [latestValue, setLatestValue] = useState<number | null>(null)
-  const [latestLabel, setLatestLabel] = useState<string | null>(null)
+  const [trend, setTrend] = useState<{ date: string; value: number | null }[]>([])
   const [target, setTarget] = useState<Target | null>(null)
   const [causes, setCauses] = useState<CausalAnalysisWithAuthor[]>([])
   const [plans, setPlans] = useState<ActionPlanWithNames[]>([])
@@ -68,18 +103,19 @@ export function IndicatorBoardPage() {
     const indicatorData = await fetchIndicatorWithRelationsById(indicatorId)
     const from = new Date(`${range.from}T00:00:00`)
     const to = new Date(`${range.to}T00:00:00`)
-    const buckets = buildPeriodBucketsInRange(periodType, from, to)
-    const [series, causesData, plansData, profilesData] = await Promise.all([
-      indicatorData ? fetchSeries(indicatorData, buckets, organizationId) : Promise.resolve([]),
+    const rangeBucket: PeriodBucket[] = [{ label: 'rango', startDate: range.from, endDate: range.to }]
+    const trendBuckets = buildPeriodBucketsInRange(periodType, from, to)
+    const [{ rangeSeries, trendSeries }, causesData, plansData, profilesData] = await Promise.all([
+      indicatorData
+        ? fetchRangeAndTrend(indicatorData, rangeBucket, trendBuckets, organizationId)
+        : Promise.resolve({ rangeSeries: [], trendSeries: [] }),
       fetchCausalAnalyses(indicatorId),
       fetchActionPlansForIndicator(indicatorId),
       fetchProfiles(organizationId),
     ])
     setIndicator(indicatorData)
-    const withData = series.filter((p) => p.value !== null)
-    const last = withData[withData.length - 1]
-    setLatestValue(last ? (last.value as number) : null)
-    setLatestLabel(last ? last.label : null)
+    setLatestValue(rangeSeries[0]?.value ?? null)
+    setTrend(trendSeries.map((p) => ({ date: p.date, value: p.value })))
     setCauses(causesData)
     setPlans(plansData)
     setProfiles(profilesData)
@@ -98,19 +134,20 @@ export function IndicatorBoardPage() {
       if (cancelled) return
       const from = new Date(`${range.from}T00:00:00`)
       const to = new Date(`${range.to}T00:00:00`)
-      const buckets = buildPeriodBucketsInRange(periodType, from, to)
-      const [series, causesData, plansData, profilesData] = await Promise.all([
-        indicatorData ? fetchSeries(indicatorData, buckets, organizationId) : Promise.resolve([]),
+      const rangeBucket: PeriodBucket[] = [{ label: 'rango', startDate: range.from, endDate: range.to }]
+      const trendBuckets = buildPeriodBucketsInRange(periodType, from, to)
+      const [{ rangeSeries, trendSeries }, causesData, plansData, profilesData] = await Promise.all([
+        indicatorData
+          ? fetchRangeAndTrend(indicatorData, rangeBucket, trendBuckets, organizationId)
+          : Promise.resolve({ rangeSeries: [], trendSeries: [] }),
         fetchCausalAnalyses(indicatorId),
         fetchActionPlansForIndicator(indicatorId),
         fetchProfiles(organizationId),
       ])
       if (cancelled) return
       setIndicator(indicatorData)
-      const withData = series.filter((p) => p.value !== null)
-      const last = withData[withData.length - 1]
-      setLatestValue(last ? (last.value as number) : null)
-      setLatestLabel(last ? last.label : null)
+      setLatestValue(rangeSeries[0]?.value ?? null)
+      setTrend(trendSeries.map((p) => ({ date: p.date, value: p.value })))
       setCauses(causesData)
       setPlans(plansData)
       setProfiles(profilesData)
@@ -134,6 +171,47 @@ export function IndicatorBoardPage() {
   const whereLabel = eventLocationName
     ? `${indicator?.sites?.name ?? 'Corporativo'} · ${eventLocationName}`
     : (indicator?.sites?.name ?? 'Corporativo')
+
+  // Todas las causas cuyo EVENTO (la fecha de la medición, no cuándo se
+  // escribió la causa) cae dentro del rango elegido, ordenadas por cuánto
+  // pesaron (impact_value) — no solo la más reciente, para que en la
+  // reunión se vea de una vez cuáles causales dominaron el período. Se usa
+  // la fecha del evento y no la de registro porque es común documentar
+  // causas de días pasados varios días después (ej. poniéndose al día en
+  // una reunión) — si se filtrara por cuándo se escribió, esas causas
+  // reales desaparecerían del rango que sí les corresponde.
+  const causesInRange = causes
+    .filter((c) => {
+      const eventDate = c.measurements?.period_date ?? c.created_at.slice(0, 10)
+      return eventDate >= range.from && eventDate <= range.to
+    })
+    .sort((a, b) => b.impact_value - a.impact_value)
+
+  // Pareto de causas de este indicador: acumula el impacto de cada causa
+  // raíz distinta (no un impacto suelto por registro) para que se vea de
+  // una vez cuál es la más ofensora dentro del rango — mismo criterio que
+  // el Pareto general y el de "Causas posibles".
+  const causeParetoRows = Object.values(
+    causesInRange
+      .filter((c): c is typeof c & { root_cause: string } => !!c.root_cause?.trim())
+      .reduce<Record<string, { rootCause: string; impactTotal: number }>>((acc, c) => {
+        const key = c.root_cause.trim().toLowerCase()
+        const entry = acc[key] ?? { rootCause: c.root_cause, impactTotal: 0 }
+        entry.impactTotal += c.impact_value
+        acc[key] = entry
+        return acc
+      }, {}),
+  ).sort((a, b) => b.impactTotal - a.impactTotal)
+
+  const causeParetoTotal = causeParetoRows.reduce((sum, r) => sum + r.impactTotal, 0)
+  const causeParetoData = causeParetoRows.map((row, index) => {
+    const cumulative = causeParetoRows.slice(0, index + 1).reduce((sum, r) => sum + r.impactTotal, 0)
+    return {
+      name: row.rootCause,
+      impactTotal: row.impactTotal,
+      cumulativePercent: causeParetoTotal ? Math.round((cumulative / causeParetoTotal) * 1000) / 10 : 0,
+    }
+  })
 
   async function handleCreatePlan(e: FormEvent) {
     e.preventDefault()
@@ -179,20 +257,20 @@ export function IndicatorBoardPage() {
   return (
     <div className="board-page">
       <div className="board-header">
-        <h1>{indicator.name}</h1>
+        <div className="board-header__filters">
+          <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+          <PeriodTypeSelector value={periodType} onChange={setPeriodType} />
+        </div>
         <Link to={`/cascada/${indicator.id}`}>Ver cascada</Link>
       </div>
 
       <div className="board-columns">
       <div className="board-columns__main">
-      <section className="board-card board-result">
+      <section className="board-card board-result" style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}>
         <div className="board-result__header">
-          <h2>Resultado</h2>
-          <div className="board-result__filters">
-            <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
-            <PeriodTypeSelector value={periodType} onChange={setPeriodType} />
-          </div>
+          <h2>{indicator.name}</h2>
         </div>
+        <div className="board-result__content">
         {indicator.is_calculated && (
           <p className="board-result__calculated-note">
             Valor calculado automáticamente ({AGGREGATION_METHOD_LABEL[indicator.aggregation_method].toLowerCase()}{' '}
@@ -219,23 +297,45 @@ export function IndicatorBoardPage() {
           )}
           <Semaforo estado={estado} />
         </div>
-        {latestLabel && <p className="board-result__period">Período: {latestLabel}</p>}
+        <p className="board-result__period">
+          Del {range.from} al {range.to} — {AGGREGATION_METHOD_LABEL[indicator.aggregation_method]} en ese rango
+        </p>
+        {trend.length > 0 && (
+          <div className="board-result__sparkline">
+            <TrendSparkline data={trend} color={SEMAFORO_COLOR[estado]} height={48} />
+          </div>
+        )}
+        </div>
       </section>
 
       <section className="board-card">
         <h2>Análisis de causas</h2>
-        {latestCause ? (
-          <div className="board-cause">
-            <p className="board-cause__root">{latestCause.root_cause}</p>
-            <p className="board-cause__meta">
-              {CAUSAL_METHODOLOGY_LABEL[latestCause.methodology]} · {latestCause.profiles?.full_name} ·{' '}
-              {new Date(latestCause.created_at).toLocaleDateString('es-CO')}
-              {eventLocationName && <> · 📍 {eventLocationName}</>}
-            </p>
+        <p className="board-causes-subtitle">
+          Del {range.from} al {range.to} — cuánto pesó cada causa dentro de este período.
+        </p>
+        {causeParetoData.length > 0 && (
+          <div className="board-causes-pareto">
+            <ResponsiveContainer width="100%" height={220}>
+              <ComposedChart data={causeParetoData} margin={{ bottom: 12 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={<ParetoAxisTick />} interval={0} height={50} />
+                <YAxis yAxisId="left" allowDecimals={false} />
+                <YAxis yAxisId="right" orientation="right" domain={[0, 100]} unit="%" />
+                <Tooltip />
+                <Bar yAxisId="left" dataKey="impactTotal" fill="var(--color-primary)" name="Valor" />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="cumulativePercent"
+                  stroke="var(--color-orange)"
+                  strokeWidth={2}
+                  name="% acumulado"
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
-        ) : (
-          <p>Todavía no hay una causa registrada para este indicador.</p>
         )}
+        {causeParetoData.length === 0 && <p>Sin causas registradas dentro de este rango.</p>}
         <Link to={`/analisis-causal/${indicator.id}`} className="button-primary board-link-button">
           {latestCause ? 'Ver historial / registrar otra causa' : 'Registrar análisis de causa'}
         </Link>
@@ -311,6 +411,13 @@ export function IndicatorBoardPage() {
               <ActionPlanProgress status={plan.status} />
               <div className="board-plan-item__body">
                 <p className="board-plan-item__description">{plan.description}</p>
+                {plan.causal_analysis?.root_cause ? (
+                  <p className="board-plan-item__cause">
+                    <strong>Causa raíz:</strong> {plan.causal_analysis.root_cause}
+                  </p>
+                ) : (
+                  <p className="board-plan-item__no-cause">⚠ Sin análisis de causa vinculado</p>
+                )}
                 <p className="board-plan-item__meta">
                   Responsable: {plan.responsible?.full_name ?? 'Sin asignar'} · Plazo:{' '}
                   {plan.due_date ?? '—'} · Registró: {plan.creator?.full_name ?? '—'}

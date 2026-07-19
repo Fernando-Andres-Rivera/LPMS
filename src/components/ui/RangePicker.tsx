@@ -1,4 +1,4 @@
-import { daysAgo, today } from '../../lib/dateRange'
+import { daysAgo, today, yesterday } from '../../lib/dateRange'
 import './RangePicker.css'
 
 interface RangePickerProps {
@@ -24,13 +24,13 @@ export function RangePicker({ from, to, onChange, label = 'Rango de análisis' }
         <span>a</span>
         <input type="date" value={to} min={from} max={today()} onChange={(e) => onChange(from, e.target.value)} />
         <div className="range-picker__presets">
-          <button type="button" onClick={() => onChange(daysAgo(7), today())}>
+          <button type="button" onClick={() => onChange(daysAgo(7), yesterday())}>
             7d
           </button>
-          <button type="button" onClick={() => onChange(daysAgo(30), today())}>
+          <button type="button" onClick={() => onChange(daysAgo(30), yesterday())}>
             30d
           </button>
-          <button type="button" onClick={() => onChange(daysAgo(90), today())}>
+          <button type="button" onClick={() => onChange(daysAgo(90), yesterday())}>
             90d
           </button>
         </div>

@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { IndicatorCause, IndicatorRootCause } from '../../lib/types'
+import type { Indicator, IndicatorCause, IndicatorRootCause } from '../../lib/types'
 
 export async function fetchIndicatorCauses(indicatorId: string): Promise<IndicatorCause[]> {
   const { data, error } = await supabase
@@ -295,4 +295,143 @@ export function countCauseImpact(
   ).size
 
   return { descendantCount: descendantIds.size, taggedAnalysesCount }
+}
+
+export interface ParetoTag extends IndicatorCauseTag {
+  indicator_id: string
+  root_cause: string
+}
+
+/**
+ * Igual que fetchIndicatorCauseTagsForMany, pero para el Pareto GENERAL
+ * (varios indicadores a la vez, con filtro opcional de ubicación puntual) —
+ * trae también indicator_id y root_cause de cada análisis, para poder (a)
+ * armar el nivel superior "por indicador" del Pareto general y (b) mostrar
+ * la evidencia real (causa + impacto) al hacer clic en una barra, sin
+ * depender de una consulta aparte por indicador.
+ *
+ * La ubicación "más precisa" de un análisis es la del evento realmente
+ * capturado (measurement.site_location_id) si existe; si no, cae a la
+ * ubicación por defecto del indicador — mismo criterio que
+ * causeTaxonomyApi.fetchTaggedCauses.
+ */
+export async function fetchParetoTagsForIndicators(params: {
+  indicatorIds: string[]
+  range: { from: string; to: string }
+  locationIds: Set<string> | null
+  defaultLocationByIndicator: Map<string, string | null>
+}): Promise<ParetoTag[]> {
+  const { indicatorIds, range, locationIds, defaultLocationByIndicator } = params
+  if (indicatorIds.length === 0) return []
+
+  const { data: analyses, error: analysesError } = await supabase
+    .from('causal_analyses')
+    .select('id, indicator_id, root_cause, impact_value, measurements(site_location_id)')
+    .in('indicator_id', indicatorIds)
+    .eq('methodology', 'causas_estandar')
+    .gte('created_at', range.from)
+    .lte('created_at', `${range.to}T23:59:59`)
+
+  if (analysesError) throw analysesError
+
+  interface AnalysisRow {
+    id: string
+    indicator_id: string
+    root_cause: string
+    impact_value: number | null
+    measurements: { site_location_id: string | null } | null
+  }
+
+  let scoped = (analyses ?? []) as unknown as AnalysisRow[]
+  if (locationIds) {
+    scoped = scoped.filter((a) => {
+      const effectiveLocation = a.measurements?.site_location_id ?? defaultLocationByIndicator.get(a.indicator_id) ?? null
+      return effectiveLocation ? locationIds.has(effectiveLocation) : false
+    })
+  }
+
+  const analysisIds = scoped.map((a) => a.id)
+  if (analysisIds.length === 0) return []
+  const analysisById = new Map(scoped.map((a) => [a.id, a]))
+
+  const { data: tagRows, error: tagsError } = await supabase
+    .from('causal_analysis_indicator_causes')
+    .select('causal_analysis_id, indicator_cause_id')
+    .in('causal_analysis_id', analysisIds)
+
+  if (tagsError) throw tagsError
+  return (tagRows ?? []).flatMap((row) => {
+    const analysis = analysisById.get(row.causal_analysis_id)
+    if (!analysis) return []
+    return [
+      {
+        causal_analysis_id: row.causal_analysis_id,
+        indicator_cause_id: row.indicator_cause_id,
+        indicator_id: analysis.indicator_id,
+        root_cause: analysis.root_cause,
+        impact_value: analysis.impact_value ?? 1,
+      },
+    ]
+  })
+}
+
+export interface IndicatorParetoRow {
+  indicator: Indicator
+  count: number
+  impactTotal: number
+}
+
+/** Nivel superior del Pareto general cuando no hay un indicador específico
+ * elegido: qué KPI acumula más impacto en "Causas posibles", antes de entrar
+ * a su propio árbol de causas. Mismo criterio de acumulación (por análisis,
+ * no por etiqueta) que computeIndicatorCauseParetoForParent. */
+export function computeParetoByIndicator(indicators: Indicator[], tags: ParetoTag[]): IndicatorParetoRow[] {
+  return indicators
+    .map((indicator) => {
+      const impactByAnalysis = new Map<string, number>()
+      for (const t of tags) {
+        if (t.indicator_id === indicator.id) impactByAnalysis.set(t.causal_analysis_id, t.impact_value)
+      }
+      let impactTotal = 0
+      for (const v of impactByAnalysis.values()) impactTotal += v
+      return { indicator, count: impactByAnalysis.size, impactTotal }
+    })
+    .filter((row) => row.count > 0)
+    .sort((a, b) => b.impactTotal - a.impactTotal)
+}
+
+export interface CauseEvidence {
+  causal_analysis_id: string
+  root_cause: string
+  impact_value: number
+}
+
+/** Los registros reales (causa + impacto) detrás de un nodo del árbol de
+ * causas de un indicador, acumulados con sus descendientes — sin fecha ni
+ * autor: lo que importa aquí es cuál causal pesa más, no cuándo ni quién la
+ * registró. */
+export function getIndicatorCauseEvidence(causes: IndicatorCause[], tags: ParetoTag[], causeId: string): CauseEvidence[] {
+  const childrenOf = (id: string) => causes.filter((c) => c.parent_id === id)
+  const descendantIds = new Set([causeId])
+  const stack = [causeId]
+  while (stack.length > 0) {
+    const current = stack.pop()!
+    for (const child of childrenOf(current)) {
+      if (!descendantIds.has(child.id)) {
+        descendantIds.add(child.id)
+        stack.push(child.id)
+      }
+    }
+  }
+
+  const seen = new Map<string, CauseEvidence>()
+  for (const t of tags) {
+    if (!descendantIds.has(t.indicator_cause_id)) continue
+    seen.set(t.causal_analysis_id, {
+      causal_analysis_id: t.causal_analysis_id,
+      root_cause: t.root_cause,
+      impact_value: t.impact_value,
+    })
+  }
+  return Array.from(seen.values()).sort((a, b) => b.impact_value - a.impact_value)
 }

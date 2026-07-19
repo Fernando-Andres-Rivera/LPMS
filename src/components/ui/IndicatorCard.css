@@ -2,7 +2,8 @@
   display: block;
   background: var(--color-surface);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
+  border-left: 4px solid transparent;
+  box-shadow: var(--shadow-kpi);
   padding: 16px;
   text-decoration: none;
   color: inherit;
@@ -10,7 +11,7 @@
 }
 
 .indicator-card:hover {
-  box-shadow: 0 4px 12px rgba(27, 54, 93, 0.14);
+  box-shadow: 0 8px 22px rgba(27, 54, 93, 0.28);
 }
 
 .indicator-card__header {
@@ -53,7 +54,8 @@
 
 .indicator-card__target {
   font-size: 0.8rem;
-  color: var(--color-text-muted);
+  font-weight: 600;
+  color: var(--color-kpi-target);
 }
 
 .indicator-card__sparkline {

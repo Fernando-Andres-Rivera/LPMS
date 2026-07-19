@@ -46,6 +46,8 @@ export async function tagCausalAnalysis(causalAnalysisId: string, causeCategoryI
 export interface TaggedCause {
   causal_analysis_id: string
   cause_category_id: string
+  root_cause: string
+  impact_value: number
 }
 
 /**
@@ -88,7 +90,7 @@ export async function fetchTaggedCauses(params: {
 
   const { data: analyses, error: analysesError } = await supabase
     .from('causal_analyses')
-    .select('id, indicator_id, measurements(site_location_id)')
+    .select('id, indicator_id, root_cause, impact_value, measurements(site_location_id)')
     .eq('organization_id', params.organizationId)
     .in('indicator_id', indicatorIds)
     .gte('created_at', params.range.from)
@@ -99,6 +101,8 @@ export async function fetchTaggedCauses(params: {
   interface AnalysisWithMeasurementLocation {
     id: string
     indicator_id: string
+    root_cause: string
+    impact_value: number | null
     measurements: { site_location_id: string | null } | null
   }
 
@@ -113,60 +117,115 @@ export async function fetchTaggedCauses(params: {
   const analysisIds = scopedAnalyses.map((a) => a.id)
   if (analysisIds.length === 0) return []
 
+  // impact_value viaja en el análisis (no en la etiqueta) — se adjunta a cada
+  // par para que el Pareto pueda sumar impacto acumulado en vez de solo
+  // contar ocurrencias sueltas (mismo patrón que fetchIndicatorCauseTags).
+  const analysisById = new Map(scopedAnalyses.map((a) => [a.id, a]))
+
   const { data: causes, error: causesError } = await supabase
     .from('causal_analysis_causes')
     .select('causal_analysis_id, cause_category_id')
     .in('causal_analysis_id', analysisIds)
 
   if (causesError) throw causesError
-  return causes ?? []
+  return (causes ?? []).flatMap((row) => {
+    const analysis = analysisById.get(row.causal_analysis_id)
+    if (!analysis) return []
+    return [
+      {
+        ...row,
+        root_cause: analysis.root_cause,
+        impact_value: analysis.impact_value ?? 1,
+      },
+    ]
+  })
 }
 
 export interface ParetoRow {
   category: CauseCategory
   count: number
+  impactTotal: number
+}
+
+function childrenOf(categories: CauseCategory[], id: string | null): CauseCategory[] {
+  return categories.filter((c) => c.parent_id === id)
+}
+
+/** Un nodo y todos sus descendientes — para acumular (rollup) lo que cuelga
+ * de él sin importar cuántos niveles de sub-causas tenga debajo. */
+export function collectCategoryDescendantIds(categories: CauseCategory[], id: string): Set<string> {
+  const ids = new Set([id])
+  const stack = [id]
+  while (stack.length > 0) {
+    const current = stack.pop()!
+    for (const child of childrenOf(categories, current)) {
+      if (!ids.has(child.id)) {
+        ids.add(child.id)
+        stack.push(child.id)
+      }
+    }
+  }
+  return ids
+}
+
+// Por análisis, no por etiqueta: un mismo causal_analysis podría (en teoría)
+// quedar tageado más de una vez hacia el mismo subárbol — se deduplica por
+// id antes de sumar para no contar su impact_value dos veces.
+function sumUniqueImpact(matchingTags: TaggedCause[]): { count: number; impactTotal: number } {
+  const impactByAnalysis = new Map<string, number>()
+  for (const t of matchingTags) impactByAnalysis.set(t.causal_analysis_id, t.impact_value)
+  let impactTotal = 0
+  for (const v of impactByAnalysis.values()) impactTotal += v
+  return { count: impactByAnalysis.size, impactTotal }
 }
 
 /**
- * Cuenta, para cada hijo directo de `parentId`, cuántos análisis distintos
- * caen bajo ese hijo o cualquiera de sus descendientes (rollup). También
- * separa un balde "general" para análisis etiquetados exactamente en
- * `parentId` (sin especificar un hijo).
+ * Para cada hijo directo de `parentId`, ACUMULA el impact_value de los
+ * análisis distintos que caen bajo ese hijo o cualquiera de sus
+ * descendientes (rollup) — no solo los cuenta. Así el orden refleja quién
+ * pesa más en total, no solo quién se repitió más veces; el conteo de casos
+ * se conserva como dato secundario. También separa un balde "general" para
+ * análisis etiquetados exactamente en `parentId` (sin especificar un hijo).
  */
 export function computeParetoForParent(
   categories: CauseCategory[],
   tagged: TaggedCause[],
   parentId: string | null,
-): { rows: ParetoRow[]; generalCount: number } {
-  const childrenOf = (id: string | null) => categories.filter((c) => c.parent_id === id)
-
-  function collectDescendantIds(id: string): Set<string> {
-    const ids = new Set([id])
-    const stack = [id]
-    while (stack.length > 0) {
-      const current = stack.pop()!
-      for (const child of childrenOf(current)) {
-        if (!ids.has(child.id)) {
-          ids.add(child.id)
-          stack.push(child.id)
-        }
-      }
-    }
-    return ids
-  }
-
-  const rows = childrenOf(parentId)
+): { rows: ParetoRow[]; generalCount: number; generalImpact: number } {
+  const rows = childrenOf(categories, parentId)
     .map((category) => {
-      const descendantIds = collectDescendantIds(category.id)
-      const analysisIds = new Set(tagged.filter((t) => descendantIds.has(t.cause_category_id)).map((t) => t.causal_analysis_id))
-      return { category, count: analysisIds.size }
+      const descendantIds = collectCategoryDescendantIds(categories, category.id)
+      const { count, impactTotal } = sumUniqueImpact(tagged.filter((t) => descendantIds.has(t.cause_category_id)))
+      return { category, count, impactTotal }
     })
     .filter((row) => row.count > 0)
-    .sort((a, b) => b.count - a.count)
+    .sort((a, b) => b.impactTotal - a.impactTotal)
 
-  const generalCount = parentId
-    ? new Set(tagged.filter((t) => t.cause_category_id === parentId).map((t) => t.causal_analysis_id)).size
-    : 0
+  const general = parentId ? sumUniqueImpact(tagged.filter((t) => t.cause_category_id === parentId)) : null
 
-  return { rows, generalCount }
+  return { rows, generalCount: general?.count ?? 0, generalImpact: general?.impactTotal ?? 0 }
+}
+
+export interface CauseEvidence {
+  causal_analysis_id: string
+  root_cause: string
+  impact_value: number
+}
+
+/** Los registros reales (causa + impacto) detrás de un nodo del árbol,
+ * acumulados con sus descendientes — la evidencia concreta que explica por
+ * qué esa barra pesa lo que pesa. Sin fecha ni autor: en este Pareto lo que
+ * importa es cuál causal impacta más, no cuándo ni quién la registró. */
+export function getCategoryEvidence(categories: CauseCategory[], tagged: TaggedCause[], categoryId: string): CauseEvidence[] {
+  const descendantIds = collectCategoryDescendantIds(categories, categoryId)
+  const seen = new Map<string, CauseEvidence>()
+  for (const t of tagged) {
+    if (!descendantIds.has(t.cause_category_id)) continue
+    seen.set(t.causal_analysis_id, {
+      causal_analysis_id: t.causal_analysis_id,
+      root_cause: t.root_cause,
+      impact_value: t.impact_value,
+    })
+  }
+  return Array.from(seen.values()).sort((a, b) => b.impact_value - a.impact_value)
 }

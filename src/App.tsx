@@ -24,6 +24,7 @@ import { MeetingScheduleConfigPage } from './features/org-structure/MeetingSched
 import { NewOrganizationPage } from './features/onboarding/NewOrganizationPage'
 import { ClientsPage } from './features/onboarding/ClientsPage'
 import { LinkUserPage } from './features/onboarding/LinkUserPage'
+import { AccountSecurityPage } from './features/account/AccountSecurityPage'
 
 const INDICATOR_MANAGER_ROLES = ['admin_consultora', 'admin_cliente', 'gerente', 'administrativo'] as const
 const MANAGEMENT_ROLES = ['admin_consultora', 'admin_cliente', 'gerente'] as const
@@ -38,6 +39,7 @@ function App() {
 
           <Route element={<RequireAuth />}>
             <Route element={<AppLayout />}>
+              <Route path="seguridad-cuenta" element={<AccountSecurityPage />} />
               <Route index element={<AxesOverviewPage />} />
               <Route path="ejes/:axisId" element={<AxisDashboardPage />} />
               <Route path="niveles/:level" element={<LevelDashboardPage />} />

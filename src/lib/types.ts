@@ -72,7 +72,7 @@ export const AGGREGATION_METHOD_HELP: Record<AggregationMethod, string> = {
 export type PeriodType = 'dia' | 'semana' | 'quincena' | 'mes' | 'trimestre'
 
 export const PERIOD_TYPE_LABEL: Record<PeriodType, string> = {
-  dia: 'Día',
+  dia: 'N-1',
   semana: 'Semana',
   quincena: 'Quincena',
   mes: 'Mes',

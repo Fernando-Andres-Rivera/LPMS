@@ -40,6 +40,11 @@ export function AppLayout() {
       <aside className={`app-sidebar ${menuOpen ? 'app-sidebar--open' : ''}`}>
         <div className="app-sidebar__brand">LPMS</div>
         <nav className="app-sidebar__nav">
+          <span className="app-sidebar__section">Mi cuenta</span>
+          <NavLink to="/seguridad-cuenta" className={linkClass}>
+            Seguridad de la cuenta
+          </NavLink>
+
           <span className="app-sidebar__section">Diario</span>
           <NavLink to="/" end className={linkClass}>
             Ejes
