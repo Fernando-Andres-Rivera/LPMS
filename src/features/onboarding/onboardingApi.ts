@@ -108,30 +108,44 @@ export async function fetchSitesForOrganization(organizationId: string): Promise
   return data ?? []
 }
 
-export interface NewProfileInput {
-  userId: string
+export interface InviteUserInput {
+  email: string
+  fullName: string
   organizationId: string
   role: UserRole
-  fullName: string
-  email: string
   siteIds: string[]
 }
 
-/** Vincula un usuario de Supabase Auth ya existente (por su UID) a un perfil de la app. */
-export async function createProfileForUser(input: NewProfileInput): Promise<void> {
-  const { error: profileError } = await supabase.from('profiles').insert({
-    id: input.userId,
-    organization_id: input.organizationId,
-    role: input.role,
-    full_name: input.fullName,
-    email: input.email,
+/**
+ * Invita a una persona por correo — crea su cuenta de Supabase Auth (le
+ * llega un correo para poner su contraseña), y en la misma operación deja
+ * su perfil vinculado con el rol y sitio(s) definidos. Corre en una Edge
+ * Function (supabase/functions/invite-user) porque requiere la service
+ * role key, que nunca debe llegar al navegador — la autorización de quién
+ * puede invitar a quién se revalida ahí mismo, no solo aquí.
+ */
+export async function inviteUser(input: InviteUserInput): Promise<{ userId: string }> {
+  const { data, error } = await supabase.functions.invoke('invite-user', {
+    body: {
+      email: input.email,
+      fullName: input.fullName,
+      organizationId: input.organizationId,
+      role: input.role,
+      siteIds: input.siteIds,
+    },
   })
-  if (profileError) throw profileError
 
-  if (input.siteIds.length > 0) {
-    const { error: sitesError } = await supabase
-      .from('profile_sites')
-      .insert(input.siteIds.map((site_id) => ({ profile_id: input.userId, site_id })))
-    if (sitesError) throw sitesError
+  if (error) {
+    // FunctionsHttpError trae la respuesta real (con el mensaje que arma la
+    // función) en error.context — sin esto, el usuario solo vería "Edge
+    // Function returned a non-2xx status code", sin explicación útil.
+    const context = (error as { context?: Response }).context
+    if (context) {
+      const body = await context.json().catch(() => null)
+      if (body?.error) throw new Error(body.error)
+    }
+    throw error
   }
+  if (data?.error) throw new Error(data.error)
+  return { userId: data.userId }
 }

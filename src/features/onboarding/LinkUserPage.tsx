@@ -1,10 +1,20 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { createProfileForUser, fetchOrganizationsList, fetchSitesForOrganization } from './onboardingApi'
+import { inviteUser, fetchOrganizationsList, fetchSitesForOrganization } from './onboardingApi'
 import type { Organization, Site, UserRole } from '../../lib/types'
 import './onboarding.css'
 
-const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
+/** Un admin_cliente solo puede invitar dentro de su propia organización, y
+ * nunca al rol admin_consultora (reservado al equipo de LeanProLogistic) —
+ * la Edge Function revalida esto mismo del lado del servidor. */
+const CONSULTORA_ROLE_OPTIONS: { value: UserRole; label: string }[] = [
+  { value: 'admin_consultora', label: 'Admin Consultora (equipo LeanProLogistic)' },
+  { value: 'admin_cliente', label: 'Admin Cliente' },
+  { value: 'gerente', label: 'Gerente' },
+  { value: 'administrativo', label: 'Administrativo' },
+  { value: 'operativo', label: 'Operativo' },
+]
+const CLIENTE_ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: 'admin_cliente', label: 'Admin Cliente' },
   { value: 'gerente', label: 'Gerente' },
   { value: 'administrativo', label: 'Administrativo' },
@@ -14,11 +24,11 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
 export function LinkUserPage() {
   const { profile, organizationId } = useAuth()
   const isConsultora = profile?.role === 'admin_consultora'
+  const roleOptions = isConsultora ? CONSULTORA_ROLE_OPTIONS : CLIENTE_ROLE_OPTIONS
 
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [sites, setSites] = useState<Site[]>([])
 
-  const [userId, setUserId] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<UserRole>('gerente')
@@ -26,7 +36,7 @@ export function LinkUserPage() {
   const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [invitedEmail, setInvitedEmail] = useState<string | null>(null)
 
   useEffect(() => {
     if (isConsultora) fetchOrganizationsList().then(setOrganizations)
@@ -51,28 +61,30 @@ export function LinkUserPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!userId.trim() || !fullName.trim() || !email.trim() || !selectedOrgId) {
-      setError('Completa el UID, nombre, correo y organización.')
+    if (!fullName.trim() || !email.trim() || !selectedOrgId) {
+      setError('Completa el nombre, correo y organización.')
+      return
+    }
+    if (requiresSite && selectedSiteIds.length === 0) {
+      setError('Este rol necesita al menos un sitio asignado.')
       return
     }
     setSaving(true)
     setError(null)
     try {
-      await createProfileForUser({
-        userId: userId.trim(),
+      await inviteUser({
+        email: email.trim(),
+        fullName: fullName.trim(),
         organizationId: selectedOrgId,
         role,
-        fullName: fullName.trim(),
-        email: email.trim(),
         siteIds: requiresSite ? selectedSiteIds : [],
       })
-      setSuccess(true)
-      setUserId('')
+      setInvitedEmail(email.trim())
       setFullName('')
       setEmail('')
       setSelectedSiteIds([])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo vincular el usuario.')
+      setError(err instanceof Error ? err.message : 'No se pudo invitar al usuario.')
     } finally {
       setSaving(false)
     }
@@ -80,18 +92,13 @@ export function LinkUserPage() {
 
   return (
     <div className="onboarding-page">
-      <h1>Vincular usuario</h1>
+      <h1>Invitar usuario</h1>
       <p className="page-subtitle">
-        Primero crea el usuario en Supabase (Authentication → Users → Add user, marcado como confirmado) y copia su
-        UID. Aquí solo se vincula ese UID a un perfil de la app.
+        Le llega un correo para poner su contraseña — al aceptar la invitación queda vinculado automáticamente con
+        el rol y sitio(s) que definas aquí. No hace falta crear nada manualmente en Supabase.
       </p>
 
       <form className="onboarding-card onboarding-form" onSubmit={handleSubmit}>
-        <label>
-          UID del usuario (de Supabase Auth)
-          <input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="xxxxxxxx-xxxx-xxxx-…" required />
-        </label>
-
         <div className="onboarding-form__row">
           <label>
             Nombre completo
@@ -125,7 +132,7 @@ export function LinkUserPage() {
           <label>
             Rol
             <select value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-              {ROLE_OPTIONS.map((r) => (
+              {roleOptions.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
                 </option>
@@ -152,11 +159,13 @@ export function LinkUserPage() {
         )}
 
         {error && <p className="onboarding-error">{error}</p>}
-        {success && <p className="onboarding-success-text">Usuario vinculado correctamente.</p>}
+        {invitedEmail && (
+          <p className="onboarding-success-text">Invitación enviada a {invitedEmail}.</p>
+        )}
 
         <div className="onboarding-form__actions">
           <button type="submit" className="button-primary" disabled={saving}>
-            {saving ? 'Vinculando…' : 'Vincular usuario'}
+            {saving ? 'Invitando…' : 'Invitar usuario'}
           </button>
         </div>
       </form>

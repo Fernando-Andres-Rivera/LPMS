@@ -77,13 +77,105 @@ function MfaChallenge({ onVerified }: MfaChallengeProps) {
   )
 }
 
-/** Redirige a /login si no hay sesión activa, y exige el código de
+interface SetPasswordFormProps {
+  onDone: () => void
+}
+
+/** Pantalla para poner contraseña la primera vez — aparece cuando la
+ * sesión se estableció desde un enlace de invitación o de recuperación
+ * (Supabase dispara el evento PASSWORD_RECOVERY en ambos casos), ya que
+ * esas cuentas no tienen contraseña propia todavía hasta que la definen
+ * aquí. */
+function SetPasswordForm({ onDone }: SetPasswordFormProps) {
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres.')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden.')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password })
+      if (updateError) throw updateError
+      onDone()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar la contraseña.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="login-page">
+      <div className="login-panel" style={{ flex: '1 1 100%' }}>
+        <form className="login-card" onSubmit={handleSubmit}>
+          <h2 className="login-card__title">Define tu contraseña</h2>
+          <p className="login-card__subtitle">Es la primera vez que entras — pon una contraseña para tu cuenta.</p>
+
+          <label className="login-label" htmlFor="new-password">
+            Contraseña
+          </label>
+          <input
+            id="new-password"
+            className="login-input"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoFocus
+            required
+          />
+
+          <label className="login-label" htmlFor="confirm-password">
+            Confirmar contraseña
+          </label>
+          <input
+            id="confirm-password"
+            className="login-input"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+          />
+
+          {error && <p className="login-error">{error}</p>}
+
+          <button className="login-button" type="submit" disabled={saving}>
+            {saving ? 'Guardando…' : 'Guardar y entrar'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+/** Redirige a /login si no hay sesión activa, exige el código de
  * verificación en dos pasos cuando el usuario ya tiene un factor MFA
- * verificado pero esta sesión todavía no lo confirmó. */
+ * verificado pero esta sesión todavía no lo confirmó, y pide definir
+ * contraseña cuando la sesión viene de un enlace de invitación. */
 export function RequireAuth() {
   const { session, loading } = useAuth()
   const [aalStatus, setAalStatus] = useState<AalStatus>('checking')
   const [checkedUserId, setCheckedUserId] = useState<string | null>(null)
+  const [needsPassword, setNeedsPassword] = useState(false)
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') setNeedsPassword(true)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
     if (!session) return
@@ -108,6 +200,9 @@ export function RequireAuth() {
 
   if (loading) return <div className="page-loading">Cargando…</div>
   if (!session) return <Navigate to="/login" replace />
+  if (needsPassword) {
+    return <SetPasswordForm onDone={() => setNeedsPassword(false)} />
+  }
   if (checkedUserId !== session.user.id || aalStatus === 'checking') {
     return <div className="page-loading">Cargando…</div>
   }

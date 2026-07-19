@@ -115,8 +115,8 @@ export function AppLayout() {
             </NavLink>
           )}
           {canOnboardUsers && (
-            <NavLink to="/vincular-usuario" className={linkClass}>
-              Vincular usuario
+            <NavLink to="/invitar-usuario" className={linkClass}>
+              Invitar usuario
             </NavLink>
           )}
         </nav>

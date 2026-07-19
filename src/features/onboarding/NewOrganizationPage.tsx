@@ -69,8 +69,8 @@ export function NewOrganizationPage() {
             habilitado(s). Ya está seleccionada en el switcher de organización.
           </p>
           <div className="onboarding-success__actions">
-            <Link to="/vincular-usuario" className="button-primary">
-              Vincular el primer usuario →
+            <Link to="/invitar-usuario" className="button-primary">
+              Invitar el primer usuario →
             </Link>
             <button type="button" onClick={() => navigate('/')}>
               Ir a la app
