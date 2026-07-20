@@ -19,13 +19,16 @@ export interface AuthContextValue {
   setOrganizationId: (id: string) => void
   /** Vuelve a cargar la lista de organizaciones (ej. tras crear una nueva) y, si se pasa, selecciona esa. */
   refreshOrganizations: (selectId?: string) => Promise<void>
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  /** captchaToken es obligatorio en la práctica: Supabase Auth tiene la
+   * protección CAPTCHA activada a nivel de proyecto (todos los endpoints de
+   * password-grant), así que sin un token válido de Turnstile la llamada falla. */
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: string | null }>
   /** Registro público — crea la cuenta; el trigger handle_new_user la
    * aprovisiona con una organización Demo propia. Con confirmación de correo
    * activa, no devuelve sesión hasta que el usuario confirma. */
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>
+  signUp: (email: string, password: string, fullName: string, captchaToken?: string) => Promise<{ error: string | null }>
   /** Envía el correo de recuperación de contraseña. */
-  resetPassword: (email: string) => Promise<{ error: string | null }>
+  resetPassword: (email: string, captchaToken?: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
 

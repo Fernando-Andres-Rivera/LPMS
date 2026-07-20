@@ -249,6 +249,10 @@
   cursor: default;
 }
 
+.turnstile-widget {
+  margin: 4px 0 16px;
+}
+
 .login-error {
   color: var(--color-fail);
   font-size: 0.85rem;

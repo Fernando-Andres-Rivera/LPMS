@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { Turnstile } from '../../components/ui/Turnstile'
 import './login.css'
 
 const CASCADE_STAGES = [
@@ -33,6 +34,8 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [captchaResetSignal, setCaptchaResetSignal] = useState(0)
 
   if (session) return <Navigate to="/" replace />
 
@@ -49,10 +52,16 @@ export function LoginPage() {
     setError(null)
     setSuccess(null)
 
+    if (!captchaToken) {
+      setError('Espera a que termine la verificación de seguridad y vuelve a intentar.')
+      return
+    }
+
     if (mode === 'login') {
       setSubmitting(true)
-      const { error } = await signIn(email, password)
+      const { error } = await signIn(email, password, captchaToken)
       setSubmitting(false)
+      setCaptchaResetSignal((k) => k + 1)
       if (error) setError('Credenciales inválidas. Verifica tu correo y contraseña.')
       return
     }
@@ -71,8 +80,9 @@ export function LoginPage() {
         return
       }
       setSubmitting(true)
-      const { error } = await signUp(email.trim(), password, fullName.trim())
+      const { error } = await signUp(email.trim(), password, fullName.trim(), captchaToken)
       setSubmitting(false)
+      setCaptchaResetSignal((k) => k + 1)
       if (error) {
         setError(error)
       } else {
@@ -85,8 +95,9 @@ export function LoginPage() {
 
     // mode === 'forgot'
     setSubmitting(true)
-    const { error } = await resetPassword(email.trim())
+    const { error } = await resetPassword(email.trim(), captchaToken)
     setSubmitting(false)
+    setCaptchaResetSignal((k) => k + 1)
     if (error) {
       setError(error)
     } else {
@@ -193,12 +204,14 @@ export function LoginPage() {
             </>
           )}
 
+          <Turnstile onToken={setCaptchaToken} resetSignal={captchaResetSignal} />
+
           {(error || (mode === 'login' && blockedReason)) && (
             <p className="login-error">{error ?? blockedReason}</p>
           )}
           {success && <p className="login-success">{success}</p>}
 
-          <button className="login-button" type="submit" disabled={submitting}>
+          <button className="login-button" type="submit" disabled={submitting || !captchaToken}>
             {submitting
               ? 'Procesando…'
               : mode === 'login'

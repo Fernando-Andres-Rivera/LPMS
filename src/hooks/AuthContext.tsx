@@ -105,13 +105,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (selectId) setOrganizationId(selectId)
   }
 
-  async function signIn(email: string, password: string) {
+  async function signIn(email: string, password: string, captchaToken?: string) {
     setBlockedReason(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+      options: captchaToken ? { captchaToken } : undefined,
+    })
     return { error: error?.message ?? null }
   }
 
-  async function signUp(email: string, password: string, fullName: string) {
+  async function signUp(email: string, password: string, fullName: string, captchaToken?: string) {
     setBlockedReason(null)
     const { error } = await supabase.auth.signUp({
       email,
@@ -119,14 +123,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // emailRedirectTo se resuelve al origen actual para que el enlace de
       // confirmación vuelva al app donde sea que se sirva (local o producción);
       // ese origen debe estar en la lista de Redirect URLs de Supabase Auth.
-      options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
+      options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin, captchaToken },
     })
     return { error: error?.message ?? null }
   }
 
-  async function resetPassword(email: string) {
+  async function resetPassword(email: string, captchaToken?: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin,
+      captchaToken,
     })
     return { error: error?.message ?? null }
   }
