@@ -119,6 +119,7 @@ export interface IndicatorFormValues {
   responsible_id: string | null
   is_calculated: boolean
   value_type: Indicator['value_type']
+  is_focus: boolean
 }
 
 export async function createIndicator(values: IndicatorFormValues, parentIds: string[]): Promise<string> {

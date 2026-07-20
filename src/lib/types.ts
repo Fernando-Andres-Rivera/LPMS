@@ -68,16 +68,8 @@ export const AGGREGATION_METHOD_HELP: Record<AggregationMethod, string> = {
   minimo: 'Ej. el peor valor alcanzado durante el período.',
 }
 
-/** Ventana de tiempo usada para revisar resultados agregados en los tableros. */
+/** Ventana de tiempo usada para agrupar la mini-tendencia de un indicador. */
 export type PeriodType = 'dia' | 'semana' | 'quincena' | 'mes' | 'trimestre'
-
-export const PERIOD_TYPE_LABEL: Record<PeriodType, string> = {
-  dia: 'N-1',
-  semana: 'Semana',
-  quincena: 'Quincena',
-  mes: 'Mes',
-  trimestre: 'Trimestre',
-}
 
 export interface Organization {
   id: string
@@ -143,31 +135,60 @@ export const WEEKDAY_OPTIONS: { value: number; label: string }[] = [
   { value: 0, label: 'Dom' },
 ]
 
-/** La fecha (YYYY-MM-DD) que la reunión de hoy evalúa, según su desfase. */
-export function evaluatedDateForOffset(offset: number, now: Date): string {
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)
-  return d.toISOString().slice(0, 10)
+function toLocalDateString(d: Date): string {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
-/** true si ya pasó la hora de la reunión del nivel, HOY es uno de los días
- * en que ese nivel se reúne, Y la fecha que se quiere capturar es justo la
- * que esa reunión evalúa. Nunca bloquea fechas más antiguas que la
- * evaluada (para poder ponerse al día con un dato atrasado). */
-export function isCaptureBlockedByTime(
+/**
+ * Última fecha que ya "cerró": retrocede desde hoy hasta el día de reunión
+ * (de weekdays) más reciente que ya pasó su hora de corte, y le resta el
+ * desfase de evaluación. Cualquier fecha <= a esta ya fue expuesta en su
+ * reunión — a diferencia de la regla anterior, el cierre solo avanza hacia
+ * adelante en el tiempo: una fecha atrasada no "se reabre" al día
+ * siguiente solo porque ya no es la que evalúa la reunión de hoy. La
+ * misma regla se aplica también en la base de datos (trigger
+ * enforce_measurement_capture_lock) — este cálculo es solo para que la
+ * pantalla lo muestre sin esperar el error del servidor.
+ */
+export function computeLastClosedDate(
+  schedule: { cutoff_time: string; evaluated_day_offset: number; weekdays: number[] } | null,
+  now: Date,
+): string | null {
+  if (!schedule) return null
+  const allowedDays = schedule.weekdays && schedule.weekdays.length > 0 ? schedule.weekdays : [0, 1, 2, 3, 4, 5, 6]
+  const [hours, minutes] = schedule.cutoff_time.split(':').map(Number)
+
+  let meetingDate: Date | null = null
+  for (let i = 0; i <= 7; i++) {
+    const candidate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
+    if (!allowedDays.includes(candidate.getDay())) continue
+    if (i === 0) {
+      const cutoffMoment = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
+      if (now < cutoffMoment) continue
+    }
+    meetingDate = candidate
+    break
+  }
+  if (!meetingDate) return null
+
+  const closed = new Date(meetingDate)
+  closed.setDate(closed.getDate() + schedule.evaluated_day_offset)
+  return toLocalDateString(closed)
+}
+
+/** true si esta fecha ya cerró (pasó la reunión que la evalúa, sin importar
+ * hace cuánto) y por lo tanto no se puede editar sin autorización. */
+export function isDateClosedForCapture(
   schedule: { cutoff_time: string; evaluated_day_offset: number; weekdays: number[] } | null,
   periodDate: string,
   now: Date,
 ): boolean {
-  if (!schedule) return false
-  // `weekdays` puede venir undefined si la migración que agrega la columna
-  // todavía no corrió contra esta base — en ese caso, mismo comportamiento
-  // de antes (bloquea todos los días) en vez de reventar.
-  const weekdays = schedule.weekdays ?? []
-  if (weekdays.length > 0 && !weekdays.includes(now.getDay())) return false
-  if (periodDate !== evaluatedDateForOffset(schedule.evaluated_day_offset, now)) return false
-  const [hours, minutes] = schedule.cutoff_time.split(':').map(Number)
-  const meetingTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
-  return now >= meetingTime
+  const lastClosed = computeLastClosedDate(schedule, now)
+  if (!lastClosed) return false
+  return periodDate <= lastClosed
 }
 
 export type ExposureFrequency = 'semanal' | 'quincenal' | 'mensual'
@@ -266,6 +287,9 @@ export interface Indicator {
    * (según aggregation_method) los valores de sus indicadores hijo. */
   is_calculated: boolean
   value_type: IndicatorValueType
+  /** Indicador prioritario para el equipo — se resalta con un borde azul
+   * muy visible en las tarjetas, sin importar su semáforo. */
+  is_focus: boolean
 }
 
 export interface Unit {

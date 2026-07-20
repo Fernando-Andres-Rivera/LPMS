@@ -205,57 +205,74 @@ interface ExposureSectionProps {
  */
 export function ExposureSection({ organizationId, createdBy, canEdit, schedule, loading, onSaved }: ExposureSectionProps) {
   const [editing, setEditing] = useState(false)
-  // Abre el formulario solo la primera vez que se confirma que no hay
-  // periodicidad configurada — ajuste de estado durante el render, no en un
-  // efecto (mismo patrón que el resto del proyecto).
+  const [expanded, setExpanded] = useState(false)
+  // Abre el formulario (y despliega el bloque) solo la primera vez que se
+  // confirma que no hay periodicidad configurada — ajuste de estado durante
+  // el render, no en un efecto (mismo patrón que el resto del proyecto).
   const [autoOpenChecked, setAutoOpenChecked] = useState(false)
   if (!loading && !autoOpenChecked) {
     setAutoOpenChecked(true)
-    if (!schedule && canEdit) setEditing(true)
+    if (!schedule && canEdit) {
+      setEditing(true)
+      setExpanded(true)
+    }
   }
 
   const upcoming = schedule ? nextExposureDate(schedule, new Date()) : null
 
   return (
-    <section className="gdash-section gdash-exposure">
+    <section className="gdash-exposure">
       <div className="gdash-exposure__header">
-        <div>
-          <h2>Periodicidad de exposición</h2>
+        <p className="gdash-exposure__summary">
+          <strong>Exposición:</strong>{' '}
           {schedule ? (
-            <p className="page-subtitle">
+            <>
               {FREQUENCY_LABEL[schedule.frequency]}
               {schedule.exposure_time && ` · ${schedule.exposure_time.slice(0, 5)}`}
               {upcoming && <> · Próxima: {formatLong(upcoming)}</>}
-            </p>
+            </>
           ) : (
-            <p className="page-subtitle">Todavía no se ha definido cada cuánto se presenta este Dashboard.</p>
+            'sin definir'
+          )}
+        </p>
+        <div className="gdash-exposure__actions">
+          <button type="button" className="gdash-exposure__toggle" onClick={() => setExpanded((v) => !v)}>
+            {expanded ? 'Ocultar ▴' : 'Ver calendario ▾'}
+          </button>
+          {canEdit && !editing && (
+            <button
+              type="button"
+              className="gdash-exposure__edit"
+              onClick={() => {
+                setEditing(true)
+                setExpanded(true)
+              }}
+            >
+              {schedule ? 'Editar' : 'Definir'}
+            </button>
           )}
         </div>
-        {canEdit && !editing && (
-          <button type="button" className="gdash-exposure__edit" onClick={() => setEditing(true)}>
-            {schedule ? 'Editar periodicidad' : 'Definir periodicidad'}
-          </button>
-        )}
       </div>
 
-      {loading ? (
-        <p>Cargando…</p>
-      ) : (
-        <div className="gdash-exposure__body">
-          {editing && canEdit && (
-            <ScheduleForm
-              organizationId={organizationId}
-              createdBy={createdBy}
-              schedule={schedule}
-              onSaved={(s) => {
-                onSaved(s)
-                setEditing(false)
-              }}
-            />
-          )}
-          {schedule && <CalendarGrid schedule={schedule} />}
-        </div>
-      )}
+      {expanded &&
+        (loading ? (
+          <p>Cargando…</p>
+        ) : (
+          <div className="gdash-exposure__body">
+            {editing && canEdit && (
+              <ScheduleForm
+                organizationId={organizationId}
+                createdBy={createdBy}
+                schedule={schedule}
+                onSaved={(s) => {
+                  onSaved(s)
+                  setEditing(false)
+                }}
+              />
+            )}
+            {schedule && <CalendarGrid schedule={schedule} />}
+          </div>
+        ))}
     </section>
   )
 }

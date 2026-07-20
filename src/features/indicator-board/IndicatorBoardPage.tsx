@@ -14,7 +14,6 @@ import { useAuth } from '../../hooks/useAuth'
 import { Semaforo } from '../../components/ui/Semaforo'
 import { ActionPlanProgress } from '../../components/ui/ActionPlanProgress'
 import { ParetoAxisTick } from '../../components/ui/ParetoAxisTick'
-import { PeriodTypeSelector } from '../../components/ui/PeriodTypeSelector'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { TrendSparkline } from '../../components/ui/TrendSparkline'
 import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
@@ -37,7 +36,7 @@ import {
   type ActionPlanWithNames,
 } from '../action-plans/actionPlansApi'
 import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL, formatIndicatorValue } from '../../lib/types'
-import type { PdcaStatus, PeriodType, Profile, Target } from '../../lib/types'
+import type { PdcaStatus, Profile, Target } from '../../lib/types'
 import './indicator-board.css'
 
 function today(): string {
@@ -79,7 +78,6 @@ export function IndicatorBoardPage() {
   const { profile, organizationId } = useAuth()
 
   const [indicator, setIndicator] = useState<IndicatorWithRelations | null>(null)
-  const [periodType, setPeriodType] = useState<PeriodType>('dia')
   const [range, setRange] = useState(defaultRange())
   const [latestValue, setLatestValue] = useState<number | null>(null)
   const [trend, setTrend] = useState<{ date: string; value: number | null }[]>([])
@@ -104,7 +102,7 @@ export function IndicatorBoardPage() {
     const from = new Date(`${range.from}T00:00:00`)
     const to = new Date(`${range.to}T00:00:00`)
     const rangeBucket: PeriodBucket[] = [{ label: 'rango', startDate: range.from, endDate: range.to }]
-    const trendBuckets = buildPeriodBucketsInRange(periodType, from, to)
+    const trendBuckets = buildPeriodBucketsInRange('dia', from, to)
     const [{ rangeSeries, trendSeries }, causesData, plansData, profilesData] = await Promise.all([
       indicatorData
         ? fetchRangeAndTrend(indicatorData, rangeBucket, trendBuckets, organizationId)
@@ -135,7 +133,7 @@ export function IndicatorBoardPage() {
       const from = new Date(`${range.from}T00:00:00`)
       const to = new Date(`${range.to}T00:00:00`)
       const rangeBucket: PeriodBucket[] = [{ label: 'rango', startDate: range.from, endDate: range.to }]
-      const trendBuckets = buildPeriodBucketsInRange(periodType, from, to)
+      const trendBuckets = buildPeriodBucketsInRange('dia', from, to)
       const [{ rangeSeries, trendSeries }, causesData, plansData, profilesData] = await Promise.all([
         indicatorData
           ? fetchRangeAndTrend(indicatorData, rangeBucket, trendBuckets, organizationId)
@@ -163,7 +161,7 @@ export function IndicatorBoardPage() {
     return () => {
       cancelled = true
     }
-  }, [indicatorId, organizationId, periodType, range])
+  }, [indicatorId, organizationId, range])
 
   const estado = calcularSemaforo(latestValue, target?.target_value, indicator?.improvement_direction ?? 'mayor_mejor')
   const latestCause = causes[0]
@@ -259,14 +257,16 @@ export function IndicatorBoardPage() {
       <div className="board-header">
         <div className="board-header__filters">
           <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
-          <PeriodTypeSelector value={periodType} onChange={setPeriodType} />
         </div>
         <Link to={`/cascada/${indicator.id}`}>Ver cascada</Link>
       </div>
 
       <div className="board-columns">
       <div className="board-columns__main">
-      <section className="board-card board-result" style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}>
+      <section
+        className={`board-card board-result${indicator.is_focus ? ' kpi-focus' : ''}`}
+        style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
+      >
         <div className="board-result__header">
           <h2>{indicator.name}</h2>
         </div>

@@ -94,6 +94,58 @@ export async function fetchMeasurementForPeriod(indicatorId: string, periodDate:
   return data
 }
 
+export interface MeasurementOverrideReason {
+  id: string
+  code: string
+  name: string
+}
+
+/** Catálogo de causales para autorizar una edición después del cierre — lo
+ * gestiona admin_consultora (mismo patrón que el catálogo de ejes). */
+export async function fetchMeasurementOverrideReasons(): Promise<MeasurementOverrideReason[]> {
+  const { data, error } = await supabase
+    .from('measurement_override_reasons')
+    .select('id, code, name')
+    .eq('active', true)
+    .order('sort_order')
+
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * Autoriza una corrección tardía Y guarda la medición en una sola llamada
+ * atómica (función de servidor) — hacerlo como dos peticiones HTTP
+ * separadas (autorizar, luego guardar) dejaba una carrera real: la
+ * segunda a veces no alcanzaba a "ver" la autorización que la primera
+ * acababa de insertar. Solo admin_consultora puede ejecutarla (la función
+ * lo exige del lado del servidor, no solo aquí).
+ */
+export async function authorizeAndSaveMeasurement(params: {
+  indicatorId: string
+  periodDate: string
+  reasonId: string
+  authComment: string | null
+  value: number
+  measurementComment: string | null
+  siteLocationId: string | null
+  plannedValue?: number | null
+  realValue?: number | null
+}): Promise<void> {
+  const { error } = await supabase.rpc('authorize_and_save_measurement', {
+    p_indicator_id: params.indicatorId,
+    p_period_date: params.periodDate,
+    p_reason_id: params.reasonId,
+    p_auth_comment: params.authComment,
+    p_value: params.value,
+    p_measurement_comment: params.measurementComment,
+    p_site_location_id: params.siteLocationId,
+    p_planned_value: params.plannedValue ?? null,
+    p_real_value: params.realValue ?? null,
+  })
+  if (error) throw error
+}
+
 export async function saveMeasurement(params: {
   indicatorId: string
   periodDate: string

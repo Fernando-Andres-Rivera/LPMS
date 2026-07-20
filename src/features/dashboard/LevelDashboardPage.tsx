@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
-import { PeriodTypeSelector } from '../../components/ui/PeriodTypeSelector'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
 import { defaultRange } from '../../lib/dateRange'
@@ -19,7 +18,7 @@ import {
   fetchSafetyEventsInRange,
   isDaysWithoutAccidentsIndicatorName,
 } from '../safety/safetyApi'
-import type { Axis, Indicator, PeriodType, SemaforoEstado, Site } from '../../lib/types'
+import type { Axis, Indicator, SemaforoEstado, Site } from '../../lib/types'
 import './dashboard.css'
 
 interface IndicatorRow {
@@ -43,7 +42,6 @@ export function LevelDashboardPage() {
   const [siteOverride, setSiteOverride] = useState<string | null>(null)
   const [siteTouched, setSiteTouched] = useState(false)
   const selectedSite = siteTouched ? siteOverride : (siteIds[0] ?? null)
-  const [periodType, setPeriodType] = useState<PeriodType>('dia')
   const [range, setRange] = useState(defaultRange())
   const [rows, setRows] = useState<IndicatorRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -68,7 +66,7 @@ export function LevelDashboardPage() {
 
       const from = new Date(`${range.from}T00:00:00`)
       const to = new Date(`${range.to}T00:00:00`)
-      const buckets = buildPeriodBucketsInRange(periodType, from, to)
+      const buckets = buildPeriodBucketsInRange('dia', from, to)
       const ids = indicators.map((i) => i.id)
 
       // 2 consultas en total en vez de 2 por indicador (patrón N+1).
@@ -153,7 +151,7 @@ export function LevelDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [organizationId, level, selectedSite, periodType, range, sites])
+  }, [organizationId, level, selectedSite, range, sites])
 
   const axisById = new Map(axes.map((a) => [a.id, a]))
   const rowsByAxis = new Map<string, IndicatorRow[]>()
@@ -178,7 +176,6 @@ export function LevelDashboardPage() {
         </div>
 
         <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
-        <PeriodTypeSelector value={periodType} onChange={setPeriodType} />
 
         {sites.length > 0 && (
           <select
@@ -223,6 +220,7 @@ export function LevelDashboardPage() {
                   targetValue={targetValue}
                   trend={trend}
                   estadoOverride={estadoOverride}
+                  isFocus={indicator.is_focus}
                 />
               ))}
             </div>

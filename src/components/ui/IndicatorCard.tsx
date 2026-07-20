@@ -31,6 +31,8 @@ interface IndicatorCardProps {
    * objetivo de 0, pero lo que importa es si hubo un accidente DENTRO del
    * rango elegido) — cuando se da, reemplaza el cálculo genérico. */
   estadoOverride?: SemaforoEstado
+  /** Indicador marcado como "foco" — se resalta con un borde azul muy visible. */
+  isFocus?: boolean
 }
 
 /**
@@ -48,13 +50,14 @@ export function IndicatorCard({
   targetValue,
   trend,
   estadoOverride,
+  isFocus = false,
 }: IndicatorCardProps) {
   const estado = estadoOverride ?? calcularSemaforo(latestValue, targetValue, improvementDirection)
 
   return (
     <Link
       to={`/tablero/${id}`}
-      className="indicator-card"
+      className={`indicator-card${isFocus ? ' kpi-focus' : ''}`}
       style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
     >
       <div className="indicator-card__header">
@@ -81,15 +84,15 @@ export function IndicatorCard({
         )}
       </div>
 
-      {trend.length > 0 && (
-        <div className="indicator-card__sparkline">
+      <div className="indicator-card__sparkline">
+        {trend.length > 0 && (
           <TrendSparkline
             data={trend.map((p) => ({ date: p.period_date, value: p.value }))}
             color={SEMAFORO_COLOR[estado]}
             height={40}
           />
-        </div>
-      )}
+        )}
+      </div>
     </Link>
   )
 }

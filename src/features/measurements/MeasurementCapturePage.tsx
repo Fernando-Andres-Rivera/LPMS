@@ -2,8 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import {
-  DAY_OFFSET_LABEL,
-  isCaptureBlockedByTime,
+  isDateClosedForCapture,
   type Axis,
   type Indicator,
   type LevelCaptureCutoff,
@@ -11,7 +10,14 @@ import {
   type SiteLocation,
   type Target,
 } from '../../lib/types'
-import { fetchCapturableIndicators, fetchMeasurementForPeriod, saveMeasurement } from './measurementsApi'
+import {
+  authorizeAndSaveMeasurement,
+  fetchCapturableIndicators,
+  fetchMeasurementForPeriod,
+  fetchMeasurementOverrideReasons,
+  saveMeasurement,
+  type MeasurementOverrideReason,
+} from './measurementsApi'
 import { fetchActiveAxes, fetchCurrentTarget } from '../dashboard/dashboardApi'
 import { fetchSites } from '../indicators/indicatorsApi'
 import { fetchSiteLocations } from '../org-structure/orgStructureApi'
@@ -22,6 +28,18 @@ import './capture.css'
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
+}
+
+/** Los errores de Supabase (PostgrestError) son objetos planos, no
+ * instancias de Error — instanceof Error nunca los detecta, y el mensaje
+ * real del trigger (ej. "Esta fecha ya cerró…") se perdía detrás de un
+ * genérico. */
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message
+  if (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
+    return (err as { message: string }).message
+  }
+  return fallback
 }
 
 /**
@@ -67,6 +85,9 @@ export function MeasurementCapturePage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [target, setTarget] = useState<Target | null>(null)
+  const [reasons, setReasons] = useState<MeasurementOverrideReason[]>([])
+  const [overrideReasonId, setOverrideReasonId] = useState('')
+  const [overrideComment, setOverrideComment] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -77,13 +98,15 @@ export function MeasurementCapturePage() {
       fetchSites(organizationId),
       fetchActiveAxes(organizationId),
       fetchLevelCutoffs(organizationId),
+      fetchMeasurementOverrideReasons(),
     ])
-      .then(([indicatorsData, sitesData, axesData, cutoffsData]) => {
+      .then(([indicatorsData, sitesData, axesData, cutoffsData, reasonsData]) => {
         if (cancelled) return
         setIndicators(indicatorsData)
         setSites(sitesData)
         setAxes(axesData)
         setCutoffs(cutoffsData)
+        setReasons(reasonsData)
         if (indicatorsData.length && !indicatorId) setIndicatorId(indicatorsData[0].id)
         setLoading(false)
       })
@@ -103,7 +126,9 @@ export function MeasurementCapturePage() {
   const selectedSite = sites.find((s) => s.id === selectedIndicator?.site_id) ?? null
   const locationOptions = buildLocationOptions(siteLocations)
   const levelCutoff = cutoffs.find((c) => c.level === selectedIndicator?.level)
-  const blockedByTime = isCaptureBlockedByTime(levelCutoff ?? null, periodDate, new Date())
+  const dateClosed = isDateClosedForCapture(levelCutoff ?? null, periodDate, new Date())
+  const isAdminConsultora = profile?.role === 'admin_consultora'
+  const fieldsDisabled = dateClosed && !isAdminConsultora
   // Para indicadores de razón, value no se escribe directo — se deriva de
   // programado/real, igual que se compara siempre contra un objetivo de 100.
   const razonPercent =
@@ -165,38 +190,55 @@ export function MeasurementCapturePage() {
     }
   }, [selectedIndicator?.site_id])
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    if (!profile || !indicatorId || !selectedIndicator) return
-    if (blockedByTime) {
-      setMessage({ type: 'error', text: 'Ya pasó la hora límite de captura de hoy para este nivel.' })
-      return
-    }
+  /**
+   * `overrideAuth` presente = ruta de admin_consultora corrigiendo una
+   * fecha cerrada: autoriza y guarda en UNA sola llamada atómica de
+   * servidor (no dos peticiones HTTP separadas) — así se evita la carrera
+   * donde el guardado no alcanzaba a "ver" la autorización recién creada.
+   * Devuelve si guardó con éxito, para que quien llama sepa si limpiar su
+   * propio estado (ej. la causal elegida) o dejarlo para reintentar.
+   */
+  async function performSave(overrideAuth?: { reasonId: string; comment: string | null }): Promise<boolean> {
+    if (!profile || !indicatorId || !selectedIndicator) return false
     // Number('') es 0, no NaN — sin esta validación, enviar el formulario sin
     // elegir Sí/No registraría silenciosamente "No" por defecto.
     if (selectedIndicator.value_type === 'binario' && value !== '1' && value !== '0') {
       setMessage({ type: 'error', text: 'Elige Sí o No antes de guardar.' })
-      return
+      return false
     }
     if (selectedIndicator.value_type === 'razon' && razonPercent === null) {
       setMessage({ type: 'error', text: 'Escribe cuántos se programaron y cuántos ocurrieron realmente.' })
-      return
+      return false
     }
     const effectiveValue = selectedIndicator.value_type === 'razon' ? (razonPercent as number) : Number(value)
     setSaving(true)
     setMessage(null)
     setDeviation(null)
     try {
-      await saveMeasurement({
-        indicatorId,
-        periodDate,
-        value: effectiveValue,
-        comment: comment || null,
-        siteLocationId: siteLocationId || null,
-        capturedBy: profile.id,
-        plannedValue: selectedIndicator.value_type === 'razon' ? Number(plannedValue) : undefined,
-        realValue: selectedIndicator.value_type === 'razon' ? Number(realValue) : undefined,
-      })
+      if (overrideAuth) {
+        await authorizeAndSaveMeasurement({
+          indicatorId,
+          periodDate,
+          reasonId: overrideAuth.reasonId,
+          authComment: overrideAuth.comment,
+          value: effectiveValue,
+          measurementComment: comment || null,
+          siteLocationId: siteLocationId || null,
+          plannedValue: selectedIndicator.value_type === 'razon' ? Number(plannedValue) : undefined,
+          realValue: selectedIndicator.value_type === 'razon' ? Number(realValue) : undefined,
+        })
+      } else {
+        await saveMeasurement({
+          indicatorId,
+          periodDate,
+          value: effectiveValue,
+          comment: comment || null,
+          siteLocationId: siteLocationId || null,
+          capturedBy: profile.id,
+          plannedValue: selectedIndicator.value_type === 'razon' ? Number(plannedValue) : undefined,
+          realValue: selectedIndicator.value_type === 'razon' ? Number(realValue) : undefined,
+        })
+      }
 
       const saved = await fetchMeasurementForPeriod(indicatorId, periodDate)
       const estado = calcularSemaforo(effectiveValue, target?.target_value, selectedIndicator.improvement_direction)
@@ -210,17 +252,42 @@ export function MeasurementCapturePage() {
       // estandarización de la lista.
       if (saved && estado === 'incumple') {
         navigate(`/analisis-causal/${indicatorId}?measurement=${saved.id}`)
-        return
+        return true
       }
 
       setMessage({ type: 'ok', text: 'Medición guardada correctamente.' })
       if (saved && estado === 'riesgo') {
         setDeviation({ measurementId: saved.id })
       }
+      return true
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'No se pudo guardar la medición.' })
+      setMessage({ type: 'error', text: errorMessage(err, 'No se pudo guardar la medición.') })
+      return false
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (dateClosed) {
+      setMessage({
+        type: 'error',
+        text: 'Esta fecha ya cerró (pasó la reunión que la evalúa) — solo LeanProLogistic puede autorizar una corrección.',
+      })
+      return
+    }
+    await performSave()
+  }
+
+  /** Solo admin_consultora llega aquí (el botón no se renderiza para nadie
+   * más) — autoriza y guarda en una sola operación atómica de servidor. */
+  async function handleAuthorizeAndSave() {
+    if (!overrideReasonId) return
+    const ok = await performSave({ reasonId: overrideReasonId, comment: overrideComment || null })
+    if (ok) {
+      setOverrideReasonId('')
+      setOverrideComment('')
     }
   }
 
@@ -278,12 +345,13 @@ export function MeasurementCapturePage() {
             />
           </label>
 
-          {blockedByTime && levelCutoff && (
+          {dateClosed && levelCutoff && (
             <p className="capture-cutoff-warning">
-              Ya pasó la hora de la reunión de Nivel {selectedIndicator?.level} ({levelCutoff.cutoff_time.slice(0, 5)}
-              ) — se bloqueó la captura del {DAY_OFFSET_LABEL[levelCutoff.evaluated_day_offset]?.toLowerCase()}.
-              Elige una fecha anterior si necesitas ponerte al día, o pide a gerencia que ajuste el horario en
-              Horario de reuniones.
+              Esta fecha ya pasó por la reunión de Nivel {selectedIndicator?.level} que la evalúa y quedó cerrada —
+              no se puede editar{isAdminConsultora ? '' : ' sin autorización de LeanProLogistic'}.
+              {isAdminConsultora
+                ? ' Elige una causal abajo para autorizar la corrección.'
+                : ' Pide a LeanProLogistic que la autorice si necesitas corregirla.'}
             </p>
           )}
 
@@ -295,7 +363,7 @@ export function MeasurementCapturePage() {
                   type="button"
                   className={`capture-binary__option capture-binary__option--si ${value === '1' ? 'active' : ''}`}
                   onClick={() => setValue('1')}
-                  disabled={blockedByTime}
+                  disabled={fieldsDisabled}
                 >
                   Sí
                 </button>
@@ -303,7 +371,7 @@ export function MeasurementCapturePage() {
                   type="button"
                   className={`capture-binary__option capture-binary__option--no ${value === '0' ? 'active' : ''}`}
                   onClick={() => setValue('0')}
-                  disabled={blockedByTime}
+                  disabled={fieldsDisabled}
                 >
                   No
                 </button>
@@ -325,7 +393,7 @@ export function MeasurementCapturePage() {
                     onChange={(e) => setPlannedValue(e.target.value)}
                     required
                     autoFocus
-                    disabled={blockedByTime}
+                    disabled={fieldsDisabled}
                   />
                 </label>
                 <label className="capture-razon__field">
@@ -339,7 +407,7 @@ export function MeasurementCapturePage() {
                     value={realValue}
                     onChange={(e) => setRealValue(e.target.value)}
                     required
-                    disabled={blockedByTime}
+                    disabled={fieldsDisabled}
                   />
                 </label>
               </div>
@@ -360,7 +428,7 @@ export function MeasurementCapturePage() {
                 onChange={(e) => setValue(e.target.value)}
                 required
                 autoFocus
-                disabled={blockedByTime}
+                disabled={fieldsDisabled}
               />
             </label>
           )}
@@ -423,9 +491,47 @@ export function MeasurementCapturePage() {
             </div>
           )}
 
-          <button className="capture-submit" type="submit" disabled={saving || blockedByTime}>
-            {saving ? 'Guardando…' : blockedByTime ? 'Captura bloqueada' : 'Guardar medición'}
-          </button>
+          {dateClosed && isAdminConsultora ? (
+            <div className="capture-override">
+              <label className="capture-label">
+                Causal de la corrección
+                <select
+                  className="capture-select"
+                  value={overrideReasonId}
+                  onChange={(e) => setOverrideReasonId(e.target.value)}
+                  required
+                >
+                  <option value="">Selecciona una causal…</option>
+                  {reasons.map((reason) => (
+                    <option key={reason.id} value={reason.id}>
+                      {reason.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="capture-label">
+                Comentario (opcional)
+                <textarea
+                  className="capture-comment"
+                  rows={2}
+                  value={overrideComment}
+                  onChange={(e) => setOverrideComment(e.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="capture-submit capture-submit--override"
+                onClick={handleAuthorizeAndSave}
+                disabled={saving || !overrideReasonId}
+              >
+                {saving ? 'Guardando…' : 'Autorizar y guardar'}
+              </button>
+            </div>
+          ) : (
+            <button className="capture-submit" type="submit" disabled={saving || dateClosed}>
+              {saving ? 'Guardando…' : dateClosed ? 'Captura bloqueada' : 'Guardar medición'}
+            </button>
+          )}
         </form>
       )}
     </div>

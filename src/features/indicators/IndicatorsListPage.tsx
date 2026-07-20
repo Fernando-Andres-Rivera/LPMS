@@ -82,9 +82,21 @@ export function IndicatorsListPage() {
         </thead>
         <tbody>
           {indicators.map((indicator) => (
-            <tr key={indicator.id} className={!indicator.active ? 'row-inactive' : ''}>
+            <tr
+              key={indicator.id}
+              className={[!indicator.active ? 'row-inactive' : '', indicator.is_focus ? 'row-focus' : '']
+                .filter(Boolean)
+                .join(' ')}
+            >
               <td>{indicator.level}</td>
-              <td>{indicator.name}</td>
+              <td>
+                {indicator.is_focus && (
+                  <span className="focus-badge" title="Indicador foco">
+                    ★
+                  </span>
+                )}
+                {indicator.name}
+              </td>
               <td>
                 <span className="axis-chip" style={{ backgroundColor: indicator.axes?.color }}>
                   {indicator.axes?.name}

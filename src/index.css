@@ -30,6 +30,9 @@
   --shadow-kpi: 0 6px 18px rgba(27, 54, 93, 0.22);
   --color-kpi-target: var(--color-primary);
 
+  /* Indicadores marcados como "foco" (prioritarios) */
+  --color-focus: #1565C0;
+
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   color-scheme: light;
@@ -43,6 +46,15 @@ html,
 body {
   margin: 0;
   padding: 0;
+}
+
+/* Anillo azul para indicadores marcados como "foco" — mismo look en
+   cualquier tarjeta de KPI (Dashboard general, por eje, por nivel, Tablero),
+   sin importar el color de su semáforo. !important porque cada tarjeta ya
+   fija su propio box-shadow con la misma especificidad (una sola clase) y
+   el orden de carga de esos CSS por componente no está garantizado. */
+.kpi-focus {
+  box-shadow: 0 0 0 3px var(--color-focus), var(--shadow-kpi) !important;
 }
 
 body {

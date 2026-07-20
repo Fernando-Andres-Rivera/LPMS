@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
-import { PeriodTypeSelector } from '../../components/ui/PeriodTypeSelector'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo } from '../../lib/semaforo'
 import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
@@ -15,7 +14,7 @@ import {
 } from './dashboardApi'
 import { fetchLatestRootCauses } from '../causal-analysis/causalAnalysisApi'
 import { fetchActionPlanCounts } from '../action-plans/actionPlansApi'
-import type { Axis, Indicator, PeriodType, SemaforoEstado } from '../../lib/types'
+import type { Axis, Indicator, SemaforoEstado } from '../../lib/types'
 import './dashboard.css'
 
 type Diagnostico = 'cumple' | 'sin_datos' | 'sin_causa' | 'falta_gestion' | 'falta_eficacia'
@@ -54,7 +53,6 @@ export function AxisDashboardPage() {
   const { axisId } = useParams<{ axisId: string }>()
   const { organizationId } = useAuth()
   const [axis, setAxis] = useState<Axis | null>(null)
-  const [periodType, setPeriodType] = useState<PeriodType>('dia')
   const [range, setRange] = useState(defaultRange())
   const [rows, setRows] = useState<IndicatorRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -75,7 +73,7 @@ export function AxisDashboardPage() {
 
       const from = new Date(`${range.from}T00:00:00`)
       const to = new Date(`${range.to}T00:00:00`)
-      const buckets = buildPeriodBucketsInRange(periodType, from, to)
+      const buckets = buildPeriodBucketsInRange('dia', from, to)
       const ids = indicators.map((i) => i.id)
 
       // 4 consultas en total (mediciones del rango, objetivos, causas, conteo de
@@ -128,7 +126,7 @@ export function AxisDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [organizationId, axisId, periodType, range])
+  }, [organizationId, axisId, range])
 
   if (loading) return <p>Cargando indicadores…</p>
 
@@ -142,7 +140,6 @@ export function AxisDashboardPage() {
 
       <div className="period-row">
         <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
-        <PeriodTypeSelector value={periodType} onChange={setPeriodType} />
       </div>
 
       {rows.length === 0 && <p>Este eje no tiene indicadores activos todavía.</p>}
@@ -162,6 +159,7 @@ export function AxisDashboardPage() {
                 latestValue={latestValue}
                 targetValue={targetValue}
                 trend={trend}
+                isFocus={indicator.is_focus}
               />
 
               {diagnostico !== 'cumple' && (

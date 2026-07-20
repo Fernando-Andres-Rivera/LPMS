@@ -38,6 +38,15 @@
   opacity: 0.5;
 }
 
+.indicators-table tr.row-focus {
+  box-shadow: inset 3px 0 0 var(--color-focus);
+}
+
+.focus-badge {
+  color: var(--color-focus);
+  margin-right: 6px;
+}
+
 .indicators-table__actions {
   display: flex;
   gap: 12px;

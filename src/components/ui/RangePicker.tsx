@@ -33,6 +33,9 @@ export function RangePicker({ from, to, onChange, label = 'Rango de análisis' }
           <button type="button" onClick={() => onChange(daysAgo(90), yesterday())}>
             90d
           </button>
+          <button type="button" onClick={() => onChange(yesterday(), yesterday())}>
+            N-1
+          </button>
         </div>
       </div>
     </div>

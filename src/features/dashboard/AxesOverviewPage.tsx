@@ -104,6 +104,15 @@ export function AxesOverviewPage() {
 
       <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
 
+      <h2 className="panorama-section-title">Selecciona un eje</h2>
+      <div className="axes-grid">
+        {axes.map((axis) => (
+          <Link key={axis.id} to={`/ejes/${axis.id}`} className="axis-card" style={{ borderTopColor: axis.color }}>
+            <span className="axis-card__name">{axis.name}</span>
+          </Link>
+        ))}
+      </div>
+
       {loading ? (
         <p>Cargando ejes…</p>
       ) : total > 0 ? (
@@ -202,15 +211,6 @@ export function AxesOverviewPage() {
       ) : (
         <p>No hay indicadores evaluados en este período.</p>
       )}
-
-      <h2 className="panorama-section-title">Selecciona un eje</h2>
-      <div className="axes-grid">
-        {axes.map((axis) => (
-          <Link key={axis.id} to={`/ejes/${axis.id}`} className="axis-card" style={{ borderTopColor: axis.color }}>
-            <span className="axis-card__name">{axis.name}</span>
-          </Link>
-        ))}
-      </div>
     </div>
   )
 }

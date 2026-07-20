@@ -24,6 +24,7 @@ import { MeetingScheduleConfigPage } from './features/org-structure/MeetingSched
 import { NewOrganizationPage } from './features/onboarding/NewOrganizationPage'
 import { ClientsPage } from './features/onboarding/ClientsPage'
 import { LinkUserPage } from './features/onboarding/LinkUserPage'
+import { CaptureAuthorizationsReportPage } from './features/reports/CaptureAuthorizationsReportPage'
 import { AccountSecurityPage } from './features/account/AccountSecurityPage'
 
 const INDICATOR_MANAGER_ROLES = ['admin_consultora', 'admin_cliente', 'gerente', 'administrativo'] as const
@@ -68,6 +69,7 @@ function App() {
               <Route element={<RequireRole allowed={['admin_consultora']} />}>
                 <Route path="clientes" element={<ClientsPage />} />
                 <Route path="nuevo-cliente" element={<NewOrganizationPage />} />
+                <Route path="autorizaciones-captura" element={<CaptureAuthorizationsReportPage />} />
               </Route>
 
               <Route element={<RequireRole allowed={[...ONBOARDING_ROLES]} />}>

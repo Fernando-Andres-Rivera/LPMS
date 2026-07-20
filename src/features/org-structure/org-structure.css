@@ -22,6 +22,26 @@
   font-size: 0.85rem;
 }
 
+.org-structure-axes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+}
+
+.org-structure-axis-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.org-structure-axis-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 .org-structure-add-row--site {
   flex-wrap: wrap;
   margin-bottom: 18px;

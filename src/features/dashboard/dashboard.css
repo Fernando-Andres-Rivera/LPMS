@@ -7,26 +7,30 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 16px;
+  margin-bottom: 28px;
 }
 
 .axis-card {
   background: var(--color-surface);
-  border-top: 4px solid var(--color-primary);
+  border-top: 5px solid var(--color-primary);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
-  padding: 24px 16px;
+  box-shadow: var(--shadow-kpi);
+  padding: 28px 16px;
   text-decoration: none;
   color: var(--color-text);
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  min-height: 88px;
-  font-weight: 600;
+  min-height: 100px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .axis-card:hover {
-  box-shadow: 0 4px 12px rgba(27, 54, 93, 0.14);
+  box-shadow: 0 8px 22px rgba(27, 54, 93, 0.22);
+  transform: translateY(-2px);
 }
 
 .period-row {
@@ -41,9 +45,13 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
+/* align-items: stretch (arriba) hace que cada celda de una fila ocupe la
+   misma altura; dentro de la celda, IndicatorCard tiene flex: 1 y crece
+   para llenar ese espacio — así el diagnóstico de cada columna arranca en
+   el mismo renglón, sin importar si el nombre ocupa una o dos líneas. */
 .indicator-cell {
   display: flex;
   flex-direction: column;

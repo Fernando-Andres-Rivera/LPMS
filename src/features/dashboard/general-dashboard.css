@@ -34,6 +34,172 @@
   color: var(--color-fail);
 }
 
+.gdash-site-select {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* ---- Navegación entre pilares ---- */
+
+.gdash-pillar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 14px 20px;
+  margin-bottom: 16px;
+}
+
+.gdash-pillar-nav__btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--color-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gdash-pillar-nav__btn:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.gdash-pillar-nav__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.gdash-pillar-nav__current {
+  font-size: 1.4rem;
+  font-weight: 800;
+  text-align: center;
+  flex: 1;
+}
+
+/* ---- Resultado global del pilar (valor + estado + comparativas + barras diarias) ---- */
+
+.gdash-pillar-result {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-kpi);
+  padding: 20px 24px;
+}
+
+.gdash-pillar-result__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gdash-pillar-result__period {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.gdash-status-pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.gdash-status-pill--ok {
+  background: rgba(38, 166, 154, 0.14);
+  color: var(--color-ok);
+}
+
+.gdash-status-pill--risk {
+  background: rgba(245, 124, 0, 0.14);
+  color: var(--color-risk);
+}
+
+.gdash-status-pill--fail {
+  background: rgba(211, 47, 47, 0.14);
+  color: var(--color-fail);
+}
+
+.gdash-pillar-result__value {
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1;
+  margin-top: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.gdash-pillar-result__value-sub {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.gdash-pillar-result__compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.gdash-compare-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+
+.gdash-compare-box__label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.gdash-compare-box__value {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.gdash-compare-box__value--up {
+  color: var(--color-ok);
+}
+
+.gdash-compare-box__value--down {
+  color: var(--color-fail);
+}
+
+.gdash-compare-box__value--muted {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.gdash-compare-box__sub {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.gdash-pillar-result__chart {
+  width: 100%;
+  height: 200px;
+  margin-top: 8px;
+}
+
 .gdash-section {
   margin-top: 28px;
 }
@@ -42,24 +208,58 @@
   margin-bottom: 4px;
 }
 
-/* ---- Periodicidad de exposición + calendario ---- */
+/* ---- Periodicidad de exposición (compacta, un renglón por defecto) ---- */
+
+.gdash-exposure {
+  margin: 4px 0 16px;
+}
 
 .gdash-exposure__header {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.gdash-exposure__summary {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.gdash-exposure__summary strong {
+  color: var(--color-text);
+}
+
+.gdash-exposure__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.gdash-exposure__toggle {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  white-space: nowrap;
 }
 
 .gdash-exposure__edit {
-  padding: 8px 14px;
+  padding: 3px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-primary);
   background: var(--color-surface);
   color: var(--color-primary);
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -68,7 +268,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
-  margin-top: 14px;
+  margin-top: 10px;
   align-items: flex-start;
 }
 
@@ -231,6 +431,11 @@
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--color-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.4em;
 }
 
 .gdash-card__value {

@@ -114,6 +114,11 @@ export function AppLayout() {
               + Nuevo cliente
             </NavLink>
           )}
+          {isConsultora && (
+            <NavLink to="/autorizaciones-captura" className={linkClass}>
+              Autorizaciones de captura
+            </NavLink>
+          )}
           {canOnboardUsers && (
             <NavLink to="/invitar-usuario" className={linkClass}>
               Invitar usuario

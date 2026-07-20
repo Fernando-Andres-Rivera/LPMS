@@ -148,8 +148,9 @@ export function MeetingScheduleConfigPage() {
       <p className="page-subtitle">
         Cada nivel tiene su propia reunión: define a qué hora empieza y qué día evalúa — una reunión de hoy no
         siempre revisa el dato de hoy (ej. la gerencial de la mañana puede estar evaluando el cierre de ayer).
-        Pasada esa hora, la captura del día evaluado se bloquea para indicadores de ese nivel; los días anteriores
-        siguen disponibles para ponerse al día. Déjalo vacío si ese nivel no necesita bloqueo.
+        Pasada esa hora, esa fecha (y todas las anteriores) quedan cerradas para siempre para indicadores de ese
+        nivel — no se reabren al día siguiente. Solo LeanProLogistic puede autorizar una corrección puntual, con
+        causal, desde Captura de mediciones. Déjalo vacío si ese nivel no necesita bloqueo.
       </p>
 
       <div className="meeting-schedule-list">
@@ -222,9 +223,10 @@ export function MeetingScheduleConfigPage() {
               </div>
               {current && (
                 <p className="meeting-schedule-summary">
-                  {summarizeWeekdays(current.weekdays)}, a las {current.cutoff_time.slice(0, 5)}, se bloquea la
-                  captura del{' '}
-                  {DAY_OFFSET_LABEL[current.evaluated_day_offset]?.toLowerCase() ?? 'día evaluado'} para este nivel.
+                  {summarizeWeekdays(current.weekdays)}, a las {current.cutoff_time.slice(0, 5)}, se cierra para
+                  siempre la captura del{' '}
+                  {DAY_OFFSET_LABEL[current.evaluated_day_offset]?.toLowerCase() ?? 'día evaluado'} (y de cualquier
+                  fecha anterior) para este nivel.
                 </p>
               )}
             </section>

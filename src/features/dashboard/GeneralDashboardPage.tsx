@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { Semaforo } from '../../components/ui/Semaforo'
@@ -7,14 +8,16 @@ import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
 import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
 import { daysAgo, yesterday, DEFAULT_RANGE_DAYS } from '../../lib/dateRange'
-import { formatIndicatorValue, type Axis, type Indicator } from '../../lib/types'
+import { formatIndicatorValue, type Axis, type Indicator, type Site } from '../../lib/types'
 import {
   fetchActiveAxes,
+  fetchCurrentTargetsForIndicators,
   fetchIndicatorsByAxis,
   fetchIndicatorStatusesInRange,
   fetchMeasurementsInRange,
   type IndicatorStatus,
 } from './dashboardApi'
+import { fetchSites } from '../indicators/indicatorsApi'
 import { fetchAnalysisSpeedDays, fetchAxisActionPlans, type AxisActionPlan } from './generalDashboardApi'
 import {
   computeIndicatorCauseParetoForParent,
@@ -30,6 +33,239 @@ import './general-dashboard.css'
 const CAN_EDIT_EXPOSURE_ROLES = ['admin_consultora', 'admin_cliente', 'gerente']
 
 const TOP_CAUSES = 3
+
+interface PillarDailyPoint {
+  date: string
+  label: string
+  pct: number | null
+  cumplidos: number
+  total: number
+}
+
+function pillarPctColor(pct: number | null): string {
+  if (pct === null) return 'var(--color-border)'
+  if (pct >= 80) return 'var(--color-ok)'
+  if (pct >= 50) return 'var(--color-risk)'
+  return 'var(--color-fail)'
+}
+
+/**
+ * Resultado del pilar día por día: de los indicadores que reportaron ese
+ * día, qué % cumplió su objetivo — un solo número que resume el pilar
+ * completo, sin importar cuántos indicadores tenga ni su frecuencia
+ * individual (un indicador semanal solo aporta al día en que se capturó).
+ */
+function computePillarDailyResult(
+  indicators: Indicator[],
+  measurements: { indicator_id: string; period_date: string; value: number }[],
+  statusByIndicator: Map<string, IndicatorStatus>,
+  rangeFrom: string,
+  rangeTo: string,
+): PillarDailyPoint[] {
+  const indicatorById = new Map(indicators.map((i) => [i.id, i]))
+  const byDate = new Map<string, { indicator_id: string; value: number }[]>()
+  for (const m of measurements) {
+    if (!indicatorById.has(m.indicator_id)) continue
+    const list = byDate.get(m.period_date) ?? []
+    list.push(m)
+    byDate.set(m.period_date, list)
+  }
+
+  const from = new Date(`${rangeFrom}T00:00:00`)
+  const to = new Date(`${rangeTo}T00:00:00`)
+  const buckets = buildPeriodBucketsInRange('dia', from, to)
+
+  return buckets.map((bucket) => {
+    const dayMeasurements = byDate.get(bucket.startDate) ?? []
+    let cumplidos = 0
+    let total = 0
+    for (const m of dayMeasurements) {
+      const indicator = indicatorById.get(m.indicator_id)
+      const status = statusByIndicator.get(m.indicator_id)
+      if (!indicator || !status) continue
+      const estado = calcularSemaforo(m.value, status.target_value, indicator.improvement_direction)
+      if (estado === 'sin_datos') continue
+      total++
+      if (estado === 'cumple') cumplidos++
+    }
+    return {
+      date: bucket.startDate,
+      label: bucket.label,
+      cumplidos,
+      total,
+      pct: total > 0 ? Math.round((cumplidos / total) * 100) : null,
+    }
+  })
+}
+
+export interface PeriodCompliance {
+  cumplidos: number
+  total: number
+  pct: number | null
+}
+
+/** Desplaza un rango de fechas N meses y/o N años (para comparar contra el
+ * mismo rango del mes o del año anterior). */
+export function shiftRange(
+  range: { from: string; to: string },
+  monthsDelta: number,
+  yearsDelta: number,
+): { from: string; to: string } {
+  function shift(iso: string): string {
+    const d = new Date(`${iso}T00:00:00`)
+    d.setFullYear(d.getFullYear() + yearsDelta)
+    d.setMonth(d.getMonth() + monthsDelta)
+    return d.toISOString().slice(0, 10)
+  }
+  return { from: shift(range.from), to: shift(range.to) }
+}
+
+/** % de cumplimiento agregado de un conjunto de indicadores en un rango
+ * cualquiera — misma lógica que computePillarDailyResult pero sin
+ * desglosar por día, para comparar el resultado total de un período contra
+ * otro (mes anterior, año anterior). */
+export async function fetchPeriodCompliance(
+  indicatorIds: string[],
+  indicatorById: Map<string, Indicator>,
+  range: { from: string; to: string },
+): Promise<PeriodCompliance> {
+  if (indicatorIds.length === 0) return { cumplidos: 0, total: 0, pct: null }
+  const to = new Date(`${range.to}T00:00:00`)
+  const [measRows, targetMap] = await Promise.all([
+    fetchMeasurementsInRange(indicatorIds, range.from, range.to),
+    fetchCurrentTargetsForIndicators(indicatorIds, to.getFullYear(), to.getMonth() + 1),
+  ])
+  let cumplidos = 0
+  let total = 0
+  for (const m of measRows) {
+    const indicator = indicatorById.get(m.indicator_id)
+    if (!indicator) continue
+    const estado = calcularSemaforo(m.value, targetMap.get(m.indicator_id) ?? null, indicator.improvement_direction)
+    if (estado === 'sin_datos') continue
+    total++
+    if (estado === 'cumple') cumplidos++
+  }
+  return { cumplidos, total, pct: total > 0 ? Math.round((cumplidos / total) * 100) : null }
+}
+
+const STATUS_PILL: Record<'ok' | 'risk' | 'fail', { label: string; className: string }> = {
+  ok: { label: '✓ En camino', className: 'gdash-status-pill--ok' },
+  risk: { label: '⚠ En riesgo', className: 'gdash-status-pill--risk' },
+  fail: { label: '✗ Fuera de objetivo', className: 'gdash-status-pill--fail' },
+}
+
+function statusTier(pct: number | null): 'ok' | 'risk' | 'fail' {
+  if (pct === null) return 'fail'
+  if (pct >= 80) return 'ok'
+  if (pct >= 50) return 'risk'
+  return 'fail'
+}
+
+interface ComparisonBoxProps {
+  label: string
+  current: PeriodCompliance
+  previous: PeriodCompliance
+}
+
+/** Compara el % del período actual contra otro período (mes/año anterior):
+ * flecha + diferencia en puntos porcentuales, y debajo el valor real de ese
+ * período anterior para dar contexto (no solo la diferencia). */
+function ComparisonBox({ label, current, previous }: ComparisonBoxProps) {
+  if (current.pct === null || previous.pct === null) {
+    return (
+      <div className="gdash-compare-box">
+        <span className="gdash-compare-box__label">{label}</span>
+        <span className="gdash-compare-box__value gdash-compare-box__value--muted">Sin datos suficientes</span>
+      </div>
+    )
+  }
+  const delta = current.pct - previous.pct
+  const up = delta >= 0
+  return (
+    <div className="gdash-compare-box">
+      <span className="gdash-compare-box__label">{label}</span>
+      <span className={`gdash-compare-box__value ${up ? 'gdash-compare-box__value--up' : 'gdash-compare-box__value--down'}`}>
+        {up ? '▲' : '▼'} {Math.abs(delta)} pp
+      </span>
+      <span className="gdash-compare-box__sub">
+        {previous.pct}% ({previous.cumplidos}/{previous.total}) en ese período
+      </span>
+    </div>
+  )
+}
+
+interface PillarResultSectionProps {
+  axisName: string | undefined
+  rangeFrom: string
+  rangeTo: string
+  dailyData: PillarDailyPoint[]
+  current: PeriodCompliance
+  prevMonth: PeriodCompliance
+  prevYear: PeriodCompliance
+}
+
+/**
+ * Tarjeta de resultado del pilar: valor agregado del período en grande +
+ * estado, comparación contra el mes y el año anterior, y abajo las barras
+ * con el valor diario — mismo espíritu que un tablero de KPI financiero
+ * (resultado, comparativas, tendencia), aplicado al % de cumplimiento.
+ */
+function PillarResultSection({ axisName, rangeFrom, rangeTo, dailyData, current, prevMonth, prevYear }: PillarResultSectionProps) {
+  const tier = statusTier(current.pct)
+  const hasDaily = dailyData.some((d) => d.pct !== null)
+
+  return (
+    <section className="gdash-section gdash-pillar-result">
+      <div className="gdash-pillar-result__header">
+        <div>
+          <h2>Resultado global del pilar {axisName && `— ${axisName}`}</h2>
+          <p className="gdash-pillar-result__period">
+            {rangeFrom} · {rangeTo}
+          </p>
+        </div>
+        {current.pct !== null && (
+          <span className={`gdash-status-pill ${STATUS_PILL[tier].className}`}>{STATUS_PILL[tier].label}</span>
+        )}
+      </div>
+
+      {current.pct === null ? (
+        <p>Sin mediciones en este rango todavía.</p>
+      ) : (
+        <>
+          <div className="gdash-pillar-result__value">
+            {current.pct}%
+            <span className="gdash-pillar-result__value-sub">
+              {current.cumplidos}/{current.total} mediciones cumplen en el período
+            </span>
+          </div>
+
+          <div className="gdash-pillar-result__compare">
+            <ComparisonBox label="vs. mes anterior" current={current} previous={prevMonth} />
+            <ComparisonBox label="vs. año anterior" current={current} previous={prevYear} />
+          </div>
+
+          {hasDaily && (
+            <div className="gdash-pillar-result__chart">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailyData} margin={{ top: 8, right: 8, bottom: 4, left: 4 }}>
+                  <CartesianGrid vertical={false} stroke="var(--color-border)" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
+                  <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} width={40} />
+                  <Tooltip formatter={(value: number) => [`${value}%`, 'Cumplimiento']} />
+                  <Bar dataKey="pct" radius={[4, 4, 0, 0]}>
+                    {dailyData.map((p) => (
+                      <Cell key={p.date} fill={pillarPctColor(p.pct)} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  )
+}
 
 interface KpiTileProps {
   indicator: Indicator
@@ -61,6 +297,7 @@ function KpiTile({ indicator, status, trend }: KpiTileProps) {
         latestValue={latestValue}
         targetValue={targetValue}
         trend={trend}
+        isFocus={indicator.is_focus}
       />
     )
   }
@@ -70,7 +307,7 @@ function KpiTile({ indicator, status, trend }: KpiTileProps) {
     return (
       <Link
         to={`/tablero/${indicator.id}`}
-        className="gdash-card gdash-card--bar"
+        className={`gdash-card gdash-card--bar${indicator.is_focus ? ' kpi-focus' : ''}`}
         style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
       >
         <div className="gdash-card__header">
@@ -94,7 +331,7 @@ function KpiTile({ indicator, status, trend }: KpiTileProps) {
   return (
     <Link
       to={`/tablero/${indicator.id}`}
-      className="gdash-card gdash-card--bar"
+      className={`gdash-card gdash-card--bar${indicator.is_focus ? ' kpi-focus' : ''}`}
       style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
     >
       <div className="gdash-card__header">
@@ -192,7 +429,7 @@ function ActionRow({ plan, indicatorName, isTopCause }: ActionRowProps) {
 }
 
 export function GeneralDashboardPage() {
-  const { organizationId, profile } = useAuth()
+  const { organizationId, profile, siteIds } = useAuth()
   const canEditExposure = !!profile && CAN_EDIT_EXPOSURE_ROLES.includes(profile.role)
   const [exposureSchedule, setExposureSchedule] = useState<ExposureSchedule | null>(null)
   const [exposureLoading, setExposureLoading] = useState(true)
@@ -200,6 +437,11 @@ export function GeneralDashboardPage() {
   const [rangeTo, setRangeTo] = useState(yesterday())
   const [axes, setAxes] = useState<Axis[]>([])
   const [axisId, setAxisId] = useState('')
+  const [sites, setSites] = useState<Site[]>([])
+  // null = todavía no lo tocó el usuario; en ese caso se usa el primer sitio asignado por defecto.
+  const [siteOverride, setSiteOverride] = useState<string | null>(null)
+  const [siteTouched, setSiteTouched] = useState(false)
+  const selectedSite = siteTouched ? siteOverride : (siteIds[0] ?? null)
   const [allIndicators, setAllIndicators] = useState<Indicator[]>([])
   const [statuses, setStatuses] = useState<IndicatorStatus[]>([])
   const [causesMap, setCausesMap] = useState<Map<string, IndicatorCause[]>>(new Map())
@@ -209,6 +451,13 @@ export function GeneralDashboardPage() {
   const [measurements, setMeasurements] = useState<{ indicator_id: string; period_date: string; value: number }[]>(
     [],
   )
+  const [currentCompliance, setCurrentCompliance] = useState<PeriodCompliance>({ cumplidos: 0, total: 0, pct: null })
+  const [prevMonthCompliance, setPrevMonthCompliance] = useState<PeriodCompliance>({
+    cumplidos: 0,
+    total: 0,
+    pct: null,
+  })
+  const [prevYearCompliance, setPrevYearCompliance] = useState<PeriodCompliance>({ cumplidos: 0, total: 0, pct: null })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -237,10 +486,11 @@ export function GeneralDashboardPage() {
   useEffect(() => {
     if (!organizationId) return
     let cancelled = false
-    fetchActiveAxes(organizationId)
-      .then((axesData) => {
+    Promise.all([fetchActiveAxes(organizationId), fetchSites(organizationId)])
+      .then(([axesData, sitesData]) => {
         if (cancelled) return
         setAxes(axesData)
+        setSites(sitesData)
         if (axesData.length && !axisId) setAxisId(axesData[0].id)
       })
       .catch((err) => {
@@ -262,19 +512,46 @@ export function GeneralDashboardPage() {
     async function load() {
       setLoading(true)
       try {
-        const indicatorsData = await fetchIndicatorsByAxis(organizationId!, axisId)
+        const indicatorsData = await fetchIndicatorsByAxis(organizationId!, axisId, selectedSite)
         if (cancelled) return
         const indicatorIds = indicatorsData.map((i) => i.id)
+        const indicatorByIdLocal = new Map(indicatorsData.map((i) => [i.id, i]))
 
-        const [statusesData, causesData, tagsData, actionPlansData, speedData, measurementsData] = await Promise.all([
+        const [
+          statusesData,
+          causesData,
+          tagsData,
+          actionPlansData,
+          speedData,
+          measurementsData,
+          prevMonthData,
+          prevYearData,
+        ] = await Promise.all([
           fetchIndicatorStatusesInRange(organizationId!, range),
           fetchIndicatorCausesForMany(indicatorIds),
           fetchIndicatorCauseTagsForMany(indicatorIds, range),
           fetchAxisActionPlans(indicatorIds, range),
           fetchAnalysisSpeedDays(indicatorIds, range),
           fetchMeasurementsInRange(indicatorIds, range.from, range.to),
+          fetchPeriodCompliance(indicatorIds, indicatorByIdLocal, shiftRange(range, -1, 0)),
+          fetchPeriodCompliance(indicatorIds, indicatorByIdLocal, shiftRange(range, 0, -1)),
         ])
         if (cancelled) return
+
+        // Reusa las mediciones y objetivos ya traídos para el resultado
+        // agregado del período actual — misma metodología que
+        // fetchPeriodCompliance (mes/año anterior), sin pedirlos de nuevo.
+        const targetMapCurrent = new Map(statusesData.map((s) => [s.id, s.target_value]))
+        let curCumplidos = 0
+        let curTotal = 0
+        for (const m of measurementsData) {
+          const indicator = indicatorByIdLocal.get(m.indicator_id)
+          if (!indicator) continue
+          const estado = calcularSemaforo(m.value, targetMapCurrent.get(m.indicator_id) ?? null, indicator.improvement_direction)
+          if (estado === 'sin_datos') continue
+          curTotal++
+          if (estado === 'cumple') curCumplidos++
+        }
 
         setAllIndicators(indicatorsData)
         setStatuses(statusesData)
@@ -283,6 +560,13 @@ export function GeneralDashboardPage() {
         setActionPlans(actionPlansData)
         setAnalysisSpeedDays(speedData)
         setMeasurements(measurementsData)
+        setCurrentCompliance({
+          cumplidos: curCumplidos,
+          total: curTotal,
+          pct: curTotal > 0 ? Math.round((curCumplidos / curTotal) * 100) : null,
+        })
+        setPrevMonthCompliance(prevMonthData)
+        setPrevYearCompliance(prevYearData)
         setLoadError(null)
       } catch (err) {
         if (cancelled) return
@@ -296,7 +580,7 @@ export function GeneralDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [organizationId, axisId, rangeFrom, rangeTo])
+  }, [organizationId, axisId, selectedSite, rangeFrom, rangeTo])
 
   const statusByIndicator = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses])
   const indicatorById = useMemo(() => new Map(allIndicators.map((i) => [i.id, i])), [allIndicators])
@@ -392,6 +676,18 @@ export function GeneralDashboardPage() {
 
   const currentAxis = axes.find((a) => a.id === axisId)
 
+  function goToAxis(delta: number) {
+    if (axes.length === 0) return
+    const currentIndex = axes.findIndex((a) => a.id === axisId)
+    const nextIndex = (currentIndex + delta + axes.length) % axes.length
+    setAxisId(axes[nextIndex].id)
+  }
+
+  const pillarDailyResult = useMemo(
+    () => computePillarDailyResult(allIndicators, measurements, statusByIndicator, rangeFrom, rangeTo),
+    [allIndicators, measurements, statusByIndicator, rangeFrom, rangeTo],
+  )
+
   return (
     <div className="gdash-page">
       <h1>Dashboard</h1>
@@ -411,21 +707,50 @@ export function GeneralDashboardPage() {
         />
       )}
 
-      <div className="gdash-filters-row">
-        {axes.length > 0 && (
-          <label className="gdash-axis-select">
-            Pilar
-            <select value={axisId} onChange={(e) => setAxisId(e.target.value)}>
-              {axes.map((axis) => (
-                <option key={axis.id} value={axis.id}>
-                  {axis.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+      {axes.length > 0 && (
+        <div className="gdash-pillar-nav">
+          <button
+            type="button"
+            className="gdash-pillar-nav__btn"
+            onClick={() => goToAxis(-1)}
+            disabled={axes.length < 2}
+          >
+            ‹ Pilar anterior
+          </button>
+          <span className="gdash-pillar-nav__current" style={{ color: currentAxis?.color }}>
+            {currentAxis?.name}
+          </span>
+          <button
+            type="button"
+            className="gdash-pillar-nav__btn"
+            onClick={() => goToAxis(1)}
+            disabled={axes.length < 2}
+          >
+            Pilar siguiente ›
+          </button>
+        </div>
+      )}
 
+      <div className="gdash-filters-row">
         <RangePicker from={rangeFrom} to={rangeTo} onChange={(from, to) => { setRangeFrom(from); setRangeTo(to) }} />
+
+        {sites.length > 0 && (
+          <select
+            className="gdash-site-select"
+            value={selectedSite ?? ''}
+            onChange={(e) => {
+              setSiteOverride(e.target.value || null)
+              setSiteTouched(true)
+            }}
+          >
+            <option value="">Todos los sitios</option>
+            {sites.map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {loadError && <p className="gdash-error">No se pudo cargar el dashboard: {loadError}</p>}
@@ -434,6 +759,16 @@ export function GeneralDashboardPage() {
         <p>Cargando…</p>
       ) : (
         <>
+          <PillarResultSection
+            axisName={currentAxis?.name}
+            rangeFrom={rangeFrom}
+            rangeTo={rangeTo}
+            dailyData={pillarDailyResult}
+            current={currentCompliance}
+            prevMonth={prevMonthCompliance}
+            prevYear={prevYearCompliance}
+          />
+
           <section className="gdash-section">
             <h2 style={{ color: currentAxis?.color }}>Indicadores {currentAxis && `— ${currentAxis.name}`}</h2>
             {allIndicators.length === 0 ? (

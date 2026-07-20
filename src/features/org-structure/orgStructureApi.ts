@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { OrgUnit, Site, SiteLocation } from '../../lib/types'
+import type { Axis, OrgUnit, Site, SiteLocation } from '../../lib/types'
 
 /**
  * Postgres bloquea con error 23503 (llave foránea) el borrado de un nodo de
@@ -180,6 +180,47 @@ export async function createSiteLocation(params: {
 
   if (error) throw error
   return data
+}
+
+export interface AxisState {
+  axis: Axis
+  active: boolean
+}
+
+/**
+ * Todo el catálogo de ejes, marcando cuáles están activos para esta
+ * organización — false tanto si nunca se activó (no hay fila en
+ * organization_axes) como si se desactivó después, para no confundir
+ * "nunca gestionado" con "gestionado y luego apagado".
+ */
+export async function fetchOrganizationAxisStates(organizationId: string): Promise<AxisState[]> {
+  const [{ data: axes, error: axesError }, { data: orgAxes, error: orgAxesError }] = await Promise.all([
+    supabase.from('axes').select('*').order('sort_order'),
+    supabase.from('organization_axes').select('axis_id, active').eq('organization_id', organizationId),
+  ])
+  if (axesError) throw axesError
+  if (orgAxesError) throw orgAxesError
+
+  const activeMap = new Map((orgAxes ?? []).map((row) => [row.axis_id, row.active]))
+  return (axes ?? []).map((axis) => ({ axis, active: activeMap.get(axis.id) ?? false }))
+}
+
+/**
+ * Activa o desactiva un pilar para esta organización — el mismo alta que
+ * hoy solo pasa una vez al crear el cliente, ahora repetible cuando la
+ * consultora empieza a gestionar un pilar nuevo con un cliente que ya
+ * existe (ej. activar Estándar cuando arranca 5S), sin perder lo que ya
+ * tiene capturado en los demás ejes.
+ */
+export async function setOrganizationAxisActive(
+  organizationId: string,
+  axisId: string,
+  active: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from('organization_axes')
+    .upsert({ organization_id: organizationId, axis_id: axisId, active }, { onConflict: 'organization_id,axis_id' })
+  if (error) throw error
 }
 
 export async function fetchSitesWithOrgUnit(organizationId: string): Promise<Site[]> {

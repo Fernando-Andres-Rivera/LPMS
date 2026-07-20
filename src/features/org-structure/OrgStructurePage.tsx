@@ -8,14 +8,17 @@ import {
   deleteOrgUnit,
   deleteSite,
   deleteSiteLocation,
+  fetchOrganizationAxisStates,
   fetchOrgUnits,
   fetchSiteLocationsForSites,
   fetchSitesWithOrgUnit,
   renameOrgUnit,
   renameSite,
   renameSiteLocation,
+  setOrganizationAxisActive,
   setSiteActive,
   setSiteLocationActive,
+  type AxisState,
 } from './orgStructureApi'
 import type { OrgUnit, Site, SiteLocation } from '../../lib/types'
 import './org-structure.css'
@@ -45,6 +48,8 @@ export function OrgStructurePage() {
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([])
   const [sites, setSites] = useState<Site[]>([])
   const [locationsBySite, setLocationsBySite] = useState<Record<string, SiteLocation[]>>({})
+  const [axisStates, setAxisStates] = useState<AxisState[]>([])
+  const [savingAxisId, setSavingAxisId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const [newBusinessUnit, setNewBusinessUnit] = useState('')
@@ -65,12 +70,14 @@ export function OrgStructurePage() {
   async function loadAll() {
     if (!organizationId) return
     setLoading(true)
-    const [orgUnitsData, sitesData] = await Promise.all([
+    const [orgUnitsData, sitesData, axisStatesData] = await Promise.all([
       fetchOrgUnits(organizationId),
       fetchSitesWithOrgUnit(organizationId),
+      fetchOrganizationAxisStates(organizationId),
     ])
     setOrgUnits(orgUnitsData)
     setSites(sitesData)
+    setAxisStates(axisStatesData)
 
     const locations = await fetchSiteLocationsForSites(sitesData.map((s) => s.id))
     const grouped: Record<string, SiteLocation[]> = {}
@@ -85,27 +92,41 @@ export function OrgStructurePage() {
     if (!organizationId) return
     let cancelled = false
 
-    Promise.all([fetchOrgUnits(organizationId), fetchSitesWithOrgUnit(organizationId)]).then(
-      async ([orgUnitsData, sitesData]) => {
-        if (cancelled) return
-        setOrgUnits(orgUnitsData)
-        setSites(sitesData)
+    Promise.all([
+      fetchOrgUnits(organizationId),
+      fetchSitesWithOrgUnit(organizationId),
+      fetchOrganizationAxisStates(organizationId),
+    ]).then(async ([orgUnitsData, sitesData, axisStatesData]) => {
+      if (cancelled) return
+      setOrgUnits(orgUnitsData)
+      setSites(sitesData)
+      setAxisStates(axisStatesData)
 
-        const locations = await fetchSiteLocationsForSites(sitesData.map((s) => s.id))
-        if (cancelled) return
-        const grouped: Record<string, SiteLocation[]> = {}
-        for (const loc of locations) {
-          grouped[loc.site_id] = [...(grouped[loc.site_id] ?? []), loc]
-        }
-        setLocationsBySite(grouped)
-        setLoading(false)
-      },
-    )
+      const locations = await fetchSiteLocationsForSites(sitesData.map((s) => s.id))
+      if (cancelled) return
+      const grouped: Record<string, SiteLocation[]> = {}
+      for (const loc of locations) {
+        grouped[loc.site_id] = [...(grouped[loc.site_id] ?? []), loc]
+      }
+      setLocationsBySite(grouped)
+      setLoading(false)
+    })
 
     return () => {
       cancelled = true
     }
   }, [organizationId])
+
+  async function handleToggleAxis(axisId: string, active: boolean) {
+    if (!organizationId) return
+    setSavingAxisId(axisId)
+    try {
+      await setOrganizationAxisActive(organizationId, axisId, active)
+      setAxisStates((current) => current.map((s) => (s.axis.id === axisId ? { ...s, active } : s)))
+    } finally {
+      setSavingAxisId(null)
+    }
+  }
 
   async function handleAddBusinessUnit() {
     if (!profile || !organizationId || !newBusinessUnit.trim()) return
@@ -454,6 +475,29 @@ export function OrgStructurePage() {
             ))}
           </tbody>
         </table>
+        </div>
+      </section>
+
+      <section className="org-structure-card">
+        <h2>3. Pilares</h2>
+        <p className="org-structure-card__subtitle">
+          Los ejes que esta organización está gestionando actualmente. Actívalo cuando la consultora empiece a
+          trabajar un pilar nuevo con el cliente (ej. Estándar cuando arranca 5S) — se puede activar o desactivar
+          cuando haga falta, sin perder lo ya capturado en los demás.
+        </p>
+        <div className="org-structure-axes">
+          {axisStates.map(({ axis, active }) => (
+            <label key={axis.id} className="org-structure-axis-option">
+              <input
+                type="checkbox"
+                checked={active}
+                disabled={savingAxisId === axis.id}
+                onChange={(e) => handleToggleAxis(axis.id, e.target.checked)}
+              />
+              <span className="org-structure-axis-dot" style={{ backgroundColor: axis.color }} />
+              {axis.name}
+            </label>
+          ))}
         </div>
       </section>
     </div>

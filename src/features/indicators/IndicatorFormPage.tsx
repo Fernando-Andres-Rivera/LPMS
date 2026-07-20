@@ -117,6 +117,7 @@ export function IndicatorFormPage() {
     responsible_id: null,
     is_calculated: false,
     value_type: 'numerico',
+    is_focus: false,
   })
 
   useEffect(() => {
@@ -149,6 +150,7 @@ export function IndicatorFormPage() {
             responsible_id: data.responsible_id,
             is_calculated: data.is_calculated,
             value_type: data.value_type,
+            is_focus: data.is_focus,
           })
         }
       })
@@ -397,6 +399,11 @@ export function IndicatorFormPage() {
             onChange={(e) => update('is_calculated', e.target.checked)}
           />
           Este indicador se calcula automáticamente a partir de sus indicadores hijo (no se captura a mano)
+        </label>
+
+        <label className="indicator-form__parent-option">
+          <input type="checkbox" checked={form.is_focus} onChange={(e) => update('is_focus', e.target.checked)} />
+          Foco — marcarlo como prioritario (aparece con un borde azul muy visible en todas las tarjetas)
         </label>
 
         {form.value_type === 'razon' ? (

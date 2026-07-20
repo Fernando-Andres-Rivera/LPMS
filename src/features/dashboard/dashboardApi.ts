@@ -23,15 +23,27 @@ export async function fetchAxisById(axisId: string): Promise<Axis | null> {
   return data
 }
 
-export async function fetchIndicatorsByAxis(organizationId: string, axisId: string): Promise<Indicator[]> {
-  const { data, error } = await supabase
+/**
+ * Indicadores de un eje, opcionalmente acotados a un sitio — igual que
+ * fetchIndicatorsByLevel, incluye los corporativos (site_id nulo) junto con
+ * los del sitio elegido, para no perder de vista los objetivos que aplican
+ * a toda la organización.
+ */
+export async function fetchIndicatorsByAxis(
+  organizationId: string,
+  axisId: string,
+  siteId?: string | null,
+): Promise<Indicator[]> {
+  let query = supabase
     .from('indicators')
     .select('*')
     .eq('organization_id', organizationId)
     .eq('axis_id', axisId)
     .eq('active', true)
-    .order('level', { ascending: true })
 
+  query = siteId ? query.or(`site_id.eq.${siteId},site_id.is.null`) : query
+
+  const { data, error } = await query.order('level', { ascending: true })
   if (error) throw error
   return data ?? []
 }

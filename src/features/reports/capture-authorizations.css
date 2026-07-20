@@ -1,0 +1,75 @@
+.capture-auth-page {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.capture-auth-error {
+  color: var(--color-fail);
+}
+
+.capture-auth-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.capture-auth-stat {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.capture-auth-stat__value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.capture-auth-stat__label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.capture-auth-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.capture-auth-card h2 {
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.capture-auth-card__subtitle {
+  margin: 0 0 14px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.capture-auth-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.capture-auth-table th,
+.capture-auth-table td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.capture-auth-table td:last-child {
+  white-space: normal;
+  min-width: 180px;
+}
