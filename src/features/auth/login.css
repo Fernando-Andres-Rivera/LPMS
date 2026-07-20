@@ -255,6 +255,33 @@
   margin: -8px 0 12px;
 }
 
+.login-success {
+  color: var(--color-ok);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.45;
+  margin: -8px 0 12px;
+}
+
+.login-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+  align-items: flex-start;
+}
+
+.login-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-teal);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 /* ---- Responsive: sin la portada pesada en móvil ---- */
 
 @media (max-width: 900px) {

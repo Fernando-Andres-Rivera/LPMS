@@ -57,15 +57,25 @@ export async function createOrganizationWithSite(input: NewOrganizationInput): P
 }
 
 export async function fetchOrganizationsList(): Promise<Organization[]> {
-  const { data, error } = await supabase.from('organizations').select('*').eq('active', true).order('name')
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('active', true)
+    .eq('is_demo', false)
+    .order('name')
   if (error) throw error
   return data ?? []
 }
 
-/** Todas las organizaciones (activas e inactivas) — para la gestión de clientes
- * del admin_consultora. La RLS ya restringe esto solo a ese rol. */
+/** Todas las organizaciones reales (activas e inactivas) — para la gestión de
+ * clientes del admin_consultora. Excluye las orgs Demo de auto-registro, que
+ * viven en su propio reporte de registros. La RLS ya restringe esto al rol. */
 export async function fetchAllOrganizations(): Promise<Organization[]> {
-  const { data, error } = await supabase.from('organizations').select('*').order('name')
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('is_demo', false)
+    .order('name')
   if (error) throw error
   return data ?? []
 }

@@ -21,23 +21,86 @@ const CASCADE_STAGES = [
   },
 ]
 
+type Mode = 'login' | 'register' | 'forgot'
+
 export function LoginPage() {
-  const { session, signIn, blockedReason } = useAuth()
+  const { session, signIn, signUp, resetPassword, blockedReason } = useAuth()
+  const [mode, setMode] = useState<Mode>('login')
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   if (session) return <Navigate to="/" replace />
 
+  function switchMode(next: Mode) {
+    setMode(next)
+    setError(null)
+    setSuccess(null)
+    setPassword('')
+    setConfirmPassword('')
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setSubmitting(true)
     setError(null)
-    const { error } = await signIn(email, password)
+    setSuccess(null)
+
+    if (mode === 'login') {
+      setSubmitting(true)
+      const { error } = await signIn(email, password)
+      setSubmitting(false)
+      if (error) setError('Credenciales inválidas. Verifica tu correo y contraseña.')
+      return
+    }
+
+    if (mode === 'register') {
+      if (!fullName.trim()) {
+        setError('Escribe tu nombre.')
+        return
+      }
+      if (password.length < 8) {
+        setError('La contraseña debe tener al menos 8 caracteres.')
+        return
+      }
+      if (password !== confirmPassword) {
+        setError('Las contraseñas no coinciden.')
+        return
+      }
+      setSubmitting(true)
+      const { error } = await signUp(email.trim(), password, fullName.trim())
+      setSubmitting(false)
+      if (error) {
+        setError(error)
+      } else {
+        setSuccess(
+          `Te enviamos un correo a ${email.trim()} para confirmar tu cuenta. Ábrelo y sigue el enlace para entrar a tu entorno de prueba.`,
+        )
+      }
+      return
+    }
+
+    // mode === 'forgot'
+    setSubmitting(true)
+    const { error } = await resetPassword(email.trim())
     setSubmitting(false)
-    if (error) setError('Credenciales inválidas. Verifica tu correo y contraseña.')
+    if (error) {
+      setError(error)
+    } else {
+      setSuccess(`Si existe una cuenta con ${email.trim()}, te enviamos un correo para restablecer tu contraseña.`)
+    }
   }
+
+  const title = mode === 'login' ? 'Iniciar sesión' : mode === 'register' ? 'Crear cuenta' : 'Recuperar contraseña'
+  const subtitle =
+    mode === 'login'
+      ? 'Ingresa tus credenciales para continuar.'
+      : mode === 'register'
+        ? 'Regístrate y prueba LPMS en tu propio entorno Demo, sin costo.'
+        : 'Te enviaremos un enlace a tu correo para poner una nueva contraseña.'
 
   return (
     <div className="login-page">
@@ -66,8 +129,24 @@ export function LoginPage() {
 
       <div className="login-panel">
         <form className="login-card" onSubmit={handleSubmit}>
-          <h2 className="login-card__title">Iniciar sesión</h2>
-          <p className="login-card__subtitle">Ingresa tus credenciales para continuar.</p>
+          <h2 className="login-card__title">{title}</h2>
+          <p className="login-card__subtitle">{subtitle}</p>
+
+          {mode === 'register' && (
+            <>
+              <label className="login-label" htmlFor="fullName">
+                Nombre completo
+              </label>
+              <input
+                id="fullName"
+                className="login-input"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                autoFocus
+              />
+            </>
+          )}
 
           <label className="login-label" htmlFor="email">
             Correo electrónico
@@ -79,26 +158,73 @@ export function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            autoFocus
+            autoFocus={mode !== 'register'}
           />
 
-          <label className="login-label" htmlFor="password">
-            Contraseña
-          </label>
-          <input
-            id="password"
-            type="password"
-            className="login-input"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          {mode !== 'forgot' && (
+            <>
+              <label className="login-label" htmlFor="password">
+                Contraseña
+              </label>
+              <input
+                id="password"
+                type="password"
+                className="login-input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </>
+          )}
 
-          {(error || blockedReason) && <p className="login-error">{error ?? blockedReason}</p>}
+          {mode === 'register' && (
+            <>
+              <label className="login-label" htmlFor="confirmPassword">
+                Confirmar contraseña
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                className="login-input"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </>
+          )}
+
+          {(error || (mode === 'login' && blockedReason)) && (
+            <p className="login-error">{error ?? blockedReason}</p>
+          )}
+          {success && <p className="login-success">{success}</p>}
 
           <button className="login-button" type="submit" disabled={submitting}>
-            {submitting ? 'Ingresando…' : 'Ingresar'}
+            {submitting
+              ? 'Procesando…'
+              : mode === 'login'
+                ? 'Ingresar'
+                : mode === 'register'
+                  ? 'Crear mi cuenta Demo'
+                  : 'Enviar enlace'}
           </button>
+
+          <div className="login-switch">
+            {mode === 'login' && (
+              <>
+                <button type="button" className="login-link" onClick={() => switchMode('register')}>
+                  Crear una cuenta Demo
+                </button>
+                <button type="button" className="login-link" onClick={() => switchMode('forgot')}>
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </>
+            )}
+            {mode !== 'login' && (
+              <button type="button" className="login-link" onClick={() => switchMode('login')}>
+                ← Volver a iniciar sesión
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </div>

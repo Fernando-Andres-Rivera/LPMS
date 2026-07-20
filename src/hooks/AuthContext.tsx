@@ -39,7 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSiteIds((sitesData ?? []).map((row) => row.site_id))
 
     if (profileData?.role === 'admin_consultora') {
-      const { data: orgsData } = await supabase.from('organizations').select('*').eq('active', true).order('name')
+      const { data: orgsData } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('active', true)
+        .eq('is_demo', false)
+        .order('name')
       const orgs = orgsData ?? []
       setOrganizations(orgs)
       const stored = localStorage.getItem(SELECTED_ORG_STORAGE_KEY)
@@ -89,7 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function refreshOrganizations(selectId?: string) {
     if (profile?.role !== 'admin_consultora') return
-    const { data: orgsData } = await supabase.from('organizations').select('*').eq('active', true).order('name')
+    const { data: orgsData } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('active', true)
+      .eq('is_demo', false)
+      .order('name')
     const orgs = orgsData ?? []
     setOrganizations(orgs)
     if (selectId) setOrganizationId(selectId)
@@ -98,6 +108,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(email: string, password: string) {
     setBlockedReason(null)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
+    return { error: error?.message ?? null }
+  }
+
+  async function signUp(email: string, password: string, fullName: string) {
+    setBlockedReason(null)
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      // emailRedirectTo se resuelve al origen actual para que el enlace de
+      // confirmación vuelva al app donde sea que se sirva (local o producción);
+      // ese origen debe estar en la lista de Redirect URLs de Supabase Auth.
+      options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
+    })
+    return { error: error?.message ?? null }
+  }
+
+  async function resetPassword(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    })
     return { error: error?.message ?? null }
   }
 
@@ -118,6 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setOrganizationId,
         refreshOrganizations,
         signIn,
+        signUp,
+        resetPassword,
         signOut,
       }}
     >

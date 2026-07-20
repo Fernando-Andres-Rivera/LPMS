@@ -86,6 +86,10 @@ export interface Organization {
   logo_url: string | null
   active: boolean
   created_at: string
+  /** true si es una organización Demo auto-creada por un registro público
+   * (lead). Se excluye del switcher y de la lista de clientes reales; solo
+   * aparece en el reporte de registros. */
+  is_demo: boolean
 }
 
 export interface Site {

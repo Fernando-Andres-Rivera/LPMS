@@ -25,6 +25,7 @@ import { NewOrganizationPage } from './features/onboarding/NewOrganizationPage'
 import { ClientsPage } from './features/onboarding/ClientsPage'
 import { LinkUserPage } from './features/onboarding/LinkUserPage'
 import { CaptureAuthorizationsReportPage } from './features/reports/CaptureAuthorizationsReportPage'
+import { DemoSignupsReportPage } from './features/reports/DemoSignupsReportPage'
 import { AccountSecurityPage } from './features/account/AccountSecurityPage'
 
 const INDICATOR_MANAGER_ROLES = ['admin_consultora', 'admin_cliente', 'gerente', 'administrativo'] as const
@@ -70,6 +71,7 @@ function App() {
                 <Route path="clientes" element={<ClientsPage />} />
                 <Route path="nuevo-cliente" element={<NewOrganizationPage />} />
                 <Route path="autorizaciones-captura" element={<CaptureAuthorizationsReportPage />} />
+                <Route path="registros" element={<DemoSignupsReportPage />} />
               </Route>
 
               <Route element={<RequireRole allowed={[...ONBOARDING_ROLES]} />}>

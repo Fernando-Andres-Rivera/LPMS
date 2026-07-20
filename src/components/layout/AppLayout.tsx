@@ -112,6 +112,11 @@ export function AppLayout() {
               Autorizaciones de captura
             </NavLink>
           )}
+          {isConsultora && (
+            <NavLink to="/registros" className={linkClass}>
+              Registros Demo
+            </NavLink>
+          )}
           {canOnboardUsers && (
             <NavLink to="/usuarios" className={linkClass}>
               Usuarios
