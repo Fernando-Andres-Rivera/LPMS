@@ -126,8 +126,17 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Ya existe un usuario vinculado con este correo.' }, 409)
   }
 
+  // El link del correo de invitación se arma con esta URL — si no se pasa
+  // explícito, Supabase usa el "Site URL" configurado en el dashboard
+  // (Authentication > URL Configuration), que quedó apuntando a localhost
+  // desde que el proyecto se creó y nunca se actualizó a producción. Se fija
+  // aquí como defensa adicional, pero la URL igual debe estar en la lista de
+  // "Redirect URLs" permitidas del dashboard o Supabase la ignora.
+  const siteUrl = Deno.env.get('SITE_URL') ?? 'https://lpms-rouge.vercel.app'
+
   const { data: invited, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName },
+    redirectTo: siteUrl,
   })
   if (inviteError || !invited.user) {
     return json({ error: inviteError?.message ?? 'No se pudo enviar la invitación.' }, 500)
