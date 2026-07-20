@@ -163,6 +163,7 @@
 /* ---- Panel de acceso ---- */
 
 .login-panel {
+  position: relative;
   flex: 1 1 0;
   min-width: 380px;
   display: flex;
@@ -182,102 +183,97 @@
 
 /* ---- Marca: logo + nombre completo del sistema, sobre fondo claro ---- */
 
-.login-brand {
-  width: 100%;
-  max-width: 360px;
-  margin-bottom: 32px;
+/* ---- Logo chico, esquina superior derecha del panel ---- */
+
+.login-brand-mini {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.login-brand__logo {
-  position: relative;
-  display: inline-block;
-  margin-bottom: 6px;
-}
-
-.login-brand__bars {
+.login-brand-mini__bars {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
-  height: 30px;
+  gap: 2px;
+  height: 16px;
 }
 
-.login-brand__bar {
-  width: 9px;
-  border-radius: 3px 3px 0 0;
+.login-brand-mini__bar {
+  width: 5px;
+  border-radius: 2px 2px 0 0;
 }
 
-.login-brand__bar--1 {
+.login-brand-mini__bar--1 {
   height: 38%;
   background: #9ca6b4;
 }
 
-.login-brand__bar--2 {
+.login-brand-mini__bar--2 {
   height: 60%;
   background: #c7cdd6;
 }
 
-.login-brand__bar--3 {
+.login-brand-mini__bar--3 {
   height: 80%;
   background: #dde2e8;
 }
 
-.login-brand__bar--4 {
+.login-brand-mini__bar--4 {
   height: 100%;
   background: var(--color-teal);
 }
 
-.login-brand__baseline {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-teal);
-  margin-top: 4px;
+.login-brand-mini__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
 }
 
-.login-brand__wordmark {
-  display: block;
-  font-size: 2rem;
+.login-brand-mini__wordmark {
+  font-size: 0.85rem;
   font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
 }
 
-.login-brand__lean-pro {
+.login-brand-mini__lean-pro {
   color: var(--color-primary);
 }
 
-.login-brand__logistic {
+.login-brand-mini__logistic {
   color: var(--color-teal);
 }
 
-.login-brand__sas {
-  display: block;
-  font-size: 0.85rem;
+.login-brand-mini__sas {
+  font-size: 0.6rem;
   font-weight: 700;
   color: var(--color-text-muted);
-  margin: -2px 0 18px;
 }
 
-.login-brand__product {
+/* ---- LPMS, centrado y prominente ---- */
+
+.login-product-central {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding-top: 16px;
-  border-top: 2px solid var(--color-border);
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 32px;
 }
 
-.login-brand__product-name {
-  font-size: 2.6rem;
+.login-product-central__name {
+  font-size: 2.8rem;
   font-weight: 900;
   color: var(--color-primary);
   line-height: 1;
   letter-spacing: -0.02em;
 }
 
-.login-brand__product-tagline {
-  font-size: 0.95rem;
+.login-product-central__tagline {
+  font-size: 1rem;
   font-weight: 600;
   color: var(--color-text-muted);
+  margin-top: 8px;
 }
 
 .login-card__title {

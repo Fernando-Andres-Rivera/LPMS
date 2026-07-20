@@ -134,26 +134,25 @@ export function LoginPage() {
       </div>
 
       <div className="login-panel">
-        <div className="login-brand">
-          <div className="login-brand__logo">
-            <div className="login-brand__bars" aria-hidden="true">
-              <span className="login-brand__bar login-brand__bar--1" />
-              <span className="login-brand__bar login-brand__bar--2" />
-              <span className="login-brand__bar login-brand__bar--3" />
-              <span className="login-brand__bar login-brand__bar--4" />
-            </div>
-            <div className="login-brand__baseline" aria-hidden="true" />
+        <div className="login-brand-mini" aria-hidden="true">
+          <div className="login-brand-mini__bars">
+            <span className="login-brand-mini__bar login-brand-mini__bar--1" />
+            <span className="login-brand-mini__bar login-brand-mini__bar--2" />
+            <span className="login-brand-mini__bar login-brand-mini__bar--3" />
+            <span className="login-brand-mini__bar login-brand-mini__bar--4" />
           </div>
-          <div className="login-brand__wordmark">
-            <span className="login-brand__lean-pro">LeanPro</span>
-            <span className="login-brand__logistic">Logistic</span>
+          <div className="login-brand-mini__text">
+            <span className="login-brand-mini__wordmark">
+              <span className="login-brand-mini__lean-pro">LeanPro</span>
+              <span className="login-brand-mini__logistic">Logistic</span>
+            </span>
+            <span className="login-brand-mini__sas">sas</span>
           </div>
-          <span className="login-brand__sas">sas</span>
+        </div>
 
-          <div className="login-brand__product">
-            <span className="login-brand__product-name">LPMS</span>
-            <span className="login-brand__product-tagline">Lean Performance Management System</span>
-          </div>
+        <div className="login-product-central">
+          <span className="login-product-central__name">LPMS</span>
+          <span className="login-product-central__tagline">Lean Performance Management System</span>
         </div>
 
         <form className="login-card" onSubmit={handleSubmit}>
