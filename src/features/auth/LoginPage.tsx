@@ -123,11 +123,6 @@ export function LoginPage() {
         />
         <div className="login-hero__scrim" aria-hidden="true" />
 
-        <div className="login-hero__brand">
-          <span className="login-hero__brand-name">LeanProLogistic SAS</span>
-          <span className="login-hero__brand-product">LPMS</span>
-        </div>
-
         <div className="login-hero__captions">
           {CASCADE_STAGES.map((stage) => (
             <div key={stage.key} className={`login-hero__caption login-hero__caption--${stage.key}`}>
@@ -139,6 +134,28 @@ export function LoginPage() {
       </div>
 
       <div className="login-panel">
+        <div className="login-brand">
+          <div className="login-brand__logo">
+            <div className="login-brand__bars" aria-hidden="true">
+              <span className="login-brand__bar login-brand__bar--1" />
+              <span className="login-brand__bar login-brand__bar--2" />
+              <span className="login-brand__bar login-brand__bar--3" />
+              <span className="login-brand__bar login-brand__bar--4" />
+            </div>
+            <div className="login-brand__baseline" aria-hidden="true" />
+          </div>
+          <div className="login-brand__wordmark">
+            <span className="login-brand__lean-pro">LeanPro</span>
+            <span className="login-brand__logistic">Logistic</span>
+          </div>
+          <span className="login-brand__sas">sas</span>
+
+          <div className="login-brand__product">
+            <span className="login-brand__product-name">LPMS</span>
+            <span className="login-brand__product-tagline">Lean Performance Management System</span>
+          </div>
+        </div>
+
         <form className="login-card" onSubmit={handleSubmit}>
           <h2 className="login-card__title">{title}</h2>
           <p className="login-card__subtitle">{subtitle}</p>
