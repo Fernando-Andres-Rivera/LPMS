@@ -100,7 +100,7 @@ export function CaptureAuthorizationsReportPage() {
                   <CartesianGrid horizontal={false} stroke="var(--color-border)" />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
                   <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value: number) => [value, 'Autorizaciones']} />
+                  <Tooltip formatter={(value) => [value, 'Autorizaciones']} />
                   <Bar dataKey="count" fill="var(--color-primary)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -116,7 +116,7 @@ export function CaptureAuthorizationsReportPage() {
                   <CartesianGrid vertical={false} stroke="var(--color-border)" />
                   <XAxis dataKey="day" tick={{ fontSize: 11 }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={30} />
-                  <Tooltip formatter={(value: number) => [value, 'Autorizaciones']} />
+                  <Tooltip formatter={(value) => [value, 'Autorizaciones']} />
                   <Bar dataKey="count" fill="var(--color-risk)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

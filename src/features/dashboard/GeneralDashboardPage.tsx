@@ -251,7 +251,7 @@ function PillarResultSection({ axisName, rangeFrom, rangeTo, dailyData, current,
                   <CartesianGrid vertical={false} stroke="var(--color-border)" />
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                   <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} width={40} />
-                  <Tooltip formatter={(value: number) => [`${value}%`, 'Cumplimiento']} />
+                  <Tooltip formatter={(value) => [`${value}%`, 'Cumplimiento']} />
                   <Bar dataKey="pct" radius={[4, 4, 0, 0]}>
                     {dailyData.map((p) => (
                       <Cell key={p.date} fill={pillarPctColor(p.pct)} />
