@@ -131,12 +131,14 @@ Deno.serve(async (req: Request) => {
   // (Authentication > URL Configuration), que quedó apuntando a localhost
   // desde que el proyecto se creó y nunca se actualizó a producción. Se fija
   // aquí como defensa adicional, pero la URL igual debe estar en la lista de
-  // "Redirect URLs" permitidas del dashboard o Supabase la ignora.
+  // "Redirect URLs" permitidas del dashboard o Supabase la ignora. Apunta a
+  // /restablecer-contrasena — la misma pantalla que usa "olvidé mi
+  // contraseña", ya que el invitado tampoco tiene contraseña propia todavía.
   const siteUrl = Deno.env.get('SITE_URL') ?? 'https://lpms-rouge.vercel.app'
 
   const { data: invited, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName },
-    redirectTo: siteUrl,
+    redirectTo: `${siteUrl}/restablecer-contrasena`,
   })
   if (inviteError || !invited.user) {
     return json({ error: inviteError?.message ?? 'No se pudo enviar la invitación.' }, 500)

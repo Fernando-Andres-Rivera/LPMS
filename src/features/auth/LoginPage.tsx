@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Turnstile } from '../../components/ui/Turnstile'
+import { describeAuthError } from './authErrorMessages'
 import './login.css'
 
 const CASCADE_STAGES = [
@@ -59,10 +60,10 @@ export function LoginPage() {
 
     if (mode === 'login') {
       setSubmitting(true)
-      const { error } = await signIn(email, password, captchaToken)
+      const { error, code } = await signIn(email, password, captchaToken)
       setSubmitting(false)
       setCaptchaResetSignal((k) => k + 1)
-      if (error) setError('Credenciales inválidas. Verifica tu correo y contraseña.')
+      if (error) setError(describeAuthError('login', code, error))
       return
     }
 
@@ -80,14 +81,15 @@ export function LoginPage() {
         return
       }
       setSubmitting(true)
-      const { error } = await signUp(email.trim(), password, fullName.trim(), captchaToken)
+      const { error, code } = await signUp(email.trim(), password, fullName.trim(), captchaToken)
       setSubmitting(false)
       setCaptchaResetSignal((k) => k + 1)
       if (error) {
-        setError(error)
+        setError(describeAuthError('register', code, error))
       } else {
         setSuccess(
-          `Te enviamos un correo a ${email.trim()} para confirmar tu cuenta. Ábrelo y sigue el enlace para entrar a tu entorno de prueba.`,
+          `Te enviamos un correo a ${email.trim()} para confirmar tu cuenta y entrar a tu entorno de prueba. ` +
+            'Ábrelo y haz clic en el enlace — si no lo ves en unos minutos, revisa también la carpeta de spam.',
         )
       }
       return
@@ -95,13 +97,16 @@ export function LoginPage() {
 
     // mode === 'forgot'
     setSubmitting(true)
-    const { error } = await resetPassword(email.trim(), captchaToken)
+    const { error, code } = await resetPassword(email.trim(), captchaToken)
     setSubmitting(false)
     setCaptchaResetSignal((k) => k + 1)
     if (error) {
-      setError(error)
+      setError(describeAuthError('forgot', code, error))
     } else {
-      setSuccess(`Si existe una cuenta con ${email.trim()}, te enviamos un correo para restablecer tu contraseña.`)
+      setSuccess(
+        `Si existe una cuenta con ${email.trim()}, te enviamos un correo con un enlace para poner una nueva contraseña. ` +
+          'Revisa también la carpeta de spam — el enlace es válido por un tiempo limitado.',
+      )
     }
   }
 

@@ -21,14 +21,26 @@ export interface AuthContextValue {
   refreshOrganizations: (selectId?: string) => Promise<void>
   /** captchaToken es obligatorio en la práctica: Supabase Auth tiene la
    * protección CAPTCHA activada a nivel de proyecto (todos los endpoints de
-   * password-grant), así que sin un token válido de Turnstile la llamada falla. */
-  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: string | null }>
+   * password-grant), así que sin un token válido de Turnstile la llamada falla.
+   * `code` es el código de error ESTABLE de Supabase (ej. 'email_not_confirmed',
+   * 'invalid_credentials') — úsalo para decidir el mensaje a mostrar en vez de
+   * el `error` (texto en inglés, pensado para logs, no para el usuario final). */
+  signIn: (
+    email: string,
+    password: string,
+    captchaToken?: string,
+  ) => Promise<{ error: string | null; code?: string }>
   /** Registro público — crea la cuenta; el trigger handle_new_user la
    * aprovisiona con una organización Demo propia. Con confirmación de correo
    * activa, no devuelve sesión hasta que el usuario confirma. */
-  signUp: (email: string, password: string, fullName: string, captchaToken?: string) => Promise<{ error: string | null }>
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    captchaToken?: string,
+  ) => Promise<{ error: string | null; code?: string }>
   /** Envía el correo de recuperación de contraseña. */
-  resetPassword: (email: string, captchaToken?: string) => Promise<{ error: string | null }>
+  resetPassword: (email: string, captchaToken?: string) => Promise<{ error: string | null; code?: string }>
   signOut: () => Promise<void>
 }
 

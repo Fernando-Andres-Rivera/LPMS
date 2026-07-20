@@ -3,6 +3,7 @@ import { AuthProvider } from './hooks/AuthContext'
 import { RequireAuth } from './features/auth/RequireAuth'
 import { RequireRole } from './features/auth/RequireRole'
 import { LoginPage } from './features/auth/LoginPage'
+import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
 import { AppLayout } from './components/layout/AppLayout'
 import { AxesOverviewPage } from './features/dashboard/AxesOverviewPage'
 import { GeneralDashboardPage } from './features/dashboard/GeneralDashboardPage'
@@ -38,6 +39,7 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/restablecer-contrasena" element={<ResetPasswordPage />} />
 
           <Route element={<RequireAuth />}>
             <Route element={<AppLayout />}>

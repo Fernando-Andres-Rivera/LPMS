@@ -321,6 +321,12 @@
   cursor: default;
 }
 
+.login-button--link {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
 .turnstile-widget {
   margin: 4px 0 16px;
 }

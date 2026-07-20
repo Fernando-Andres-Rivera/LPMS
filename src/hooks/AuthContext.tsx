@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: captchaToken ? { captchaToken } : undefined,
     })
-    return { error: error?.message ?? null }
+    return { error: error?.message ?? null, code: error?.code }
   }
 
   async function signUp(email: string, password: string, fullName: string, captchaToken?: string) {
@@ -120,20 +120,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      // emailRedirectTo se resuelve al origen actual para que el enlace de
-      // confirmación vuelva al app donde sea que se sirva (local o producción);
-      // ese origen debe estar en la lista de Redirect URLs de Supabase Auth.
-      options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin, captchaToken },
+      // emailRedirectTo apunta a la pantalla dedicada de "definir contraseña"
+      // — el mismo enlace de confirmación deja al usuario con una sesión ya
+      // activa (así funciona el link de Supabase), así que esa pantalla solo
+      // necesita mostrar el formulario, sin depender de cachar ningún evento.
+      options: {
+        data: { full_name: fullName },
+        emailRedirectTo: `${window.location.origin}/restablecer-contrasena`,
+        captchaToken,
+      },
     })
-    return { error: error?.message ?? null }
+    return { error: error?.message ?? null, code: error?.code }
   }
 
   async function resetPassword(email: string, captchaToken?: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
+      redirectTo: `${window.location.origin}/restablecer-contrasena`,
       captchaToken,
     })
-    return { error: error?.message ?? null }
+    return { error: error?.message ?? null, code: error?.code }
   }
 
   async function signOut() {
