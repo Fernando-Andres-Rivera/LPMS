@@ -1,6 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { inviteUser, fetchOrganizationsList, fetchSitesForOrganization } from './onboardingApi'
+import {
+  inviteUser,
+  fetchOrganizationsList,
+  fetchSitesForOrganization,
+  fetchOrganizationUsers,
+  updateUserRole,
+  setUserActive,
+  setUserSites,
+  type OrgUserRow,
+} from './onboardingApi'
 import type { Organization, Site, UserRole } from '../../lib/types'
 import './onboarding.css'
 
@@ -38,6 +47,12 @@ export function LinkUserPage() {
   const [error, setError] = useState<string | null>(null)
   const [invitedEmail, setInvitedEmail] = useState<string | null>(null)
 
+  const [users, setUsers] = useState<OrgUserRow[]>([])
+  const [usersLoading, setUsersLoading] = useState(true)
+  const [savingUserId, setSavingUserId] = useState<string | null>(null)
+  const [userError, setUserError] = useState<string | null>(null)
+  const [usersRefreshKey, setUsersRefreshKey] = useState(0)
+
   useEffect(() => {
     if (isConsultora) fetchOrganizationsList().then(setOrganizations)
   }, [isConsultora])
@@ -52,6 +67,74 @@ export function LinkUserPage() {
       cancelled = true
     }
   }, [selectedOrgId])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!selectedOrgId) {
+      setUsers([])
+      setUsersLoading(false)
+      return
+    }
+    setUsersLoading(true)
+    fetchOrganizationUsers(selectedOrgId)
+      .then((data) => {
+        if (!cancelled) {
+          setUsers(data)
+          setUserError(null)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setUserError(err instanceof Error ? err.message : 'No se pudo cargar la lista de usuarios.')
+      })
+      .finally(() => {
+        if (!cancelled) setUsersLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedOrgId, usersRefreshKey])
+
+  async function handleRoleChange(user: OrgUserRow, nextRole: UserRole) {
+    setSavingUserId(user.id)
+    setUserError(null)
+    try {
+      await updateUserRole(user.id, nextRole)
+      setUsers((current) => current.map((u) => (u.id === user.id ? { ...u, role: nextRole } : u)))
+    } catch (err) {
+      setUserError(err instanceof Error ? err.message : 'No se pudo cambiar el rol.')
+    } finally {
+      setSavingUserId(null)
+    }
+  }
+
+  async function handleToggleActive(user: OrgUserRow) {
+    setSavingUserId(user.id)
+    setUserError(null)
+    try {
+      await setUserActive(user.id, !user.active)
+      setUsers((current) => current.map((u) => (u.id === user.id ? { ...u, active: !u.active } : u)))
+    } catch (err) {
+      setUserError(err instanceof Error ? err.message : 'No se pudo cambiar el estado.')
+    } finally {
+      setSavingUserId(null)
+    }
+  }
+
+  async function handleToggleUserSite(user: OrgUserRow, siteId: string) {
+    const nextSiteIds = user.siteIds.includes(siteId)
+      ? user.siteIds.filter((id) => id !== siteId)
+      : [...user.siteIds, siteId]
+    setSavingUserId(user.id)
+    setUserError(null)
+    try {
+      await setUserSites(user.id, nextSiteIds)
+      setUsers((current) => current.map((u) => (u.id === user.id ? { ...u, siteIds: nextSiteIds } : u)))
+    } catch (err) {
+      setUserError(err instanceof Error ? err.message : 'No se pudieron actualizar los sitios.')
+    } finally {
+      setSavingUserId(null)
+    }
+  }
 
   const requiresSite = role === 'administrativo' || role === 'operativo'
 
@@ -83,6 +166,7 @@ export function LinkUserPage() {
       setFullName('')
       setEmail('')
       setSelectedSiteIds([])
+      setUsersRefreshKey((k) => k + 1)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo invitar al usuario.')
     } finally {
@@ -91,13 +175,14 @@ export function LinkUserPage() {
   }
 
   return (
-    <div className="onboarding-page">
-      <h1>Invitar usuario</h1>
+    <div className="onboarding-page users-page">
+      <h1>Usuarios</h1>
       <p className="page-subtitle">
-        Le llega un correo para poner su contraseña — al aceptar la invitación queda vinculado automáticamente con
-        el rol y sitio(s) que definas aquí. No hace falta crear nada manualmente en Supabase.
+        Invita gente nueva por correo, y gestiona el rol, los sitios asignados y el estado de quienes ya tienen
+        cuenta.
       </p>
 
+      <h2 className="users-section-title">Invitar usuario nuevo</h2>
       <form className="onboarding-card onboarding-form" onSubmit={handleSubmit}>
         <div className="onboarding-form__row">
           <label>
@@ -169,6 +254,87 @@ export function LinkUserPage() {
           </button>
         </div>
       </form>
+
+      <h2 className="users-section-title">Usuarios de la organización</h2>
+      <section className="onboarding-card users-card">
+        {usersLoading ? (
+          <p>Cargando usuarios…</p>
+        ) : users.length === 0 ? (
+          <p>Todavía no hay usuarios en esta organización.</p>
+        ) : (
+          <div className="table-scroll">
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Correo</th>
+                  <th>Rol</th>
+                  <th>Sitio(s)</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => {
+                  const isSelf = user.id === profile?.id
+                  const userRequiresSite = user.role === 'administrativo' || user.role === 'operativo'
+                  const rowDisabled = isSelf || savingUserId === user.id
+                  return (
+                    <tr key={user.id} className={user.active ? '' : 'users-row--inactive'}>
+                      <td>{user.full_name}</td>
+                      <td>{user.email}</td>
+                      <td>
+                        <select
+                          value={user.role}
+                          disabled={rowDisabled}
+                          onChange={(e) => handleRoleChange(user, e.target.value as UserRole)}
+                        >
+                          {roleOptions.map((r) => (
+                            <option key={r.value} value={r.value}>
+                              {r.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        {userRequiresSite ? (
+                          <div className="users-site-list">
+                            {sites.length === 0 && <span className="users-site-na">Sin sitios</span>}
+                            {sites.map((site) => (
+                              <label key={site.id} className="users-site-option">
+                                <input
+                                  type="checkbox"
+                                  checked={user.siteIds.includes(site.id)}
+                                  disabled={rowDisabled}
+                                  onChange={() => handleToggleUserSite(user, site.id)}
+                                />
+                                {site.name}
+                              </label>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="users-site-na">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className={`users-status-toggle${user.active ? '' : ' users-status-toggle--inactive'}`}
+                          disabled={isSelf || savingUserId === user.id}
+                          onClick={() => handleToggleActive(user)}
+                          title={isSelf ? 'No puedes desactivar tu propio usuario.' : undefined}
+                        >
+                          {user.active ? 'Activo' : 'Inactivo'}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {userError && <p className="onboarding-error">{userError}</p>}
+      </section>
     </div>
   )
 }

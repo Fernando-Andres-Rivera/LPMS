@@ -3,6 +3,79 @@
   margin: 0 auto;
 }
 
+.onboarding-page.users-page {
+  max-width: 960px;
+}
+
+.users-section-title {
+  margin: 28px 0 12px;
+  font-size: 1.05rem;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table th,
+.users-table td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.85rem;
+  vertical-align: top;
+}
+
+.users-table select {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.users-row--inactive td {
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+.users-site-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.users-site-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.users-site-na {
+  color: var(--color-text-muted);
+}
+
+.users-status-toggle {
+  border: 1px solid var(--color-ok);
+  color: var(--color-ok);
+  background: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.users-status-toggle--inactive {
+  border-color: var(--color-fail);
+  color: var(--color-fail);
+}
+
+.users-status-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .onboarding-card {
   background: var(--color-surface);
   border-radius: var(--radius-md);

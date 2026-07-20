@@ -1,15 +1,8 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { USER_ROLE_LABEL } from '../../lib/types'
 import './AppLayout.css'
-
-const ROLE_LABEL: Record<string, string> = {
-  admin_consultora: 'Admin Consultora',
-  admin_cliente: 'Admin Cliente',
-  gerente: 'Gerente',
-  administrativo: 'Administrativo',
-  operativo: 'Operativo',
-}
 
 export function AppLayout() {
   const { profile, signOut, organizations, organizationId, setOrganizationId } = useAuth()
@@ -120,8 +113,8 @@ export function AppLayout() {
             </NavLink>
           )}
           {canOnboardUsers && (
-            <NavLink to="/invitar-usuario" className={linkClass}>
-              Invitar usuario
+            <NavLink to="/usuarios" className={linkClass}>
+              Usuarios
             </NavLink>
           )}
         </nav>
@@ -140,7 +133,7 @@ export function AppLayout() {
             </button>
             <div className="app-topbar__user">
               <strong>{profile?.full_name}</strong>
-              {profile && <span className="app-topbar__role">{ROLE_LABEL[profile.role]}</span>}
+              {profile && <span className="app-topbar__role">{USER_ROLE_LABEL[profile.role]}</span>}
             </div>
           </div>
           <div className="app-topbar__actions">

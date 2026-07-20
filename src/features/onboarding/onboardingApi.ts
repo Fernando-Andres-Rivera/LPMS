@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { Axis, Organization, Site, UserRole } from '../../lib/types'
+import type { Axis, Organization, Profile, Site, UserRole } from '../../lib/types'
 
 export async function fetchAllAxesCatalog(): Promise<Axis[]> {
   const { data, error } = await supabase.from('axes').select('*').order('sort_order')
@@ -148,4 +148,60 @@ export async function inviteUser(input: InviteUserInput): Promise<{ userId: stri
   }
   if (data?.error) throw new Error(data.error)
   return { userId: data.userId }
+}
+
+export interface OrgUserRow extends Profile {
+  siteIds: string[]
+}
+
+/** Usuarios ya existentes de una organización, con sus sitios asignados —
+ * para la gestión de roles/permisos en la pantalla de Usuarios. La RLS ya
+ * restringe qué filas de profiles/profile_sites puede leer quien llama. */
+export async function fetchOrganizationUsers(organizationId: string): Promise<OrgUserRow[]> {
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('organization_id', organizationId)
+    .order('full_name')
+  if (profilesError) throw profilesError
+
+  const ids = (profiles ?? []).map((p) => p.id)
+  const { data: profileSites, error: sitesError } =
+    ids.length > 0
+      ? await supabase.from('profile_sites').select('profile_id, site_id').in('profile_id', ids)
+      : { data: [] as { profile_id: string; site_id: string }[], error: null }
+  if (sitesError) throw sitesError
+
+  const sitesByProfile = new Map<string, string[]>()
+  for (const row of profileSites ?? []) {
+    sitesByProfile.set(row.profile_id, [...(sitesByProfile.get(row.profile_id) ?? []), row.site_id])
+  }
+  return (profiles ?? []).map((p) => ({ ...p, siteIds: sitesByProfile.get(p.id) ?? [] }))
+}
+
+/** Cambia el rol de un usuario ya existente. La base de datos bloquea (vía
+ * trigger) asignar admin_consultora si quien llama no lo es, y bloquea que
+ * alguien cambie su propio rol — esta llamada solo falla en esos casos. */
+export async function updateUserRole(userId: string, role: UserRole): Promise<void> {
+  const { error } = await supabase.from('profiles').update({ role }).eq('id', userId)
+  if (error) throw error
+}
+
+/** Activa o desactiva un usuario. Un usuario inactivo pierde acceso a toda
+ * la aplicación de inmediato (current_role_name()/current_org_id() dejan de
+ * resolver su rol/organización), no solo se le oculta de esta lista. */
+export async function setUserActive(userId: string, active: boolean): Promise<void> {
+  const { error } = await supabase.from('profiles').update({ active }).eq('id', userId)
+  if (error) throw error
+}
+
+/** Reemplaza la lista completa de sitios asignados a un usuario. */
+export async function setUserSites(userId: string, siteIds: string[]): Promise<void> {
+  const { error: deleteError } = await supabase.from('profile_sites').delete().eq('profile_id', userId)
+  if (deleteError) throw deleteError
+  if (siteIds.length === 0) return
+  const { error: insertError } = await supabase
+    .from('profile_sites')
+    .insert(siteIds.map((site_id) => ({ profile_id: userId, site_id })))
+  if (insertError) throw insertError
 }

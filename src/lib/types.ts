@@ -9,6 +9,14 @@ export type UserRole =
   | 'administrativo'
   | 'operativo'
 
+export const USER_ROLE_LABEL: Record<UserRole, string> = {
+  admin_consultora: 'Admin Consultora',
+  admin_cliente: 'Admin Cliente',
+  gerente: 'Gerente',
+  administrativo: 'Administrativo',
+  operativo: 'Operativo',
+}
+
 export type IndicatorFrequency = 'diaria' | 'semanal' | 'quincenal' | 'mensual' | 'trimestral'
 export type ImprovementDirection = 'mayor_mejor' | 'menor_mejor'
 export type PdcaStatus = 'planificar' | 'hacer' | 'verificar' | 'actuar' | 'cerrado'

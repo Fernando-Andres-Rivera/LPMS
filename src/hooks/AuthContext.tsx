@@ -13,12 +13,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationId, setOrganizationIdState] = useState<string | null>(null)
+  const [blockedReason, setBlockedReason] = useState<string | null>(null)
 
   async function loadProfile(userId: string) {
     const [{ data: profileData }, { data: sitesData }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).single(),
       supabase.from('profile_sites').select('site_id').eq('profile_id', userId),
     ])
+
+    // Un perfil desactivado ya no puede leer/escribir nada (current_role_name()
+    // y current_org_id() dejan de resolverlo en la base de datos) — se cierra
+    // la sesión aquí mismo para que no se quede viendo pantallas vacías o
+    // errores de permisos sin explicación.
+    if (profileData && !profileData.active) {
+      setBlockedReason('Tu usuario fue desactivado. Contacta a tu administrador si crees que esto es un error.')
+      setProfile(null)
+      setSiteIds([])
+      setOrganizations([])
+      setOrganizationIdState(null)
+      await supabase.auth.signOut()
+      return
+    }
+
     setProfile(profileData ?? null)
     setSiteIds((sitesData ?? []).map((row) => row.site_id))
 
@@ -80,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signIn(email: string, password: string) {
+    setBlockedReason(null)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error?.message ?? null }
   }
@@ -95,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         siteIds,
         loading,
+        blockedReason,
         organizationId,
         organizations,
         setOrganizationId,

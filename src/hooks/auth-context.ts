@@ -7,6 +7,9 @@ export interface AuthContextValue {
   profile: Profile | null
   siteIds: string[]
   loading: boolean
+  /** Mensaje a mostrar en el login cuando la sesión se cerró porque el
+   * usuario fue desactivado — se limpia al intentar iniciar sesión de nuevo. */
+  blockedReason: string | null
   /** Organización efectiva para todas las consultas de datos. Para la mayoría de
    * los roles es siempre profile.organization_id; para admin_consultora puede
    * cambiar mediante setOrganizationId (selector de cliente). */

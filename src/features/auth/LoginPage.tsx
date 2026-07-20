@@ -22,7 +22,7 @@ const CASCADE_STAGES = [
 ]
 
 export function LoginPage() {
-  const { session, signIn } = useAuth()
+  const { session, signIn, blockedReason } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -94,7 +94,7 @@ export function LoginPage() {
             required
           />
 
-          {error && <p className="login-error">{error}</p>}
+          {(error || blockedReason) && <p className="login-error">{error ?? blockedReason}</p>}
 
           <button className="login-button" type="submit" disabled={submitting}>
             {submitting ? 'Ingresando…' : 'Ingresar'}

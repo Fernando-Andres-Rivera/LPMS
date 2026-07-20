@@ -73,7 +73,7 @@ function App() {
               </Route>
 
               <Route element={<RequireRole allowed={[...ONBOARDING_ROLES]} />}>
-                <Route path="invitar-usuario" element={<LinkUserPage />} />
+                <Route path="usuarios" element={<LinkUserPage />} />
               </Route>
             </Route>
           </Route>
