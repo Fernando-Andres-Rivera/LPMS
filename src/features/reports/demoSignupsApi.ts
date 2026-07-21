@@ -40,3 +40,24 @@ export async function fetchDemoSignups(): Promise<DemoSignupRow[]> {
     createdAt: row.created_at,
   }))
 }
+
+/**
+ * Borra por completo un registro Demo — la cuenta de Auth (lo que libera el
+ * correo para volver a registrarse) y toda su organización de prueba.
+ * Irreversible. Corre en una Edge Function porque borrar de Auth requiere
+ * la service role key, que nunca debe llegar al navegador.
+ */
+export async function deleteDemoSignup(userId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('delete-demo-signup', {
+    body: { userId },
+  })
+  if (error) {
+    const context = (error as { context?: Response }).context
+    if (context) {
+      const body = await context.json().catch(() => null)
+      if (body?.error) throw new Error(body.error)
+    }
+    throw error
+  }
+  if (data?.error) throw new Error(data.error)
+}

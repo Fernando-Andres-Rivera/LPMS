@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { fetchDemoSignups, type DemoSignupRow } from './demoSignupsApi'
+import { fetchDemoSignups, deleteDemoSignup, type DemoSignupRow } from './demoSignupsApi'
 import './capture-authorizations.css'
+import '../onboarding/clients.css'
 
 /** Fecha local (no UTC) en formato YYYY-MM-DD — evita el corrimiento de un día
  * para zonas horarias con offset negativo (Colombia, GMT-5) al pasar de la
@@ -18,6 +19,25 @@ export function DemoSignupsReportPage() {
   const [rows, setRows] = useState<DemoSignupRow[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  async function handleDelete(row: DemoSignupRow) {
+    setBusyId(row.id)
+    setDeleteError(null)
+    try {
+      await deleteDemoSignup(row.id)
+      setRows((current) => current.filter((r) => r.id !== row.id))
+      setDeletingId(null)
+      setDeleteConfirmText('')
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'No se pudo borrar el registro.')
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -107,6 +127,11 @@ export function DemoSignupsReportPage() {
 
           <section className="capture-auth-card">
             <h2>Detalle</h2>
+            <p className="capture-auth-card__subtitle">
+              Borrar un registro elimina su cuenta de acceso y su entorno Demo por completo — libera el correo para
+              que pueda registrarse de nuevo. Es irreversible.
+            </p>
+            {deleteError && <p className="capture-auth-error">{deleteError}</p>}
             <div className="table-scroll">
               <table className="capture-auth-table">
                 <thead>
@@ -115,6 +140,7 @@ export function DemoSignupsReportPage() {
                     <th>Nombre</th>
                     <th>Correo</th>
                     <th>Entorno Demo</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -124,6 +150,54 @@ export function DemoSignupsReportPage() {
                       <td>{row.fullName}</td>
                       <td>{row.email}</td>
                       <td>{row.orgName}</td>
+                      <td>
+                        {deletingId === row.id ? (
+                          <div className="clients-confirm clients-confirm--danger">
+                            <span className="clients-confirm__prompt">
+                              Escribe <strong>{row.email}</strong> para confirmar:
+                            </span>
+                            <input
+                              value={deleteConfirmText}
+                              onChange={(e) => setDeleteConfirmText(e.target.value)}
+                              placeholder={row.email}
+                              autoFocus
+                            />
+                            <div className="clients-confirm__actions">
+                              <button
+                                type="button"
+                                className="clients-delete"
+                                onClick={() => handleDelete(row)}
+                                disabled={deleteConfirmText.trim() !== row.email || busyId === row.id}
+                              >
+                                {busyId === row.id ? 'Borrando…' : 'Borrar definitivamente'}
+                              </button>
+                              <button
+                                type="button"
+                                className="clients-cancel"
+                                onClick={() => {
+                                  setDeletingId(null)
+                                  setDeleteConfirmText('')
+                                }}
+                                disabled={busyId === row.id}
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="clients-delete-trigger"
+                            onClick={() => {
+                              setDeletingId(row.id)
+                              setDeleteConfirmText('')
+                              setDeleteError(null)
+                            }}
+                          >
+                            Borrar
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
