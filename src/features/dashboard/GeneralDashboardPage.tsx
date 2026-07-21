@@ -29,6 +29,7 @@ import { ExposureSection } from './ExposureSection'
 import { fetchExposureSchedule } from './exposureScheduleApi'
 import type { ExposureSchedule, IndicatorCause } from '../../lib/types'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { AxisIcon } from '../../components/ui/AxisIcon'
 import './general-dashboard.css'
 
 const CAN_EDIT_EXPOSURE_ROLES = ['admin_consultora', 'admin_cliente', 'gerente']
@@ -219,7 +220,7 @@ function PillarResultSection({ axisName, rangeFrom, rangeTo, dailyData, current,
     <section className="gdash-section gdash-pillar-result">
       <div className="gdash-pillar-result__header">
         <div>
-          <h2>Resultado global del pilar {axisName && `— ${axisName}`}</h2>
+          <h2>Resultado global del eje {axisName && `— ${axisName}`}</h2>
           <p className="gdash-pillar-result__period">
             {rangeFrom} · {rangeTo}
           </p>
@@ -692,9 +693,9 @@ export function GeneralDashboardPage() {
   return (
     <div className="gdash-page">
       <PageHeader
-        eyebrow="Gestión · Reporte por pilar"
+        eyebrow="Gestión · Reporte por eje SMQDCEP"
         title="Dashboard"
-        subtitle="Lectura estructurada por pilar: cómo van los indicadores, cuáles causas pesan más, y si las acciones realmente están atacando esas causas."
+        subtitle="Lectura estructurada por eje SMQDCEP: cómo van los indicadores, cuáles causas pesan más, y si las acciones realmente están atacando esas causas."
       />
 
       {organizationId && profile && (
@@ -716,9 +717,14 @@ export function GeneralDashboardPage() {
             onClick={() => goToAxis(-1)}
             disabled={axes.length < 2}
           >
-            ‹ Pilar anterior
+            ‹ Eje anterior
           </button>
           <span className="gdash-pillar-nav__current" style={{ color: currentAxis?.color }}>
+            {currentAxis && (
+              <span className="gdash-pillar-nav__badge" style={{ background: currentAxis.color }}>
+                <AxisIcon icon={currentAxis.icon} size={18} />
+              </span>
+            )}
             {currentAxis?.name}
           </span>
           <button
@@ -727,7 +733,7 @@ export function GeneralDashboardPage() {
             onClick={() => goToAxis(1)}
             disabled={axes.length < 2}
           >
-            Pilar siguiente ›
+            Eje siguiente ›
           </button>
         </div>
       )}
@@ -773,7 +779,7 @@ export function GeneralDashboardPage() {
           <section className="gdash-section">
             <h2 style={{ color: currentAxis?.color }}>Indicadores {currentAxis && `— ${currentAxis.name}`}</h2>
             {allIndicators.length === 0 ? (
-              <p>Este pilar no tiene indicadores activos todavía.</p>
+              <p>Este eje no tiene indicadores activos todavía.</p>
             ) : (
               <div className="gdash-kpi-grid">
                 {allIndicators.map((indicator) => (
@@ -834,7 +840,7 @@ export function GeneralDashboardPage() {
             </div>
 
             {actionPlans.length === 0 ? (
-              <p>Todavía no hay planes de acción registrados para los indicadores de este pilar.</p>
+              <p>Todavía no hay planes de acción registrados para los indicadores de este eje.</p>
             ) : (
               <div className="gdash-actions-list">
                 {actionPlans.map((plan) => {

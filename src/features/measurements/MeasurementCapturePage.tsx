@@ -306,9 +306,9 @@ export function MeasurementCapturePage() {
         <form className="capture-form" onSubmit={handleSubmit}>
           {axes.length > 0 && (
             <label className="capture-label">
-              Pilar
+              Eje SMQDCEP
               <select className="capture-select" value={axisId} onChange={(e) => handleAxisChange(e.target.value)}>
-                <option value="">Todos los pilares</option>
+                <option value="">Todos los ejes</option>
                 {axes.map((axis) => (
                   <option key={axis.id} value={axis.id}>
                     {axis.name}
@@ -321,7 +321,7 @@ export function MeasurementCapturePage() {
           <label className="capture-label">
             Indicador
             {filteredIndicators.length === 0 ? (
-              <p className="capture-location__empty">Ningún indicador de este pilar está disponible para capturar.</p>
+              <p className="capture-location__empty">Ningún indicador de este eje está disponible para capturar.</p>
             ) : (
               <select
                 className="capture-select"

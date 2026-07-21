@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, Legend, LabelList, ResponsiveContainer, T
 import { useAuth } from '../../hooks/useAuth'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { ImprovementCycle } from '../../components/ui/ImprovementCycle'
+import { AxisIcon } from '../../components/ui/AxisIcon'
 import { calcularSemaforo, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
 import { defaultRange } from '../../lib/dateRange'
 import { fetchActiveAxes, fetchIndicatorStatusesInRange, type IndicatorStatus } from './dashboardApi'
@@ -141,7 +142,9 @@ export function AxesOverviewPage() {
             className="axis-card reveal"
             style={{ borderTopColor: axis.color, animationDelay: `${i * 60}ms` }}
           >
-            <span className="axis-card__dot" style={{ background: axis.color }} aria-hidden="true" />
+            <span className="axis-card__badge" style={{ background: axis.color }} aria-hidden="true">
+              <AxisIcon icon={axis.icon} />
+            </span>
             <span className="axis-card__name">{axis.name}</span>
             <span className="axis-card__go" aria-hidden="true">→</span>
           </Link>

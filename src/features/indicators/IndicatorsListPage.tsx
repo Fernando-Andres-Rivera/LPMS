@@ -62,7 +62,7 @@ export function IndicatorsListPage() {
       <PageHeader
         eyebrow="Gestión · Catálogo"
         title="Indicadores"
-        subtitle="El catálogo de indicadores de la organización, con su pilar, nivel y objetivo."
+        subtitle="El catálogo de indicadores de la organización, con su eje SMQDCEP, nivel y objetivo."
         actions={
           <Link to="/indicadores/nuevo" className="button-primary">
             + Nuevo indicador

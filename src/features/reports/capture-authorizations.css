@@ -35,6 +35,15 @@
   background: var(--grad-teal);
 }
 
+.capture-auth-stat {
+  transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+}
+
+.capture-auth-stat:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
 .capture-auth-stat__value {
   font-size: 2.1rem;
   font-weight: 800;

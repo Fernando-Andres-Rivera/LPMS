@@ -42,7 +42,7 @@
   color: var(--color-text);
 }
 
-/* ---- Navegación entre pilares ---- */
+/* ---- Navegación entre ejes SMQDCEP ---- */
 
 .gdash-pillar-nav {
   display: flex;
@@ -50,10 +50,24 @@
   justify-content: space-between;
   gap: 16px;
   background: var(--color-surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   padding: 14px 20px;
   margin-bottom: 16px;
+}
+
+.gdash-pillar-nav__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: #fff;
+  vertical-align: middle;
+  margin-right: 10px;
+  box-shadow: 0 5px 12px -4px rgba(27, 54, 93, 0.5);
 }
 
 .gdash-pillar-nav__btn {

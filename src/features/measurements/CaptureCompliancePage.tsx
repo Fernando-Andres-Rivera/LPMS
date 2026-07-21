@@ -102,7 +102,7 @@ export function CaptureCompliancePage() {
             value={selectedAxis ?? ''}
             onChange={(e) => setSelectedAxis(e.target.value || null)}
           >
-            <option value="">Todos los pilares</option>
+            <option value="">Todos los ejes</option>
             {axes.map((axis) => (
               <option key={axis.id} value={axis.id}>
                 {axis.name}

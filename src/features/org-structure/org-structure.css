@@ -23,23 +23,56 @@
 }
 
 .org-structure-axes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
 }
 
 .org-structure-axis-option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 500;
+  gap: 11px;
+  font-weight: 600;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out),
+    transform var(--dur) var(--ease-out);
 }
 
-.org-structure-axis-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
+.org-structure-axis-option:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* El eje activo se ve "encendido" — borde de acento y elevación. */
+.org-structure-axis-option--on {
+  border-color: var(--color-teal);
+  box-shadow: 0 0 0 1px var(--color-teal), var(--shadow-soft);
+}
+
+.org-structure-axis-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 5px 12px -4px rgba(27, 54, 93, 0.5);
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.org-structure-axis-option:hover .org-structure-axis-badge {
+  transform: scale(1.08) rotate(-4deg);
+}
+
+/* Ítem inactivo: la insignia se atenúa hasta que se enciende. */
+.org-structure-axis-option:not(.org-structure-axis-option--on) .org-structure-axis-badge {
+  filter: grayscale(0.55) opacity(0.55);
 }
 
 .org-structure-add-row--site {

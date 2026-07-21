@@ -22,6 +22,7 @@ import {
 } from './orgStructureApi'
 import type { OrgUnit, Site, SiteLocation } from '../../lib/types'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { AxisIcon } from '../../components/ui/AxisIcon'
 import './org-structure.css'
 
 type StructureKind = 'org_unit' | 'site' | 'location'
@@ -478,22 +479,28 @@ export function OrgStructurePage() {
       </section>
 
       <section className="org-structure-card">
-        <h2>3. Pilares</h2>
+        <h2>3. Ejes SMQDCEP</h2>
         <p className="org-structure-card__subtitle">
-          Los ejes que esta organización está gestionando actualmente. Actívalo cuando la consultora empiece a
-          trabajar un pilar nuevo con el cliente (ej. Estándar cuando arranca 5S) — se puede activar o desactivar
-          cuando haga falta, sin perder lo ya capturado en los demás.
+          El modelo <strong>SMQDCEP</strong> — Seguridad · Mantenimiento · Calidad · Disponibilidad · Costos ·
+          Estándar · Personas. Activa solo los ejes que esta organización está gestionando; enciende uno nuevo
+          cuando la consultora empiece a trabajarlo con el cliente (ej. Estándar cuando arranca 5S). Se puede
+          activar o desactivar cuando haga falta, sin perder lo ya capturado en los demás.
         </p>
         <div className="org-structure-axes">
           {axisStates.map(({ axis, active }) => (
-            <label key={axis.id} className="org-structure-axis-option">
+            <label
+              key={axis.id}
+              className={`org-structure-axis-option${active ? ' org-structure-axis-option--on' : ''}`}
+            >
               <input
                 type="checkbox"
                 checked={active}
                 disabled={savingAxisId === axis.id}
                 onChange={(e) => handleToggleAxis(axis.id, e.target.checked)}
               />
-              <span className="org-structure-axis-dot" style={{ backgroundColor: axis.color }} />
+              <span className="org-structure-axis-badge" style={{ background: axis.color }} aria-hidden="true">
+                <AxisIcon icon={axis.icon} size={18} />
+              </span>
               {axis.name}
             </label>
           ))}
