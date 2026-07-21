@@ -1,9 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
 import { describeAuthError } from './authErrorMessages'
+import { MfaChallenge } from './MfaChallenge'
 import './login.css'
+
+type AalStatus = 'checking' | 'ok' | 'challenge'
 
 /**
  * Pantalla a la que llega tanto el enlace de "olvidé mi contraseña" como el
@@ -11,6 +14,11 @@ import './login.css'
  * (así funcionan los enlaces de Supabase), así que esta pantalla no depende
  * de detectar ningún evento: solo mira si hay sesión (via useAuth, que ya la
  * captura apenas el cliente la establece) y muestra el formulario.
+ *
+ * Si la cuenta tiene MFA activado, Supabase exige una sesión aal2 para poder
+ * cambiar la contraseña — el enlace de recuperación por sí solo solo llega a
+ * aal1, así que primero hay que pasar el reto de verificación en dos pasos
+ * (el mismo que usa el login normal).
  */
 export function ResetPasswordPage() {
   const { session, loading } = useAuth()
@@ -19,6 +27,27 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
+  const [aalStatus, setAalStatus] = useState<AalStatus>('checking')
+  const [checkedUserId, setCheckedUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!session) return
+    let cancelled = false
+
+    async function checkAal() {
+      setAalStatus('checking')
+      const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      if (cancelled) return
+      setCheckedUserId(session!.user.id)
+      setAalStatus(data && data.nextLevel === 'aal2' && data.currentLevel !== data.nextLevel ? 'challenge' : 'ok')
+    }
+
+    checkAal()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user.id])
 
   if (done) return <Navigate to="/" replace />
   if (loading) return <div className="page-loading">Cargando…</div>
@@ -40,6 +69,13 @@ export function ResetPasswordPage() {
         </div>
       </div>
     )
+  }
+
+  if (checkedUserId !== session.user.id || aalStatus === 'checking') {
+    return <div className="page-loading">Cargando…</div>
+  }
+  if (aalStatus === 'challenge') {
+    return <MfaChallenge onVerified={() => setAalStatus('ok')} />
   }
 
   async function handleSubmit(e: FormEvent) {

@@ -27,6 +27,8 @@ export function describeAuthError(mode: 'login' | 'register' | 'forgot', code: s
       return 'El registro de cuentas nuevas está deshabilitado por ahora.'
     case 'same_password':
       return 'La nueva contraseña debe ser distinta a la anterior.'
+    case 'insufficient_aal':
+      return 'Esta cuenta tiene verificación en dos pasos activada — completa ese paso antes de continuar.'
     case 'session_expired':
     case 'session_not_found':
     case 'flow_state_expired':
