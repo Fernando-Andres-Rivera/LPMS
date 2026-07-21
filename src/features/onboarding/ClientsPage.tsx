@@ -9,6 +9,7 @@ import {
 } from './onboardingApi'
 import { INDUSTRY_OPTIONS, OTHER_INDUSTRY } from './industries'
 import type { Organization } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './clients.css'
 
 export function ClientsPage() {
@@ -122,20 +123,23 @@ export function ClientsPage() {
 
   return (
     <div className="clients-page">
-      <div className="clients-header">
-        <div>
-          <h1>Clientes</h1>
-          <p className="page-subtitle">
+      <PageHeader
+        eyebrow="Configuración · Clientes"
+        title="Clientes"
+        subtitle={
+          <>
             {activeCount} activo{activeCount === 1 ? '' : 's'} de {orgs.length}. Desactivar un cliente lo oculta del
             switcher y de toda la aplicación, pero <strong>conserva todos sus datos</strong> — se puede reactivar
             cuando quieras. No borra nada. Eliminar permanentemente sí borra todo (sitios, indicadores, mediciones,
             usuarios) y solo está disponible para clientes ya desactivados — úsalo solo para limpiar datos de prueba.
-          </p>
-        </div>
-        <Link to="/nuevo-cliente" className="button-primary">
-          + Nuevo cliente
-        </Link>
-      </div>
+          </>
+        }
+        actions={
+          <Link to="/nuevo-cliente" className="button-primary">
+            + Nuevo cliente
+          </Link>
+        }
+      />
 
       {error && <p className="clients-error">{error}</p>}
 

@@ -24,6 +24,7 @@ import { fetchSiteLocations } from '../org-structure/orgStructureApi'
 import { fetchLevelCutoffs } from '../org-structure/captureCutoffsApi'
 import { calcularSemaforo } from '../../lib/semaforo'
 import { PeriodPicker } from './PeriodPicker'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './capture.css'
 
 function today(): string {
@@ -293,7 +294,7 @@ export function MeasurementCapturePage() {
 
   return (
     <div className="capture-page">
-      <h1>Captura de mediciones</h1>
+      <PageHeader eyebrow="Diario · Registro del dato" title="Captura de mediciones" />
 
       {loading ? (
         <p>Cargando…</p>

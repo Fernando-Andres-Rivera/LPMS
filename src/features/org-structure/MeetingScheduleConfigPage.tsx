@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { fetchLevelCutoffs, setLevelCutoff } from './captureCutoffsApi'
 import { DAY_OFFSET_LABEL, WEEKDAY_OPTIONS, type LevelCaptureCutoff } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './meeting-schedule.css'
 
 const LEVELS: { level: 1 | 2 | 3; label: string }[] = [
@@ -144,14 +145,11 @@ export function MeetingScheduleConfigPage() {
 
   return (
     <div className="meeting-schedule-page">
-      <h1>Horario de reuniones</h1>
-      <p className="page-subtitle">
-        Cada nivel tiene su propia reunión: define a qué hora empieza y qué día evalúa — una reunión de hoy no
-        siempre revisa el dato de hoy (ej. la gerencial de la mañana puede estar evaluando el cierre de ayer).
-        Pasada esa hora, esa fecha (y todas las anteriores) quedan cerradas para siempre para indicadores de ese
-        nivel — no se reabren al día siguiente. Solo LeanProLogistic puede autorizar una corrección puntual, con
-        causal, desde Captura de mediciones. Déjalo vacío si ese nivel no necesita bloqueo.
-      </p>
+      <PageHeader
+        eyebrow="Configuración · Horario"
+        title="Horario de reuniones"
+        subtitle="Cada nivel tiene su propia reunión: define a qué hora empieza y qué día evalúa — una reunión de hoy no siempre revisa el dato de hoy (ej. la gerencial de la mañana puede estar evaluando el cierre de ayer). Pasada esa hora, esa fecha (y todas las anteriores) quedan cerradas para siempre para indicadores de ese nivel — no se reabren al día siguiente. Solo LeanProLogistic puede autorizar una corrección puntual, con causal, desde Captura de mediciones. Déjalo vacío si ese nivel no necesita bloqueo."
+      />
 
       <div className="meeting-schedule-list">
         {LEVELS.map(({ level, label }) => {

@@ -11,6 +11,7 @@ import {
   type OrgUserRow,
 } from './onboardingApi'
 import type { Organization, Site, UserRole } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './onboarding.css'
 
 /** Un admin_cliente solo puede invitar dentro de su propia organización, y
@@ -176,11 +177,11 @@ export function LinkUserPage() {
 
   return (
     <div className="onboarding-page users-page">
-      <h1>Usuarios</h1>
-      <p className="page-subtitle">
-        Invita gente nueva por correo, y gestiona el rol, los sitios asignados y el estado de quienes ya tienen
-        cuenta.
-      </p>
+      <PageHeader
+        eyebrow="Configuración · Usuarios"
+        title="Usuarios"
+        subtitle="Invita gente nueva por correo, y gestiona el rol, los sitios asignados y el estado de quienes ya tienen cuenta."
+      />
 
       <h2 className="users-section-title">Invitar usuario nuevo</h2>
       <form className="onboarding-card onboarding-form" onSubmit={handleSubmit}>

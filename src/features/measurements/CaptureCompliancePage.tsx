@@ -4,6 +4,7 @@ import { fetchSites } from '../indicators/indicatorsApi'
 import { fetchActiveAxes } from '../dashboard/dashboardApi'
 import { fetchCapturedDates, fetchDailyIndicators, type IndicatorWithSiteName } from './measurementsApi'
 import type { Axis, Site } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './compliance.css'
 
 function pad(n: number): string {
@@ -88,10 +89,11 @@ export function CaptureCompliancePage() {
 
   return (
     <div>
-      <h1>Cumplimiento de captura</h1>
-      <p className="page-subtitle">
-        Indicadores de frecuencia diaria y si su medición fue registrada en cada día de {currentMonthLabel()}.
-      </p>
+      <PageHeader
+        eyebrow="Diario · Disciplina de captura"
+        title="Cumplimiento de captura"
+        subtitle={`Indicadores de frecuencia diaria y si su medición fue registrada en cada día de ${currentMonthLabel()}.`}
+      />
 
       <div className="compliance-filters">
         {axes.length > 0 && (

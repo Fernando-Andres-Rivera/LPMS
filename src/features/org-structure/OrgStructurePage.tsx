@@ -21,6 +21,7 @@ import {
   type AxisState,
 } from './orgStructureApi'
 import type { OrgUnit, Site, SiteLocation } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './org-structure.css'
 
 type StructureKind = 'org_unit' | 'site' | 'location'
@@ -296,13 +297,11 @@ export function OrgStructurePage() {
 
   return (
     <div className="org-structure-page">
-      <h1>Estructura organizacional</h1>
-      <p className="page-subtitle">
-        El orden importa: Unidad de Negocio → Región → Sitio → Instalación. Un sitio (una planta, bodega u
-        oficina) tiene que existir antes de poder colgarle instalaciones — por eso "Sitios" tiene su propio
-        formulario de alta abajo, no solo la lista. A medida que el servicio de la consultora crece dentro de un
-        cliente, aquí es donde se abre cada unidad de negocio, sitio o instalación nueva.
-      </p>
+      <PageHeader
+        eyebrow="Configuración · Estructura"
+        title="Estructura organizacional"
+        subtitle='El orden importa: Unidad de Negocio → Región → Sitio → Instalación. Un sitio (una planta, bodega u oficina) tiene que existir antes de poder colgarle instalaciones — por eso "Sitios" tiene su propio formulario de alta abajo, no solo la lista. A medida que el servicio de la consultora crece dentro de un cliente, aquí es donde se abre cada unidad de negocio, sitio o instalación nueva.'
+      />
 
       {blocked && (
         <div className="org-structure-blocked">

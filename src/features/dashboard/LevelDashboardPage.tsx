@@ -19,6 +19,7 @@ import {
   isDaysWithoutAccidentsIndicatorName,
 } from '../safety/safetyApi'
 import type { Axis, Indicator, SemaforoEstado, Site } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './dashboard.css'
 
 interface IndicatorRow {
@@ -163,8 +164,11 @@ export function LevelDashboardPage() {
 
   return (
     <div>
-      <h1>Reunión de Nivel {level}</h1>
-      <p className="page-subtitle">Todos los indicadores de este nivel, agrupados por eje.</p>
+      <PageHeader
+        eyebrow="Diario · Cascada de reuniones"
+        title={`Reunión de Nivel ${level}`}
+        subtitle="Todos los indicadores de este nivel, agrupados por eje."
+      />
 
       <div className="level-toolbar">
         <div className="level-tabs">

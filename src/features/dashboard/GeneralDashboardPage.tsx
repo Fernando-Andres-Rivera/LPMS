@@ -28,6 +28,7 @@ import {
 import { ExposureSection } from './ExposureSection'
 import { fetchExposureSchedule } from './exposureScheduleApi'
 import type { ExposureSchedule, IndicatorCause } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './general-dashboard.css'
 
 const CAN_EDIT_EXPOSURE_ROLES = ['admin_consultora', 'admin_cliente', 'gerente']
@@ -690,11 +691,11 @@ export function GeneralDashboardPage() {
 
   return (
     <div className="gdash-page">
-      <h1>Dashboard</h1>
-      <p className="page-subtitle">
-        Lectura estructurada por pilar: cómo van los indicadores, cuáles causas pesan más, y si las acciones
-        realmente están atacando esas causas.
-      </p>
+      <PageHeader
+        eyebrow="Gestión · Reporte por pilar"
+        title="Dashboard"
+        subtitle="Lectura estructurada por pilar: cómo van los indicadores, cuáles causas pesan más, y si las acciones realmente están atacando esas causas."
+      />
 
       {organizationId && profile && (
         <ExposureSection

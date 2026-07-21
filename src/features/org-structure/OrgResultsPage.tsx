@@ -5,6 +5,7 @@ import { defaultRange } from '../../lib/dateRange'
 import { fetchOrgUnits, fetchSitesWithOrgUnit } from './orgStructureApi'
 import { fetchIndicatorStatusBySite, sumCounts, type SiteStatusCounts } from './orgResultsApi'
 import type { OrgUnit, Site } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './org-structure.css'
 
 function emptyCounts(): SiteStatusCounts {
@@ -77,16 +78,21 @@ export function OrgResultsPage() {
 
   return (
     <div className="org-structure-page">
-      <h1>Resultados por organización</h1>
-      <p className="page-subtitle">
-        Indicadores por Unidad de Negocio → Región → Sitio, dentro del período elegido.{' '}
-        <span className="org-results-legend">
-          <span className="org-results-badge org-results-badge--cumple">0</span> cumple ·{' '}
-          <span className="org-results-badge org-results-badge--riesgo">0</span> riesgo ·{' '}
-          <span className="org-results-badge org-results-badge--incumple">0</span> incumple ·{' '}
-          <span className="org-results-badge org-results-badge--sin_datos">0</span> sin datos
-        </span>
-      </p>
+      <PageHeader
+        eyebrow="Gestión · Resultados"
+        title="Resultados por organización"
+        subtitle={
+          <>
+            Indicadores por Unidad de Negocio → Región → Sitio, dentro del período elegido.{' '}
+            <span className="org-results-legend">
+              <span className="org-results-badge org-results-badge--cumple">0</span> cumple ·{' '}
+              <span className="org-results-badge org-results-badge--riesgo">0</span> riesgo ·{' '}
+              <span className="org-results-badge org-results-badge--incumple">0</span> incumple ·{' '}
+              <span className="org-results-badge org-results-badge--sin_datos">0</span> sin datos
+            </span>
+          </>
+        }
+      />
 
       <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
 

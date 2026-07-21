@@ -29,6 +29,7 @@ import {
 import { LocationPicker } from './LocationPicker'
 import { WHOLE_ORG_SCOPE, type LocationScope } from './locationScope'
 import type { Axis, Indicator, IndicatorCause, OrgUnit, Site, SiteLocation } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './pareto.css'
 
 interface ChartRow {
@@ -262,11 +263,11 @@ export function ParetoPage() {
 
   return (
     <div>
-      <h1>Pareto de causas</h1>
-      <p className="page-subtitle">
-        Elige el rango de fechas y ve qué indicador acumula más impacto — luego entra a su árbol de "Causas posibles"
-        para ver cuál causa específica pesa más.
-      </p>
+      <PageHeader
+        eyebrow="Gestión · Análisis de causas"
+        title="Pareto de causas"
+        subtitle='Elige el rango de fechas y ve qué indicador acumula más impacto — luego entra a su árbol de "Causas posibles" para ver cuál causa específica pesa más.'
+      />
 
       <div className="pareto-filters">
         <RangePicker from={range.from} to={range.to} onChange={handleRangeChange} />

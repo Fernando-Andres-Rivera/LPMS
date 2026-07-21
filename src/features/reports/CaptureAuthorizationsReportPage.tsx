@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { defaultRange } from '../../lib/dateRange'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { fetchMeasurementAuthorizations, type MeasurementAuthorizationRow } from './captureAuthorizationsApi'
 import './capture-authorizations.css'
 
@@ -60,11 +61,11 @@ export function CaptureAuthorizationsReportPage() {
 
   return (
     <div className="capture-auth-page">
-      <h1>Autorizaciones de captura tardía</h1>
-      <p className="page-subtitle">
-        Cada corrección que un administrador de LeanProLogistic autoriza sobre una fecha ya cerrada, en todos los
-        clientes — quién la solicita más seguido, cuándo se concentran, y el detalle completo para auditoría.
-      </p>
+      <PageHeader
+        eyebrow="Consultora · Auditoría"
+        title="Autorizaciones de captura tardía"
+        subtitle="Cada corrección que un administrador de LeanProLogistic autoriza sobre una fecha ya cerrada, en todos los clientes — quién la solicita más seguido, cuándo se concentran, y el detalle completo para auditoría."
+      />
 
       <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} label="Rango de análisis (fecha de autorización)" />
 

@@ -7,6 +7,7 @@ import {
   setIndicatorActive,
   type IndicatorWithRelations,
 } from './indicatorsApi'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './indicators.css'
 
 export function IndicatorsListPage() {
@@ -58,12 +59,16 @@ export function IndicatorsListPage() {
 
   return (
     <div>
-      <div className="indicators-header">
-        <h1>Indicadores</h1>
-        <Link to="/indicadores/nuevo" className="button-primary">
-          + Nuevo indicador
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Gestión · Catálogo"
+        title="Indicadores"
+        subtitle="El catálogo de indicadores de la organización, con su pilar, nivel y objetivo."
+        actions={
+          <Link to="/indicadores/nuevo" className="button-primary">
+            + Nuevo indicador
+          </Link>
+        }
+      />
 
       {error && <p className="indicators-error">{error}</p>}
 

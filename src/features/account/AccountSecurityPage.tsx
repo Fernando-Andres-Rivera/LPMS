@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './account-security.css'
 
 interface TotpFactor {
@@ -100,16 +101,23 @@ export function AccountSecurityPage() {
 
   return (
     <div className="account-security-page">
-      <h1>Seguridad de la cuenta</h1>
-      <p className="page-subtitle">
-        Verificación en dos pasos (MFA) con una app de autenticación (Google Authenticator, Authy, 1Password, etc.).
-        {profile?.role === 'admin_consultora' && (
+      <PageHeader
+        eyebrow="Mi cuenta · Seguridad"
+        title="Seguridad de la cuenta"
+        subtitle={
           <>
-            {' '}
-            <strong>Es obligatoria para cuentas Admin Consultora</strong>, porque tienen acceso a todos los clientes.
+            Verificación en dos pasos (MFA) con una app de autenticación (Google Authenticator, Authy, 1Password,
+            etc.).
+            {profile?.role === 'admin_consultora' && (
+              <>
+                {' '}
+                <strong>Es obligatoria para cuentas Admin Consultora</strong>, porque tienen acceso a todos los
+                clientes.
+              </>
+            )}
           </>
-        )}
-      </p>
+        }
+      />
 
       {loading ? (
         <p>Cargando…</p>

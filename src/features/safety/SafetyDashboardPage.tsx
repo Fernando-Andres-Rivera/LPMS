@@ -24,6 +24,7 @@ import {
   type SafetyEventType,
   type Site,
 } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './safety.css'
 
 const EVENT_TYPES: SafetyEventType[] = ['accidente', 'incidente', 'acto_inseguro', 'condicion_insegura']
@@ -242,11 +243,11 @@ export function SafetyDashboardPage() {
 
   return (
     <div className="safety-page">
-      <h1>Seguridad y Salud en el Trabajo</h1>
-      <p className="page-subtitle">
-        Cada sitio lleva su propio conteo. Registra un accidente, incidente, acto o condición insegura con su fecha
-        y el resto (días sin accidentes, cruz de seguridad, pirámide) se calcula solo.
-      </p>
+      <PageHeader
+        eyebrow="Diario · Seguridad y salud"
+        title="Seguridad y Salud en el Trabajo"
+        subtitle="Cada sitio lleva su propio conteo. Registra un accidente, incidente, acto o condición insegura con su fecha y el resto (días sin accidentes, cruz de seguridad, pirámide) se calcula solo."
+      />
 
       <div className="safety-filters">
         <div className="safety-site-filter">

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { fetchDemoSignups, deleteDemoSignup, type DemoSignupRow } from './demoSignupsApi'
 import './capture-authorizations.css'
 import '../onboarding/clients.css'
@@ -80,11 +81,11 @@ export function DemoSignupsReportPage() {
 
   return (
     <div className="capture-auth-page">
-      <h1>Registros Demo (posibles clientes)</h1>
-      <p className="page-subtitle">
-        Cada persona que se registró por su cuenta desde la pantalla de inicio y quedó con su propio entorno Demo —
-        tu base de posibles clientes, con cuántos llegan por día.
-      </p>
+      <PageHeader
+        eyebrow="Consultora · Posibles clientes"
+        title="Registros Demo"
+        subtitle="Cada persona que se registró por su cuenta desde la pantalla de inicio y quedó con su propio entorno Demo — tu base de posibles clientes, con cuántos llegan por día."
+      />
 
       {loadError && <p className="capture-auth-error">No se pudo cargar el reporte: {loadError}</p>}
 

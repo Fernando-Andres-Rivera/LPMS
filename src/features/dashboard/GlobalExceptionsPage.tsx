@@ -7,6 +7,7 @@ import { calcularSemaforo } from '../../lib/semaforo'
 import { defaultRange } from '../../lib/dateRange'
 import { fetchIndicatorStatusesInRange, type IndicatorStatus } from './dashboardApi'
 import { formatIndicatorValue, type SemaforoEstado } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './dashboard.css'
 
 interface ExceptionRow {
@@ -60,11 +61,11 @@ export function GlobalExceptionsPage() {
 
   return (
     <div>
-      <h1>Panorama global — indicadores en excepción</h1>
-      <p className="page-subtitle">
-        Indicadores que no cumplieron su objetivo dentro del período elegido, en todos los ejes y sitios de la
-        organización. Úsalo para dirigir la atención del despliegue hacia dónde está el problema.
-      </p>
+      <PageHeader
+        eyebrow="Gestión · Excepciones"
+        title="Panorama global — indicadores en excepción"
+        subtitle="Indicadores que no cumplieron su objetivo dentro del período elegido, en todos los ejes y sitios de la organización. Úsalo para dirigir la atención del despliegue hacia dónde está el problema."
+      />
 
       <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
 

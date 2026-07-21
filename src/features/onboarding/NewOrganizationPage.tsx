@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { createOrganizationWithSite, fetchAllAxesCatalog } from './onboardingApi'
 import { INDUSTRY_OPTIONS, OTHER_INDUSTRY } from './industries'
 import type { Axis } from '../../lib/types'
+import { PageHeader } from '../../components/ui/PageHeader'
 import './onboarding.css'
 
 export function NewOrganizationPage() {
@@ -83,8 +84,11 @@ export function NewOrganizationPage() {
 
   return (
     <div className="onboarding-page">
-      <h1>Nuevo cliente</h1>
-      <p className="page-subtitle">Crea la organización, su primer sitio, y los ejes que va a pilotar.</p>
+      <PageHeader
+        eyebrow="Configuración · Clientes"
+        title="Nuevo cliente"
+        subtitle="Crea la organización, su primer sitio, y los ejes que va a pilotar."
+      />
 
       <form className="onboarding-card onboarding-form" onSubmit={handleSubmit}>
         <label>
