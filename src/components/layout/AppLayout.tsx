@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { USER_ROLE_LABEL } from '../../lib/types'
+import { NavIcon, type NavIconName } from '../ui/NavIcon'
 import './AppLayout.css'
 
 export function AppLayout() {
@@ -24,104 +25,59 @@ export function AppLayout() {
     setMenuOpen(false)
   }
 
-  const linkClass = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '')
+  const linkClass = ({ isActive }: { isActive: boolean }) => `app-sidebar__link${isActive ? ' active' : ''}`
+
+  const item = (to: string, icon: NavIconName, label: string, end = false) => (
+    <NavLink to={to} end={end} className={linkClass}>
+      <span className="app-sidebar__ico">
+        <NavIcon name={icon} />
+      </span>
+      <span className="app-sidebar__label">{label}</span>
+    </NavLink>
+  )
 
   return (
     <div className="app-layout">
       {menuOpen && <div className="app-sidebar-backdrop" onClick={() => setMenuOpen(false)} />}
 
       <aside className={`app-sidebar ${menuOpen ? 'app-sidebar--open' : ''}`}>
-        <div className="app-sidebar__brand">LPMS</div>
+        <div className="app-sidebar__brand">
+          <span className="app-sidebar__brand-mark" aria-hidden="true">
+            <span className="app-sidebar__brand-bar" />
+            <span className="app-sidebar__brand-bar" />
+            <span className="app-sidebar__brand-bar" />
+            <span className="app-sidebar__brand-bar" />
+          </span>
+          <span className="app-sidebar__brand-text">LPMS</span>
+        </div>
         <nav className="app-sidebar__nav">
           <span className="app-sidebar__section">Mi cuenta</span>
-          <NavLink to="/seguridad-cuenta" className={linkClass}>
-            Seguridad de la cuenta
-          </NavLink>
+          {item('/seguridad-cuenta', 'account', 'Seguridad de la cuenta')}
 
           <span className="app-sidebar__section">Diario</span>
-          <NavLink to="/" end className={linkClass}>
-            Ejes
-          </NavLink>
-          <NavLink to="/niveles/1" className={linkClass}>
-            Reunión por nivel
-          </NavLink>
-          <NavLink to="/captura" className={linkClass}>
-            Captura de mediciones
-          </NavLink>
-          <NavLink to="/seguridad" className={linkClass}>
-            Seguridad y Salud en el Trabajo
-          </NavLink>
+          {item('/', 'axes', 'Ejes', true)}
+          {item('/niveles/1', 'levels', 'Reunión por nivel')}
+          {item('/captura', 'capture', 'Captura de mediciones')}
+          {item('/seguridad', 'safety', 'Seguridad y Salud en el Trabajo')}
 
           {(isManagement || canManageIndicators) && <span className="app-sidebar__section">Gestión</span>}
-          {isManagement && (
-            <NavLink to="/panorama-global" className={linkClass}>
-              Panorama global
-            </NavLink>
-          )}
-          {isManagement && (
-            <NavLink to="/resultados-organizacion" className={linkClass}>
-              Resultados por organización
-            </NavLink>
-          )}
-          {canManageIndicators && (
-            <NavLink to="/indicadores" className={linkClass}>
-              Indicadores
-            </NavLink>
-          )}
-          {canManageIndicators && (
-            <NavLink to="/cumplimiento-captura" className={linkClass}>
-              Cumplimiento de captura
-            </NavLink>
-          )}
-          {canManageIndicators && (
-            <NavLink to="/pareto" className={linkClass}>
-              Pareto de causas
-            </NavLink>
-          )}
-          {canManageIndicators && (
-            <NavLink to="/dashboard" className={linkClass}>
-              Dashboard
-            </NavLink>
-          )}
+          {isManagement && item('/panorama-global', 'panorama', 'Panorama global')}
+          {isManagement && item('/resultados-organizacion', 'org-results', 'Resultados por organización')}
+          {canManageIndicators && item('/indicadores', 'indicators', 'Indicadores')}
+          {canManageIndicators && item('/cumplimiento-captura', 'compliance', 'Cumplimiento de captura')}
+          {canManageIndicators && item('/pareto', 'pareto', 'Pareto de causas')}
+          {canManageIndicators && item('/dashboard', 'dashboard', 'Dashboard')}
 
           {(isManagement || isConsultora || canOnboardUsers) && (
             <span className="app-sidebar__section">Configuración</span>
           )}
-          {isManagement && (
-            <NavLink to="/estructura-organizacional" className={linkClass}>
-              Estructura organizacional
-            </NavLink>
-          )}
-          {isManagement && (
-            <NavLink to="/horario-reuniones" className={linkClass}>
-              Horario de reuniones
-            </NavLink>
-          )}
-          {isConsultora && (
-            <NavLink to="/clientes" className={linkClass}>
-              Clientes
-            </NavLink>
-          )}
-          {isConsultora && (
-            <NavLink to="/nuevo-cliente" className={linkClass}>
-              + Nuevo cliente
-            </NavLink>
-          )}
-          {isConsultora && (
-            <NavLink to="/autorizaciones-captura" className={linkClass}>
-              Autorizaciones de captura
-            </NavLink>
-          )}
-          {isConsultora && (
-            <NavLink to="/registros" className={linkClass}>
-              Registros Demo
-            </NavLink>
-          )}
-          {canOnboardUsers && (
-            <NavLink to="/usuarios" className={linkClass}>
-              Usuarios
-            </NavLink>
-          )}
+          {isManagement && item('/estructura-organizacional', 'structure', 'Estructura organizacional')}
+          {isManagement && item('/horario-reuniones', 'schedule', 'Horario de reuniones')}
+          {isConsultora && item('/clientes', 'clients', 'Clientes')}
+          {isConsultora && item('/nuevo-cliente', 'new-client', 'Nuevo cliente')}
+          {isConsultora && item('/autorizaciones-captura', 'authorizations', 'Autorizaciones de captura')}
+          {isConsultora && item('/registros', 'signups', 'Registros Demo')}
+          {canOnboardUsers && item('/usuarios', 'users', 'Usuarios')}
         </nav>
       </aside>
 

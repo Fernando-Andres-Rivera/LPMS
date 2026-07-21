@@ -20,8 +20,29 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
+  --radius-xl: 22px;
 
   --shadow-card: 0 1px 3px rgba(27, 54, 93, 0.08), 0 1px 2px rgba(27, 54, 93, 0.06);
+
+  /* Escala de elevación — para dar profundidad y jerarquía sin ruido. */
+  --shadow-soft: 0 2px 10px rgba(27, 54, 93, 0.06);
+  --shadow-md: 0 10px 28px rgba(27, 54, 93, 0.10);
+  --shadow-lg: 0 22px 50px rgba(27, 54, 93, 0.16);
+
+  /* Degradados de marca — el azul "profundidad de planta" y el verde de avance. */
+  --grad-navy: linear-gradient(158deg, #24487d 0%, #1b365d 52%, #122740 100%);
+  --grad-teal: linear-gradient(135deg, #34c2b3 0%, #26a69a 100%);
+
+  /* Retícula tenue tipo plano de ingeniería — se superpone sobre el azul. */
+  --blueprint-grid: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+
+  /* Movimiento — curvas y tiempos consistentes en toda la app. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 560ms;
 
   /* Sombra estándar para TODAS las tarjetas de KPI (el número que se lee en
      la reunión) — más marcada que --shadow-card a propósito, para que el
@@ -100,4 +121,58 @@ textarea {
 h1, h2, h3, h4 {
   color: var(--color-primary);
   margin: 0;
+}
+
+/* Jerarquía de título más firme y "de instrumento" — el h1 de cada pantalla
+   ancla la vista con peso y un interletrado ligeramente cerrado. */
+h1 {
+  font-size: clamp(1.5rem, 1.2rem + 1.1vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+
+/* ============================================================
+   Movimiento base: entrada suave de pantallas y utilidades de
+   revelado escalonado. Todo se apaga con prefers-reduced-motion.
+   ============================================================ */
+@keyframes lpms-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lpms-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Cada pantalla entra con un desvanecido ascendente sutil. */
+.app-content > * {
+  animation: lpms-fade-up var(--dur-slow) var(--ease-out) both;
+}
+
+.reveal {
+  opacity: 0;
+  animation: lpms-fade-up var(--dur-slow) var(--ease-out) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

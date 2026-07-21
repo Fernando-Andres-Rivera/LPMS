@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Legend, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
-import { Semaforo } from '../../components/ui/Semaforo'
 import { RangePicker } from '../../components/ui/RangePicker'
+import { ImprovementCycle } from '../../components/ui/ImprovementCycle'
 import { calcularSemaforo, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
 import { defaultRange } from '../../lib/dateRange'
 import { fetchActiveAxes, fetchIndicatorStatusesInRange, type IndicatorStatus } from './dashboardApi'
@@ -96,19 +96,54 @@ export function AxesOverviewPage() {
 
   return (
     <div>
-      <h1>Ejes de desempeño</h1>
-      <p className="page-subtitle">
-        El estado de la organización dentro del período elegido, y qué ejes están arrastrando el resultado — luego
-        elige un eje para ver sus indicadores, causas y planes de acción en detalle.
-      </p>
+      <header className="overview-hero">
+        <div className="overview-hero__body">
+          <span className="overview-hero__eyebrow">Gestión diaria · Cascada SQDCP</span>
+          <h1>Ejes de desempeño</h1>
+          <p className="overview-hero__lead">
+            El estado de la organización en el período elegido, y qué ejes están arrastrando el resultado — elige un
+            eje para ver sus indicadores, causas y planes de acción.
+          </p>
+          <div className="overview-hero__stats">
+            <div className="overview-hero__health">
+              <span className="overview-hero__health-value">
+                {cumplePercent}
+                <span className="overview-hero__health-unit">%</span>
+              </span>
+              <span className="overview-hero__health-label">de indicadores cumpliendo el objetivo</span>
+            </div>
+            <ul className="overview-hero__mini">
+              <li>
+                <b>{total}</b> evaluados
+              </li>
+              <li className="is-risk">
+                <b>{statusCounts.riesgo}</b> en riesgo
+              </li>
+              <li className="is-fail">
+                <b>{statusCounts.incumple}</b> incumpliendo
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="overview-hero__art" aria-hidden={false}>
+          <ImprovementCycle />
+        </div>
+      </header>
 
       <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
 
       <h2 className="panorama-section-title">Selecciona un eje</h2>
       <div className="axes-grid">
-        {axes.map((axis) => (
-          <Link key={axis.id} to={`/ejes/${axis.id}`} className="axis-card" style={{ borderTopColor: axis.color }}>
+        {axes.map((axis, i) => (
+          <Link
+            key={axis.id}
+            to={`/ejes/${axis.id}`}
+            className="axis-card reveal"
+            style={{ borderTopColor: axis.color, animationDelay: `${i * 60}ms` }}
+          >
+            <span className="axis-card__dot" style={{ background: axis.color }} aria-hidden="true" />
             <span className="axis-card__name">{axis.name}</span>
+            <span className="axis-card__go" aria-hidden="true">→</span>
           </Link>
         ))}
       </div>
@@ -117,31 +152,6 @@ export function AxesOverviewPage() {
         <p>Cargando ejes…</p>
       ) : total > 0 ? (
         <>
-          <div className="panorama-kpis">
-            <div className="panorama-kpi">
-              <span className="panorama-kpi__label">Indicadores evaluados</span>
-              <span className="panorama-kpi__value">{total}</span>
-            </div>
-            <div className="panorama-kpi">
-              <span className="panorama-kpi__label">
-                <Semaforo estado="cumple" showLabel={false} size="sm" /> Cumpliendo objetivo
-              </span>
-              <span className="panorama-kpi__value panorama-kpi__value--ok">{cumplePercent}%</span>
-            </div>
-            <div className="panorama-kpi">
-              <span className="panorama-kpi__label">
-                <Semaforo estado="riesgo" showLabel={false} size="sm" /> En riesgo
-              </span>
-              <span className="panorama-kpi__value panorama-kpi__value--risk">{statusCounts.riesgo}</span>
-            </div>
-            <div className="panorama-kpi">
-              <span className="panorama-kpi__label">
-                <Semaforo estado="incumple" showLabel={false} size="sm" /> Incumpliendo
-              </span>
-              <span className="panorama-kpi__value panorama-kpi__value--fail">{statusCounts.incumple}</span>
-            </div>
-          </div>
-
           <section className="panorama-card">
             <h2>Composición del estado global</h2>
             <div className="panorama-composition">

@@ -4,20 +4,69 @@
 }
 
 .app-sidebar {
-  width: 240px;
-  background: var(--color-primary);
+  position: relative;
+  width: 248px;
+  background: var(--grad-navy);
   color: white;
   display: flex;
   flex-direction: column;
-  padding: 20px 0;
+  padding: 20px 0 16px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* Retícula tenue tipo plano de ingeniería + brillo superior — dan
+   profundidad al azul sin restarle sobriedad. */
+.app-sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--blueprint-grid);
+  background-size: 26px 26px;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.15));
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.15));
+  pointer-events: none;
 }
 
 .app-sidebar__brand {
-  font-size: 1.4rem;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 2px 22px 20px;
+  position: relative;
+}
+
+.app-sidebar__brand-mark {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 22px;
+}
+
+.app-sidebar__brand-bar {
+  width: 5px;
+  border-radius: 2px 2px 0 0;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.app-sidebar__brand-bar:nth-child(1) {
+  height: 40%;
+}
+.app-sidebar__brand-bar:nth-child(2) {
+  height: 62%;
+}
+.app-sidebar__brand-bar:nth-child(3) {
+  height: 82%;
+}
+.app-sidebar__brand-bar:nth-child(4) {
+  height: 100%;
+  background: var(--color-teal);
+}
+
+.app-sidebar__brand-text {
+  font-size: 1.5rem;
+  font-weight: 800;
   letter-spacing: 0.06em;
-  padding: 0 20px 20px;
   color: white;
 }
 
@@ -25,39 +74,86 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  position: relative;
+  padding: 0 12px;
+  gap: 1px;
 }
 
 .app-sidebar__section {
-  padding: 16px 20px 6px;
-  font-size: 0.7rem;
+  padding: 18px 12px 6px;
+  font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.42);
 }
 
 .app-sidebar__section:first-child {
   padding-top: 4px;
 }
 
-.app-sidebar__nav a {
-  color: rgba(255, 255, 255, 0.85);
+.app-sidebar__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: rgba(255, 255, 255, 0.82);
   text-decoration: none;
-  padding: 11px 20px;
-  font-size: 0.9rem;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
   font-weight: 500;
-  border-left: 3px solid transparent;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
-.app-sidebar__nav a:hover {
-  background: rgba(255, 255, 255, 0.06);
+.app-sidebar__ico {
+  display: flex;
+  color: rgba(255, 255, 255, 0.55);
+  flex-shrink: 0;
+  transition: color var(--dur-fast) var(--ease-out), transform var(--dur) var(--ease-out);
 }
 
-.app-sidebar__nav a.active {
+.app-sidebar__link:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: white;
+  transform: translateX(2px);
+}
+
+.app-sidebar__link:hover .app-sidebar__ico {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.app-sidebar__link.active {
   color: white;
   background: rgba(255, 255, 255, 0.12);
-  border-left-color: var(--color-teal);
   font-weight: 600;
+}
+
+.app-sidebar__link.active .app-sidebar__ico {
+  color: var(--color-teal);
+}
+
+/* Barra de acento del ítem activo — crece desde el centro al activarse. */
+.app-sidebar__link.active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-teal);
+  box-shadow: 0 0 10px rgba(38, 166, 154, 0.7);
+  transform: translateY(-50%) scaleY(0);
+  transform-origin: center;
+  animation: lpms-accent-grow var(--dur) var(--ease-out) forwards;
+}
+
+@keyframes lpms-accent-grow {
+  to {
+    transform: translateY(-50%) scaleY(1);
+  }
 }
 
 .app-sidebar-backdrop {
@@ -76,10 +172,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: saturate(1.2) blur(8px);
   border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 1px 0 rgba(27, 54, 93, 0.03), 0 6px 18px -12px rgba(27, 54, 93, 0.28);
   padding: 12px 24px;
   flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .app-topbar__left {
@@ -159,6 +260,12 @@
   flex: 1;
   padding: 28px;
   overflow-y: auto;
+  /* Base clara con un velo de color de marca en las esquinas — evita el
+     "vacío blanco" y da sensación de espacio de trabajo, no de documento. */
+  background:
+    radial-gradient(1100px 460px at 100% -8%, rgba(38, 166, 154, 0.06), transparent 60%),
+    radial-gradient(1000px 520px at -6% 108%, rgba(27, 54, 93, 0.06), transparent 60%),
+    var(--color-bg);
 }
 
 .page-loading {
