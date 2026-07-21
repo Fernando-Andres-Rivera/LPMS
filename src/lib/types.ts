@@ -115,17 +115,37 @@ export interface OrgUnit {
 /** Horario de la reunión de un nivel: hora de inicio + qué día evalúa esa
  * reunión (0 = hoy, -1 = ayer, -2 = antier…) + en qué días de la semana se
  * reúne (no toda cascada se reúne a diario) — no toda reunión evalúa el
- * dato del mismo día en que ocurre. */
+ * dato del mismo día en que ocurre. `site_id` nulo = horario general de la
+ * organización (aplica a todo sitio sin horario propio); con valor, anula
+ * el general solo para ese sitio. */
 export interface LevelCaptureCutoff {
   id: string
   organization_id: string
   level: 1 | 2 | 3
+  site_id: string | null
   cutoff_time: string // 'HH:MM:SS'
   evaluated_day_offset: number // 0, -1, -2…
   /** Sigue Date.getDay(): 0=domingo, 1=lunes … 6=sábado. */
   weekdays: number[]
   created_by: string | null
   created_at: string
+}
+
+/** El horario que aplica a un indicador de este nivel/sitio: prioriza el
+ * horario específico de su sitio y, si no existe, cae al horario general
+ * (site_id nulo) de la organización — misma regla que usa el trigger
+ * enforce_measurement_capture_lock en la base de datos. */
+export function findApplicableCutoff(
+  cutoffs: LevelCaptureCutoff[],
+  level: number | undefined,
+  siteId: string | null,
+): LevelCaptureCutoff | null {
+  if (level === undefined) return null
+  if (siteId) {
+    const specific = cutoffs.find((c) => c.level === level && c.site_id === siteId)
+    if (specific) return specific
+  }
+  return cutoffs.find((c) => c.level === level && c.site_id === null) ?? null
 }
 
 export const DAY_OFFSET_LABEL: Record<number, string> = {

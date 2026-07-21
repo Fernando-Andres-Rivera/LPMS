@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { fetchLevelCutoffs, setLevelCutoff } from './captureCutoffsApi'
-import { DAY_OFFSET_LABEL, WEEKDAY_OPTIONS, type LevelCaptureCutoff } from '../../lib/types'
+import { fetchSites } from '../indicators/indicatorsApi'
+import { DAY_OFFSET_LABEL, WEEKDAY_OPTIONS, type LevelCaptureCutoff, type Site } from '../../lib/types'
 import { PageHeader } from '../../components/ui/PageHeader'
 import './meeting-schedule.css'
 
@@ -54,35 +55,52 @@ function summarizeWeekdays(weekdays: number[]): string {
   return ordered.map((opt) => opt.label).join(', ')
 }
 
+/** Resumen de un horario ya guardado, para mostrar tanto el propio de un
+ * sitio como el general del que hereda por defecto. */
+function summarizeCutoff(cutoff: LevelCaptureCutoff): string {
+  return `${summarizeWeekdays(cutoff.weekdays)}, a las ${cutoff.cutoff_time.slice(0, 5)} (evalúa el ${DAY_OFFSET_LABEL[
+    cutoff.evaluated_day_offset
+  ]?.toLowerCase() ?? 'día evaluado'})`
+}
+
 export function MeetingScheduleConfigPage() {
   const { profile, organizationId } = useAuth()
-  const [cutoffs, setCutoffs] = useState<LevelCaptureCutoff[]>([])
+  const [allCutoffs, setAllCutoffs] = useState<LevelCaptureCutoff[]>([])
+  const [sites, setSites] = useState<Site[]>([])
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<number, Draft>>({})
   const [savingLevel, setSavingLevel] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // El horario general (site_id nulo) siempre aplica de fallback cuando el
+  // sitio elegido no tiene uno propio configurado para ese nivel.
+  const generalCutoffs = allCutoffs.filter((c) => c.site_id === null)
+  const cutoffsForSelected = allCutoffs.filter((c) => c.site_id === selectedSiteId)
+
   async function loadAll() {
     if (!organizationId) return
-    setLoading(true)
     const data = await fetchLevelCutoffs(organizationId)
-    setCutoffs(data)
-    setDrafts(draftsFromCutoffs(data))
-    setLoading(false)
+    setAllCutoffs(data)
   }
 
   useEffect(() => {
     if (!organizationId) return
     let cancelled = false
-    fetchLevelCutoffs(organizationId).then((data) => {
+    Promise.all([fetchLevelCutoffs(organizationId), fetchSites(organizationId)]).then(([cutoffsData, sitesData]) => {
       if (cancelled) return
-      setCutoffs(data)
-      setDrafts(draftsFromCutoffs(data))
+      setAllCutoffs(cutoffsData)
+      setSites(sitesData)
       setLoading(false)
     })
     return () => {
       cancelled = true
     }
   }, [organizationId])
+
+  useEffect(() => {
+    setDrafts(draftsFromCutoffs(cutoffsForSelected))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSiteId, allCutoffs])
 
   function updateDraft(level: number, patch: Partial<Draft>) {
     setDrafts((d) => ({
@@ -112,6 +130,7 @@ export function MeetingScheduleConfigPage() {
       await setLevelCutoff({
         organizationId,
         level,
+        siteId: selectedSiteId,
         cutoffTime: draft.time,
         evaluatedDayOffset: draft.offset,
         weekdays: draft.weekdays,
@@ -130,6 +149,7 @@ export function MeetingScheduleConfigPage() {
       await setLevelCutoff({
         organizationId,
         level,
+        siteId: selectedSiteId,
         cutoffTime: null,
         evaluatedDayOffset: 0,
         weekdays: [],
@@ -151,13 +171,48 @@ export function MeetingScheduleConfigPage() {
         subtitle="Cada nivel tiene su propia reunión: define a qué hora empieza y qué día evalúa — una reunión de hoy no siempre revisa el dato de hoy (ej. la gerencial de la mañana puede estar evaluando el cierre de ayer). Pasada esa hora, esa fecha (y todas las anteriores) quedan cerradas para siempre para indicadores de ese nivel — no se reabren al día siguiente. Solo LeanProLogistic puede autorizar una corrección puntual, con causal, desde Captura de mediciones. Déjalo vacío si ese nivel no necesita bloqueo."
       />
 
+      {sites.length > 0 && (
+        <div className="meeting-schedule-site-row">
+          <label className="meeting-schedule-site-label">
+            Sitio
+            <select
+              className="meeting-schedule-site-select"
+              value={selectedSiteId ?? ''}
+              onChange={(e) => setSelectedSiteId(e.target.value || null)}
+            >
+              <option value="">General (todos los sitios sin horario propio)</option>
+              {sites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {selectedSiteId && (
+            <p className="meeting-schedule-site-hint">
+              Este horario aplica solo a este sitio. Un nivel sin horario propio aquí sigue usando el horario General.
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="meeting-schedule-list">
         {LEVELS.map(({ level, label }) => {
-          const current = cutoffs.find((c) => c.level === level)
+          const current = cutoffsForSelected.find((c) => c.level === level)
+          const fallback = selectedSiteId ? generalCutoffs.find((c) => c.level === level) : undefined
           const draft = drafts[level] ?? { time: '', offset: 0, weekdays: DEFAULT_WEEKDAYS }
           return (
             <section key={level} className="meeting-schedule-card">
               <h2>{label}</h2>
+
+              {selectedSiteId && !current && (
+                <p className="meeting-schedule-fallback">
+                  {fallback
+                    ? `Este sitio usa el horario General: ${summarizeCutoff(fallback)}.`
+                    : 'Este sitio no tiene horario propio ni hay un horario General configurado para este nivel — sin bloqueo de captura.'}
+                </p>
+              )}
+
               <div className="meeting-schedule-row">
                 <label>
                   Hora de inicio de la reunión
@@ -206,7 +261,7 @@ export function MeetingScheduleConfigPage() {
                   onClick={() => handleSave(level)}
                   disabled={savingLevel === level || !draft.time.trim() || draft.weekdays.length === 0}
                 >
-                  {savingLevel === level ? 'Guardando…' : 'Guardar'}
+                  {savingLevel === level ? 'Guardando…' : selectedSiteId ? 'Guardar horario de este sitio' : 'Guardar'}
                 </button>
                 {current && (
                   <button
@@ -224,7 +279,7 @@ export function MeetingScheduleConfigPage() {
                   {summarizeWeekdays(current.weekdays)}, a las {current.cutoff_time.slice(0, 5)}, se cierra para
                   siempre la captura del{' '}
                   {DAY_OFFSET_LABEL[current.evaluated_day_offset]?.toLowerCase() ?? 'día evaluado'} (y de cualquier
-                  fecha anterior) para este nivel.
+                  fecha anterior) para este nivel{selectedSiteId ? ' en este sitio' : ''}.
                 </p>
               )}
             </section>

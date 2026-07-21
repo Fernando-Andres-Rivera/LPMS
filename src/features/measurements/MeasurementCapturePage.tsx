@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import {
+  findApplicableCutoff,
   isDateClosedForCapture,
   type Axis,
   type Indicator,
@@ -130,7 +131,7 @@ export function MeasurementCapturePage() {
   const selectedIndicator = indicators.find((i) => i.id === indicatorId)
   const selectedSite = sites.find((s) => s.id === selectedIndicator?.site_id) ?? null
   const locationOptions = buildLocationOptions(siteLocations)
-  const levelCutoff = cutoffs.find((c) => c.level === selectedIndicator?.level)
+  const levelCutoff = findApplicableCutoff(cutoffs, selectedIndicator?.level, selectedIndicator?.site_id ?? null)
   const dateClosed = isDateClosedForCapture(levelCutoff ?? null, periodDate, new Date())
   const isAdminConsultora = profile?.role === 'admin_consultora'
   const fieldsDisabled = dateClosed && !isAdminConsultora

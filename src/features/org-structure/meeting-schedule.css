@@ -3,6 +3,45 @@
   margin: 0 auto;
 }
 
+.meeting-schedule-site-row {
+  margin-bottom: 20px;
+}
+
+.meeting-schedule-site-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  max-width: 320px;
+}
+
+.meeting-schedule-site-select {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 400;
+  font-family: inherit;
+}
+
+.meeting-schedule-site-hint {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.meeting-schedule-fallback {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
 .meeting-schedule-list {
   display: flex;
   flex-direction: column;
