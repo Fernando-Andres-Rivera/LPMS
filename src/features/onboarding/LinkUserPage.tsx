@@ -8,6 +8,7 @@ import {
   updateUserRole,
   setUserActive,
   setUserSites,
+  type InviteUserResult,
   type OrgUserRow,
 } from './onboardingApi'
 import type { Organization, Site, UserRole } from '../../lib/types'
@@ -46,7 +47,8 @@ export function LinkUserPage() {
   const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [invitedEmail, setInvitedEmail] = useState<string | null>(null)
+  const [createdUser, setCreatedUser] = useState<InviteUserResult | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const [users, setUsers] = useState<OrgUserRow[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
@@ -155,23 +157,40 @@ export function LinkUserPage() {
     }
     setSaving(true)
     setError(null)
+    setCreatedUser(null)
+    setCopied(false)
     try {
-      await inviteUser({
+      const result = await inviteUser({
         email: email.trim(),
         fullName: fullName.trim(),
         organizationId: selectedOrgId,
         role,
         siteIds: requiresSite ? selectedSiteIds : [],
       })
-      setInvitedEmail(email.trim())
+      setCreatedUser(result)
       setFullName('')
       setEmail('')
       setSelectedSiteIds([])
       setUsersRefreshKey((k) => k + 1)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo invitar al usuario.')
+      setError(err instanceof Error ? err.message : 'No se pudo crear el usuario.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function copyCredentials() {
+    if (!createdUser) return
+    const text =
+      `Acceso a LPMS\n` +
+      `Correo: ${createdUser.email}\n` +
+      `Contraseña temporal: ${createdUser.tempPassword}\n` +
+      `Entra en https://lpms-rouge.vercel.app y cámbiala en "Seguridad de la cuenta".`
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+    } catch {
+      setCopied(false)
     }
   }
 
@@ -180,10 +199,10 @@ export function LinkUserPage() {
       <PageHeader
         eyebrow="Configuración · Usuarios"
         title="Usuarios"
-        subtitle="Invita gente nueva por correo, y gestiona el rol, los sitios asignados y el estado de quienes ya tienen cuenta."
+        subtitle="Crea cuentas con acceso inmediato (se te entregan las credenciales para pasarlas al usuario), y gestiona el rol, los sitios asignados y el estado de quienes ya tienen cuenta."
       />
 
-      <h2 className="users-section-title">Invitar usuario nuevo</h2>
+      <h2 className="users-section-title">Crear usuario nuevo</h2>
       <form className="onboarding-card onboarding-form" onSubmit={handleSubmit}>
         <div className="onboarding-form__row">
           <label>
@@ -245,13 +264,30 @@ export function LinkUserPage() {
         )}
 
         {error && <p className="onboarding-error">{error}</p>}
-        {invitedEmail && (
-          <p className="onboarding-success-text">Invitación enviada a {invitedEmail}.</p>
+        {createdUser && (
+          <div className="onboarding-credentials">
+            <p className="onboarding-credentials__title">
+              Usuario creado. Entrega estas credenciales a la persona — no se envía correo.
+            </p>
+            <dl className="onboarding-credentials__grid">
+              <dt>Correo</dt>
+              <dd>{createdUser.email}</dd>
+              <dt>Contraseña temporal</dt>
+              <dd><code>{createdUser.tempPassword}</code></dd>
+            </dl>
+            <p className="onboarding-credentials__hint">
+              La persona entra con estos datos y cambia la contraseña en «Seguridad de la cuenta». Esta contraseña
+              no se vuelve a mostrar.
+            </p>
+            <button type="button" className="onboarding-credentials__copy" onClick={copyCredentials}>
+              {copied ? '✓ Copiado' : 'Copiar credenciales'}
+            </button>
+          </div>
         )}
 
         <div className="onboarding-form__actions">
           <button type="submit" className="button-primary" disabled={saving}>
-            {saving ? 'Invitando…' : 'Invitar usuario'}
+            {saving ? 'Creando…' : 'Crear usuario'}
           </button>
         </div>
       </form>

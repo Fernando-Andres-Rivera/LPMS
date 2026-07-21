@@ -1,17 +1,39 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 // ============================================================
-// Invita un usuario nuevo por correo y lo deja vinculado (perfil + rol +
-// sitios) en una sola operación — reemplaza el flujo manual anterior
+// Crea un usuario nuevo con acceso inmediato y lo deja vinculado (perfil +
+// rol + sitios) en una sola operación — reemplaza el flujo manual anterior
 // (crear en el panel de Supabase, copiar el UID, pegarlo en un formulario).
+//
+// IMPORTANTE — por qué NO se usa el correo de invitación: el servicio de
+// correo compartido de Supabase tiene un límite de pocos envíos por hora
+// (over_email_send_rate_limit) y muy mala entrega a Gmail/Hotmail, así que
+// las invitaciones "quedaban" creadas pero el usuario nunca recibía el
+// enlace para poner su contraseña y no podía entrar. En su lugar se crea la
+// cuenta con el correo ya confirmado (email_confirm) y una contraseña
+// temporal generada aquí, que se DEVUELVE al admin para que la entregue
+// directamente (WhatsApp, etc.). El usuario entra de una y luego la cambia
+// en "Seguridad de la cuenta". No depende del correo para nada.
 //
 // Requiere privilegios que el navegador nunca debe tener (crear cuentas de
 // Auth, leer/escribir profiles sin las restricciones de RLS), así que esta
 // lógica vive aquí — server-side, con la service role key — y no en el
-// cliente. La autorización de QUIÉN puede invitar a quién se revalida en
+// cliente. La autorización de QUIÉN puede crear a quién se revalida en
 // cada llamada con el JWT de quien invoca; la service role bypassa RLS,
 // así que esta es la única barrera real para esta ruta de escritura.
 // ============================================================
+
+/** Contraseña temporal legible pero con la complejidad suficiente para
+ * cualquier política de Auth: prefijo con mayúscula/minúscula fijas + un
+ * bloque aleatorio + dígitos. Alfabeto sin caracteres ambiguos (0/O, 1/l)
+ * para que se pueda dictar por teléfono sin confusiones. */
+function generateTempPassword(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+  const bytes = new Uint8Array(8)
+  crypto.getRandomValues(bytes)
+  const body = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('')
+  return `Lpms-${body}`
+}
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -126,47 +148,41 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Ya existe un usuario vinculado con este correo.' }, 409)
   }
 
-  // El link del correo de invitación se arma con esta URL — si no se pasa
-  // explícito, Supabase usa el "Site URL" configurado en el dashboard
-  // (Authentication > URL Configuration), que quedó apuntando a localhost
-  // desde que el proyecto se creó y nunca se actualizó a producción. Se fija
-  // aquí como defensa adicional, pero la URL igual debe estar en la lista de
-  // "Redirect URLs" permitidas del dashboard o Supabase la ignora. Apunta a
-  // /restablecer-contrasena — la misma pantalla que usa "olvidé mi
-  // contraseña", ya que el invitado tampoco tiene contraseña propia todavía.
-  const siteUrl = Deno.env.get('SITE_URL') ?? 'https://lpms-rouge.vercel.app'
+  const tempPassword = generateTempPassword()
 
-  const { data: invited, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-    data: { full_name: fullName },
-    redirectTo: `${siteUrl}/restablecer-contrasena`,
+  // Cuenta con acceso inmediato: email_confirm evita el bloqueo "Email not
+  // confirmed" al entrar, y la contraseña temporal se entrega al admin (no
+  // se manda ningún correo). Si el correo del usuario ya existe en Auth
+  // (ej. una invitación fantasma anterior), Supabase devuelve un code
+  // estable (email_exists) que el cliente traduce.
+  const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
   })
-  if (inviteError || !invited.user) {
-    // Se manda el `code` estable de Supabase (ej. over_email_send_rate_limit)
-    // además del mensaje crudo en inglés — el cliente lo traduce a un aviso
-    // claro en español con el siguiente paso, en vez de mostrar el texto de
-    // Supabase tal cual.
-    return json({ error: inviteError?.message ?? 'No se pudo enviar la invitación.', code: inviteError?.code }, 500)
+  if (createError || !created.user) {
+    return json({ error: createError?.message ?? 'No se pudo crear el usuario.', code: createError?.code }, 500)
   }
 
   const { error: profileError } = await supabaseAdmin.from('profiles').insert({
-    id: invited.user.id,
+    id: created.user.id,
     organization_id: organizationId,
     role,
     full_name: fullName,
     email,
   })
   if (profileError) {
-    // La invitación de Auth ya se envió y no se puede deshacer, pero si el
-    // perfil falla no debe quedar una cuenta fantasma sin perfil (RLS la
-    // dejaría sin acceso a nada de todos modos, pero mejor no dejarla).
-    await supabaseAdmin.auth.admin.deleteUser(invited.user.id)
+    // Si el perfil falla no debe quedar una cuenta fantasma sin perfil (RLS
+    // la dejaría sin acceso a nada de todos modos, pero mejor no dejarla).
+    await supabaseAdmin.auth.admin.deleteUser(created.user.id)
     return json({ error: profileError.message }, 500)
   }
 
   if (siteIds.length > 0) {
     const { error: sitesLinkError } = await supabaseAdmin
       .from('profile_sites')
-      .insert(siteIds.map((site_id: string) => ({ profile_id: invited.user.id, site_id })))
+      .insert(siteIds.map((site_id: string) => ({ profile_id: created.user.id, site_id })))
     if (sitesLinkError) {
       return json(
         { error: `Usuario creado, pero no se pudieron asignar los sitios: ${sitesLinkError.message}` },
@@ -175,5 +191,5 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  return json({ success: true, userId: invited.user.id })
+  return json({ success: true, userId: created.user.id, email, tempPassword })
 })

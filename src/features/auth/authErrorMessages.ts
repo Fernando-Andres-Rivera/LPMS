@@ -17,7 +17,7 @@ export function describeAuthError(
     case 'user_already_exists':
     case 'email_exists':
       return mode === 'invite'
-        ? 'Ya existe una cuenta con este correo — no hace falta invitarla de nuevo.'
+        ? 'Ya existe una cuenta de acceso con este correo. Búscala en la lista de usuarios de abajo; si no aparece ahí, hay que eliminarla antes de volver a crearla.'
         : 'Ya existe una cuenta con este correo. Inicia sesión, o usa "¿Olvidaste tu contraseña?" si no la recuerdas.'
     case 'weak_password':
       return 'Esa contraseña es demasiado débil o común. Usa una combinación menos predecible, de al menos 8 caracteres.'

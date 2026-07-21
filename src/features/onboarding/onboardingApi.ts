@@ -127,15 +127,26 @@ export interface InviteUserInput {
   siteIds: string[]
 }
 
+export interface InviteUserResult {
+  userId: string
+  email: string
+  /** Contraseña temporal generada por el servidor — se muestra UNA vez al
+   * admin para que la entregue al usuario. El usuario la cambia luego en
+   * "Seguridad de la cuenta". */
+  tempPassword: string
+}
+
 /**
- * Invita a una persona por correo — crea su cuenta de Supabase Auth (le
- * llega un correo para poner su contraseña), y en la misma operación deja
- * su perfil vinculado con el rol y sitio(s) definidos. Corre en una Edge
- * Function (supabase/functions/invite-user) porque requiere la service
- * role key, que nunca debe llegar al navegador — la autorización de quién
- * puede invitar a quién se revalida ahí mismo, no solo aquí.
+ * Crea la cuenta de una persona con acceso inmediato (correo ya confirmado
+ * + contraseña temporal) y en la misma operación deja su perfil vinculado
+ * con el rol y sitio(s) definidos. Devuelve las credenciales para que el
+ * admin las entregue directamente — NO depende del correo, que en el plan
+ * actual de Supabase falla por límite de envíos y mala entrega. Corre en
+ * una Edge Function (supabase/functions/invite-user) porque requiere la
+ * service role key, que nunca debe llegar al navegador — la autorización de
+ * quién puede crear a quién se revalida ahí mismo, no solo aquí.
  */
-export async function inviteUser(input: InviteUserInput): Promise<{ userId: string }> {
+export async function inviteUser(input: InviteUserInput): Promise<InviteUserResult> {
   const { data, error } = await supabase.functions.invoke('invite-user', {
     body: {
       email: input.email,
@@ -158,7 +169,7 @@ export async function inviteUser(input: InviteUserInput): Promise<{ userId: stri
     throw error
   }
   if (data?.error) throw new Error(describeAuthError('invite', data.code, data.error))
-  return { userId: data.userId }
+  return { userId: data.userId, email: data.email, tempPassword: data.tempPassword }
 }
 
 export interface OrgUserRow extends Profile {
