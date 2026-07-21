@@ -4,7 +4,11 @@
  * mensaje en español que dice qué pasó y qué debe hacer la persona —
  * en vez de un genérico "credenciales inválidas" para todo.
  */
-export function describeAuthError(mode: 'login' | 'register' | 'forgot', code: string | undefined, fallback: string): string {
+export function describeAuthError(
+  mode: 'login' | 'register' | 'forgot' | 'invite',
+  code: string | undefined,
+  fallback: string,
+): string {
   switch (code) {
     case 'invalid_credentials':
       return 'El correo o la contraseña no son correctos. Verifica ambos, o usa "¿Olvidaste tu contraseña?" si no la recuerdas.'
@@ -12,11 +16,13 @@ export function describeAuthError(mode: 'login' | 'register' | 'forgot', code: s
       return 'Todavía no confirmaste tu correo. Revisa tu bandeja de entrada (y la carpeta de spam) y haz clic en el enlace que te enviamos al registrarte.'
     case 'user_already_exists':
     case 'email_exists':
-      return 'Ya existe una cuenta con este correo. Inicia sesión, o usa "¿Olvidaste tu contraseña?" si no la recuerdas.'
+      return mode === 'invite'
+        ? 'Ya existe una cuenta con este correo — no hace falta invitarla de nuevo.'
+        : 'Ya existe una cuenta con este correo. Inicia sesión, o usa "¿Olvidaste tu contraseña?" si no la recuerdas.'
     case 'weak_password':
       return 'Esa contraseña es demasiado débil o común. Usa una combinación menos predecible, de al menos 8 caracteres.'
     case 'over_email_send_rate_limit':
-      return 'Ya te enviamos un correo hace muy poco. Espera un par de minutos antes de solicitar otro — revisa también tu bandeja de spam.'
+      return 'Supabase solo permite unos pocos correos por hora en el plan actual y ese límite ya se alcanzó. Espera unos minutos y vuelve a intentar — para que esto no vuelva a pasar con clientes reales, hay que configurar un proveedor de correo propio (SMTP) en el dashboard de Supabase.'
     case 'over_request_rate_limit':
       return 'Demasiados intentos seguidos. Espera un momento antes de volver a intentar.'
     case 'captcha_failed':

@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase'
 import type { Axis, Organization, Profile, Site, UserRole } from '../../lib/types'
+import { describeAuthError } from '../auth/authErrorMessages'
 
 export async function fetchAllAxesCatalog(): Promise<Axis[]> {
   const { data, error } = await supabase.from('axes').select('*').order('sort_order')
@@ -152,11 +153,11 @@ export async function inviteUser(input: InviteUserInput): Promise<{ userId: stri
     const context = (error as { context?: Response }).context
     if (context) {
       const body = await context.json().catch(() => null)
-      if (body?.error) throw new Error(body.error)
+      if (body?.error) throw new Error(describeAuthError('invite', body.code, body.error))
     }
     throw error
   }
-  if (data?.error) throw new Error(data.error)
+  if (data?.error) throw new Error(describeAuthError('invite', data.code, data.error))
   return { userId: data.userId }
 }
 

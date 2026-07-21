@@ -237,7 +237,12 @@ export function SafetyDashboardPage() {
   }
 
   const crossColors = computeSafetyCross(monthEvents, refYear, refMonth, refDate)
-  const monthlyStats = computeMonthlyStats(monthEvents)
+  // Los conteos (accidentes, incapacidad, actos/condiciones inseguras) se
+  // evalúan sobre el RANGO elegido, no atados al mes calendario de la fecha
+  // de referencia — esa fecha sigue siendo la que manda en "días sin
+  // accidentes", la cruz de seguridad y la pirámide (que sí necesitan un
+  // mes/año calendario exacto).
+  const rangeStats = computeMonthlyStats(rangeEvents)
   const pyramid = computeHeinrichPyramid(yearEvents)
   const sitesMissingStart = selectedSites.filter((s) => !s.operation_start_date)
 
@@ -275,6 +280,11 @@ export function SafetyDashboardPage() {
           Fecha de referencia
           <input type="date" value={referenceDate} max={today()} onChange={(e) => setReferenceDate(e.target.value)} />
         </label>
+      </div>
+
+      <div className="safety-range-row">
+        <span className="safety-range-row__label">Rango de análisis (KPIs y lista de eventos)</span>
+        <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
       </div>
 
       {selectedSiteIds.length === 0 && <p className="safety-error">Selecciona al menos un sitio para ver los datos.</p>}
@@ -317,30 +327,30 @@ export function SafetyDashboardPage() {
             </div>
 
             <div className="safety-stats-grid">
-              <div className="safety-stat">
-                <span className="safety-stat__value">
-                  {refMonth}/{refYear}
+              <div className="safety-stat safety-stat--range">
+                <span className="safety-stat__value safety-stat__value--sm">
+                  {range.from} → {range.to}
                 </span>
-                <span className="safety-stat__label">Mes evaluado</span>
+                <span className="safety-stat__label">Período analizado</span>
               </div>
               <div className="safety-stat">
-                <span className="safety-stat__value">{monthlyStats.accidentCount}</span>
-                <span className="safety-stat__label">Accidentes del mes</span>
+                <span className="safety-stat__value">{rangeStats.accidentCount}</span>
+                <span className="safety-stat__label">Accidentes en el rango</span>
               </div>
               <div className="safety-stat">
-                <span className="safety-stat__value">{monthlyStats.workersInjured}</span>
+                <span className="safety-stat__value">{rangeStats.workersInjured}</span>
                 <span className="safety-stat__label">Trabajadores accidentados</span>
               </div>
               <div className="safety-stat">
-                <span className="safety-stat__value">{monthlyStats.disabilityDays}</span>
+                <span className="safety-stat__value">{rangeStats.disabilityDays}</span>
                 <span className="safety-stat__label">Días de incapacidad</span>
               </div>
               <div className="safety-stat">
-                <span className="safety-stat__value">{monthlyStats.unsafeActsReported}</span>
+                <span className="safety-stat__value">{rangeStats.unsafeActsReported}</span>
                 <span className="safety-stat__label">Actos inseguros</span>
               </div>
               <div className="safety-stat">
-                <span className="safety-stat__value">{monthlyStats.unsafeConditionsReported}</span>
+                <span className="safety-stat__value">{rangeStats.unsafeConditionsReported}</span>
                 <span className="safety-stat__label">Condiciones inseguras</span>
               </div>
             </div>
@@ -432,10 +442,7 @@ export function SafetyDashboardPage() {
           </section>
 
           <section className="safety-card">
-            <div className="safety-card__header">
-              <h2>Eventos</h2>
-              <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
-            </div>
+            <h2>Eventos en el rango elegido</h2>
             {rangeEvents.length === 0 && <p>Sin eventos registrados en este rango.</p>}
             <ul className="safety-event-list">
               {rangeEvents.map((ev) => (

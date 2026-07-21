@@ -96,6 +96,31 @@
   font-weight: 800;
   text-align: center;
   flex: 1;
+  min-width: 0;
+}
+
+/* En pantallas angostas, "Eje anterior"/"Eje siguiente" con nowrap se salían
+   de la pantalla — se apila el nombre del eje arriba y los dos botones abajo,
+   repartiéndose el ancho a partes iguales. */
+@media (max-width: 560px) {
+  .gdash-pillar-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 14px 16px;
+  }
+
+  .gdash-pillar-nav__current {
+    order: -1;
+    flex: 1 1 100%;
+    margin-bottom: 4px;
+  }
+
+  .gdash-pillar-nav__btn {
+    flex: 1 1 0;
+    padding: 8px 6px;
+    font-size: 0.78rem;
+    text-align: center;
+  }
 }
 
 /* ---- Resultado global del pilar (valor + estado + comparativas + barras diarias) ---- */

@@ -73,6 +73,7 @@ export function MeasurementCapturePage() {
   const [cutoffs, setCutoffs] = useState<LevelCaptureCutoff[]>([])
   const [sites, setSites] = useState<Site[]>([])
   const [indicatorId, setIndicatorId] = useState('')
+  const [siteFilterId, setSiteFilterId] = useState('')
   const [periodDate, setPeriodDate] = useState(today())
   const [value, setValue] = useState('')
   const [plannedValue, setPlannedValue] = useState('')
@@ -122,7 +123,10 @@ export function MeasurementCapturePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, organizationId, siteIds])
 
-  const filteredIndicators = axisId ? indicators.filter((i) => i.axis_id === axisId) : indicators
+  const siteName = (siteId: string | null) => (siteId ? sites.find((s) => s.id === siteId)?.name ?? null : null)
+  const filteredIndicators = indicators.filter(
+    (i) => (!axisId || i.axis_id === axisId) && (!siteFilterId || i.site_id === siteFilterId),
+  )
   const selectedIndicator = indicators.find((i) => i.id === indicatorId)
   const selectedSite = sites.find((s) => s.id === selectedIndicator?.site_id) ?? null
   const locationOptions = buildLocationOptions(siteLocations)
@@ -137,12 +141,23 @@ export function MeasurementCapturePage() {
       ? (Number(realValue) / Number(plannedValue)) * 100
       : null
 
-  function handleAxisChange(nextAxisId: string) {
-    setAxisId(nextAxisId)
-    const nextList = nextAxisId ? indicators.filter((i) => i.axis_id === nextAxisId) : indicators
+  function applyFilters(nextAxisId: string, nextSiteFilterId: string) {
+    const nextList = indicators.filter(
+      (i) => (!nextAxisId || i.axis_id === nextAxisId) && (!nextSiteFilterId || i.site_id === nextSiteFilterId),
+    )
     if (!nextList.some((i) => i.id === indicatorId)) {
       setIndicatorId(nextList[0]?.id ?? '')
     }
+  }
+
+  function handleAxisChange(nextAxisId: string) {
+    setAxisId(nextAxisId)
+    applyFilters(nextAxisId, siteFilterId)
+  }
+
+  function handleSiteFilterChange(nextSiteFilterId: string) {
+    setSiteFilterId(nextSiteFilterId)
+    applyFilters(axisId, nextSiteFilterId)
   }
 
   useEffect(() => {
@@ -304,24 +319,46 @@ export function MeasurementCapturePage() {
         <p>No tienes indicadores disponibles para capturar.</p>
       ) : (
         <form className="capture-form" onSubmit={handleSubmit}>
-          {axes.length > 0 && (
-            <label className="capture-label">
-              Eje SMQDCEP
-              <select className="capture-select" value={axisId} onChange={(e) => handleAxisChange(e.target.value)}>
-                <option value="">Todos los ejes</option>
-                {axes.map((axis) => (
-                  <option key={axis.id} value={axis.id}>
-                    {axis.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+          <div className="capture-filters-row">
+            {axes.length > 0 && (
+              <label className="capture-label">
+                Eje SMQDCEP
+                <select className="capture-select" value={axisId} onChange={(e) => handleAxisChange(e.target.value)}>
+                  <option value="">Todos los ejes</option>
+                  {axes.map((axis) => (
+                    <option key={axis.id} value={axis.id}>
+                      {axis.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {sites.length > 0 && (
+              <label className="capture-label">
+                Sitio
+                <select
+                  className="capture-select"
+                  value={siteFilterId}
+                  onChange={(e) => handleSiteFilterChange(e.target.value)}
+                >
+                  <option value="">Todos los sitios</option>
+                  {sites.map((site) => (
+                    <option key={site.id} value={site.id}>
+                      {site.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
 
           <label className="capture-label">
             Indicador
             {filteredIndicators.length === 0 ? (
-              <p className="capture-location__empty">Ningún indicador de este eje está disponible para capturar.</p>
+              <p className="capture-location__empty">
+                Ningún indicador de este eje{siteFilterId ? '/sitio' : ''} está disponible para capturar.
+              </p>
             ) : (
               <select
                 className="capture-select"
@@ -331,6 +368,7 @@ export function MeasurementCapturePage() {
                 {filteredIndicators.map((indicator) => (
                   <option key={indicator.id} value={indicator.id}>
                     {indicator.name}
+                    {siteName(indicator.site_id) ? ` — ${siteName(indicator.site_id)}` : ''}
                   </option>
                 ))}
               </select>

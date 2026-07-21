@@ -141,7 +141,11 @@ Deno.serve(async (req: Request) => {
     redirectTo: `${siteUrl}/restablecer-contrasena`,
   })
   if (inviteError || !invited.user) {
-    return json({ error: inviteError?.message ?? 'No se pudo enviar la invitación.' }, 500)
+    // Se manda el `code` estable de Supabase (ej. over_email_send_rate_limit)
+    // además del mensaje crudo en inglés — el cliente lo traduce a un aviso
+    // claro en español con el siguiente paso, en vez de mostrar el texto de
+    // Supabase tal cual.
+    return json({ error: inviteError?.message ?? 'No se pudo enviar la invitación.', code: inviteError?.code }, 500)
   }
 
   const { error: profileError } = await supabaseAdmin.from('profiles').insert({

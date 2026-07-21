@@ -22,6 +22,17 @@
   color: var(--color-text);
 }
 
+.capture-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.capture-filters-row .capture-label {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
 .capture-select,
 .capture-date,
 .capture-comment {

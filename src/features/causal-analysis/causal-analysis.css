@@ -141,17 +141,23 @@
 
 .causal-methodology-toggle {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .causal-methodology-toggle button {
-  flex: 1;
+  /* flex-basis 140px + min-width:0 — sin esto, el texto largo de "Espina de
+     pescado (Ishikawa)" fuerza a los 3 botones a desbordar en móvil en vez de
+     encogerse o pasar a una segunda fila. */
+  flex: 1 1 140px;
+  min-width: 0;
   padding: 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text-muted);
   font-weight: 600;
+  font-size: 0.9rem;
   cursor: pointer;
 }
 
