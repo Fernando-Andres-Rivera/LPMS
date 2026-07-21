@@ -24,7 +24,8 @@ function countBy(rows: MeasurementAuthorizationRow[], key: (row: MeasurementAuth
 
 export function CaptureAuthorizationsReportPage() {
   const [range, setRange] = useState(defaultRange())
-  const [rows, setRows] = useState<MeasurementAuthorizationRow[]>([])
+  const [allRows, setAllRows] = useState<MeasurementAuthorizationRow[]>([])
+  const [siteFilter, setSiteFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -34,7 +35,7 @@ export function CaptureAuthorizationsReportPage() {
     fetchMeasurementAuthorizations(range)
       .then((data) => {
         if (cancelled) return
-        setRows(data)
+        setAllRows(data)
         setLoadError(null)
       })
       .catch((err) => {
@@ -48,6 +49,17 @@ export function CaptureAuthorizationsReportPage() {
       cancelled = true
     }
   }, [range])
+
+  // Nombres de sitio ya presentes en los datos cargados — sin consulta aparte,
+  // ya que este reporte cruza todos los clientes y sus sitios.
+  const sites = useMemo(
+    () => [...new Set(allRows.map((r) => r.siteName))].sort((a, b) => a.localeCompare(b)),
+    [allRows],
+  )
+  const rows = useMemo(
+    () => (siteFilter ? allRows.filter((r) => r.siteName === siteFilter) : allRows),
+    [allRows, siteFilter],
+  )
 
   const byClient = useMemo(() => countBy(rows, (r) => r.organizationName), [rows])
   const byDay = useMemo(() => {
@@ -67,14 +79,32 @@ export function CaptureAuthorizationsReportPage() {
         subtitle="Cada corrección que un administrador de LeanProLogistic autoriza sobre una fecha ya cerrada, en todos los clientes — quién la solicita más seguido, cuándo se concentran, y el detalle completo para auditoría."
       />
 
-      <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} label="Rango de análisis (fecha de autorización)" />
+      <div className="period-row">
+        <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} label="Rango de análisis (fecha de autorización)" />
+        {sites.length > 0 && (
+          <select
+            className="level-site-select"
+            value={siteFilter}
+            onChange={(e) => setSiteFilter(e.target.value)}
+          >
+            <option value="">Todos los sitios</option>
+            {sites.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {loadError && <p className="capture-auth-error">No se pudo cargar el reporte: {loadError}</p>}
 
       {loading ? (
         <p>Cargando…</p>
-      ) : rows.length === 0 ? (
+      ) : allRows.length === 0 ? (
         <p>Ninguna organización autorizó correcciones tardías en este rango.</p>
+      ) : rows.length === 0 ? (
+        <p>Ninguna autorización para el sitio elegido en este rango.</p>
       ) : (
         <>
           <div className="capture-auth-summary">
@@ -132,6 +162,7 @@ export function CaptureAuthorizationsReportPage() {
                   <tr>
                     <th>Autorizada el</th>
                     <th>Cliente</th>
+                    <th>Sitio</th>
                     <th>Indicador</th>
                     <th>Fecha corregida</th>
                     <th>Causal</th>
@@ -144,6 +175,7 @@ export function CaptureAuthorizationsReportPage() {
                     <tr key={row.id}>
                       <td>{row.authorizedAt.slice(0, 16).replace('T', ' ')}</td>
                       <td>{row.organizationName}</td>
+                      <td>{row.siteName}</td>
                       <td>{row.indicatorName}</td>
                       <td>{row.periodDate}</td>
                       <td>{row.reasonName}</td>

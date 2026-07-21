@@ -8,7 +8,8 @@ import { AxisIcon } from '../../components/ui/AxisIcon'
 import { calcularSemaforo, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
 import { defaultRange } from '../../lib/dateRange'
 import { fetchActiveAxes, fetchIndicatorStatusesInRange, type IndicatorStatus } from './dashboardApi'
-import type { Axis, SemaforoEstado } from '../../lib/types'
+import { fetchSites } from '../indicators/indicatorsApi'
+import type { Axis, SemaforoEstado, Site } from '../../lib/types'
 import './dashboard.css'
 
 interface EvaluatedIndicator {
@@ -29,11 +30,22 @@ interface AxisBreakdown {
 }
 
 export function AxesOverviewPage() {
-  const { organizationId } = useAuth()
+  const { organizationId, siteIds } = useAuth()
   const [axes, setAxes] = useState<Axis[]>([])
+  const [sites, setSites] = useState<Site[]>([])
+  // null = todavía no lo tocó el usuario; en ese caso se usa el primer sitio
+  // asignado por defecto (igual que Reunión por nivel y el Dashboard por eje).
+  const [siteOverride, setSiteOverride] = useState<string | null>(null)
+  const [siteTouched, setSiteTouched] = useState(false)
+  const selectedSite = siteTouched ? siteOverride : (siteIds[0] ?? null)
   const [range, setRange] = useState(defaultRange())
   const [evaluated, setEvaluated] = useState<EvaluatedIndicator[]>([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!organizationId) return
+    fetchSites(organizationId).then(setSites)
+  }, [organizationId])
 
   useEffect(() => {
     if (!organizationId) return
@@ -47,7 +59,7 @@ export function AxesOverviewPage() {
       setLoading(true)
       const [axesData, statuses] = await Promise.all([
         fetchActiveAxes(orgId),
-        fetchIndicatorStatusesInRange(orgId, range),
+        fetchIndicatorStatusesInRange(orgId, range, selectedSite),
       ])
       if (cancelled) return
       setAxes(axesData)
@@ -64,7 +76,7 @@ export function AxesOverviewPage() {
     return () => {
       cancelled = true
     }
-  }, [organizationId, range])
+  }, [organizationId, range, selectedSite])
 
   const statusCounts = useMemo(() => {
     const counts: Record<SemaforoEstado, number> = { cumple: 0, riesgo: 0, incumple: 0, sin_datos: 0 }
@@ -131,7 +143,26 @@ export function AxesOverviewPage() {
         </div>
       </header>
 
-      <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+      <div className="period-row">
+        <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+        {sites.length > 0 && (
+          <select
+            className="level-site-select"
+            value={selectedSite ?? ''}
+            onChange={(e) => {
+              setSiteOverride(e.target.value || null)
+              setSiteTouched(true)
+            }}
+          >
+            <option value="">Todos los sitios</option>
+            {sites.map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       <h2 className="panorama-section-title">Selecciona un eje</h2>
       <div className="axes-grid">

@@ -103,13 +103,22 @@ export interface IndicatorStatus {
   value_type: Indicator['value_type']
 }
 
-export async function fetchIndicatorStatuses(organizationId: string): Promise<IndicatorStatus[]> {
-  const { data, error } = await supabase
+export async function fetchIndicatorStatuses(
+  organizationId: string,
+  siteId?: string | null,
+): Promise<IndicatorStatus[]> {
+  let query = supabase
     .from('indicator_status')
     .select('*')
     .eq('organization_id', organizationId)
     .eq('active', true)
 
+  // Igual que fetchIndicatorsByAxis/fetchIndicatorsByLevel: filtrar por sitio
+  // no debe ocultar los indicadores corporativos (site_id nulo), que aplican
+  // a toda la organización sin importar el sitio elegido.
+  query = siteId ? query.or(`site_id.eq.${siteId},site_id.is.null`) : query
+
+  const { data, error } = await query
   if (error) throw error
   return (data ?? []) as IndicatorStatus[]
 }
@@ -126,8 +135,9 @@ export async function fetchIndicatorStatuses(organizationId: string): Promise<In
 export async function fetchIndicatorStatusesInRange(
   organizationId: string,
   range: { from: string; to: string },
+  siteId?: string | null,
 ): Promise<IndicatorStatus[]> {
-  const statuses = await fetchIndicatorStatuses(organizationId)
+  const statuses = await fetchIndicatorStatuses(organizationId, siteId)
   if (statuses.length === 0) return []
 
   const ids = statuses.map((s) => s.id)

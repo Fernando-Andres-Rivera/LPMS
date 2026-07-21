@@ -6,7 +6,8 @@ import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo } from '../../lib/semaforo'
 import { defaultRange } from '../../lib/dateRange'
 import { fetchIndicatorStatusesInRange, type IndicatorStatus } from './dashboardApi'
-import { formatIndicatorValue, type SemaforoEstado } from '../../lib/types'
+import { fetchSites } from '../indicators/indicatorsApi'
+import { formatIndicatorValue, type SemaforoEstado, type Site } from '../../lib/types'
 import { PageHeader } from '../../components/ui/PageHeader'
 import './dashboard.css'
 
@@ -24,10 +25,17 @@ const ESTADO_ORDEN: Record<SemaforoEstado, number> = {
 
 export function GlobalExceptionsPage() {
   const { organizationId } = useAuth()
+  const [sites, setSites] = useState<Site[]>([])
+  const [siteId, setSiteId] = useState<string | null>(null)
   const [range, setRange] = useState(defaultRange())
   const [rows, setRows] = useState<ExceptionRow[]>([])
   const [sinDatosCount, setSinDatosCount] = useState(0)
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!organizationId) return
+    fetchSites(organizationId).then(setSites)
+  }, [organizationId])
 
   useEffect(() => {
     if (!organizationId) return
@@ -36,7 +44,7 @@ export function GlobalExceptionsPage() {
 
     async function load() {
       setLoading(true)
-      const statuses = await fetchIndicatorStatusesInRange(orgId, range)
+      const statuses = await fetchIndicatorStatusesInRange(orgId, range, siteId)
       if (cancelled) return
 
       const evaluated = statuses.map((status) => ({
@@ -57,7 +65,7 @@ export function GlobalExceptionsPage() {
     return () => {
       cancelled = true
     }
-  }, [organizationId, range])
+  }, [organizationId, range, siteId])
 
   return (
     <div>
@@ -67,7 +75,23 @@ export function GlobalExceptionsPage() {
         subtitle="Indicadores que no cumplieron su objetivo dentro del período elegido, en todos los ejes y sitios de la organización. Úsalo para dirigir la atención del despliegue hacia dónde está el problema."
       />
 
-      <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+      <div className="period-row">
+        <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+        {sites.length > 0 && (
+          <select
+            className="level-site-select"
+            value={siteId ?? ''}
+            onChange={(e) => setSiteId(e.target.value || null)}
+          >
+            <option value="">Todos los sitios</option>
+            {sites.map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {loading ? (
         <p>Cargando panorama global…</p>

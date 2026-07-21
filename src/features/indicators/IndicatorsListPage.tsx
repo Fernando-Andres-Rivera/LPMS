@@ -13,12 +13,19 @@ import './indicators.css'
 export function IndicatorsListPage() {
   const { organizationId, profile } = useAuth()
   const [indicators, setIndicators] = useState<IndicatorWithRelations[]>([])
+  const [siteFilterId, setSiteFilterId] = useState('')
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const canHardDelete = profile?.role === 'admin_consultora'
+
+  // Sitios en orden de aparición entre los indicadores ya cargados — no hace
+  // falta una consulta aparte, y de paso solo aparecen sitios que sí tienen
+  // al menos un indicador.
+  const sites = Array.from(new Map(indicators.filter((i) => i.sites).map((i) => [i.sites!.id, i.sites!])).values())
+  const visibleIndicators = siteFilterId ? indicators.filter((i) => i.site_id === siteFilterId) : indicators
 
   async function reload() {
     if (!organizationId) return
@@ -70,6 +77,20 @@ export function IndicatorsListPage() {
         }
       />
 
+      {sites.length > 0 && (
+        <label className="indicators-site-filter">
+          Sitio
+          <select value={siteFilterId} onChange={(e) => setSiteFilterId(e.target.value)}>
+            <option value="">Todos los sitios</option>
+            {sites.map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       {error && <p className="indicators-error">{error}</p>}
 
       <div className="table-scroll">
@@ -86,7 +107,7 @@ export function IndicatorsListPage() {
           </tr>
         </thead>
         <tbody>
-          {indicators.map((indicator) => (
+          {visibleIndicators.map((indicator) => (
             <tr
               key={indicator.id}
               className={[!indicator.active ? 'row-inactive' : '', indicator.is_focus ? 'row-focus' : '']
@@ -144,9 +165,13 @@ export function IndicatorsListPage() {
               </td>
             </tr>
           ))}
-          {indicators.length === 0 && (
+          {visibleIndicators.length === 0 && (
             <tr>
-              <td colSpan={7}>No hay indicadores creados todavía.</td>
+              <td colSpan={7}>
+                {indicators.length === 0
+                  ? 'No hay indicadores creados todavía.'
+                  : 'Ningún indicador para el sitio elegido.'}
+              </td>
             </tr>
           )}
         </tbody>

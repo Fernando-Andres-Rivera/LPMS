@@ -6,6 +6,7 @@ export interface MeasurementAuthorizationRow {
   organizationName: string
   indicatorId: string
   indicatorName: string
+  siteName: string
   periodDate: string
   reasonName: string
   comment: string | null
@@ -21,7 +22,7 @@ interface RawRow {
   comment: string | null
   authorized_at: string
   organizations: { name: string } | null
-  indicators: { name: string } | null
+  indicators: { name: string; sites: { name: string } | null } | null
   measurement_override_reasons: { name: string } | null
   profiles: { full_name: string } | null
 }
@@ -41,7 +42,7 @@ export async function fetchMeasurementAuthorizations(range: {
     .from('measurement_edit_authorizations')
     .select(
       'id, organization_id, indicator_id, period_date, comment, authorized_at, ' +
-        'organizations(name), indicators(name), measurement_override_reasons(name), ' +
+        'organizations(name), indicators(name, sites(name)), measurement_override_reasons(name), ' +
         'profiles!measurement_edit_authorizations_authorized_by_fkey(full_name)',
     )
     .gte('authorized_at', range.from)
@@ -56,6 +57,7 @@ export async function fetchMeasurementAuthorizations(range: {
     organizationName: row.organizations?.name ?? '—',
     indicatorId: row.indicator_id,
     indicatorName: row.indicators?.name ?? '—',
+    siteName: row.indicators?.sites?.name ?? 'Corporativo',
     periodDate: row.period_date,
     reasonName: row.measurement_override_reasons?.name ?? '—',
     comment: row.comment,
