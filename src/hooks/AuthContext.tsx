@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signUp(email: string, password: string, fullName: string, captchaToken?: string) {
     setBlockedReason(null)
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       // emailRedirectTo apunta a la pantalla dedicada de "definir contraseña"
@@ -130,7 +130,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         captchaToken,
       },
     })
-    return { error: error?.message ?? null, code: error?.code }
+    // Por seguridad (evitar que alguien "adivine" qué correos ya están
+    // registrados), Supabase responde signUp() como éxito — SIN error — para
+    // un correo que ya tiene cuenta, pero no manda ningún correo ni crea
+    // nada. La única señal para distinguirlo: el user "fantasma" que
+    // devuelve no trae ninguna identity (una cuenta nueva sí trae una).
+    const alreadyRegistered = !error && (data.user?.identities?.length ?? 0) === 0
+    return { error: error?.message ?? null, code: error?.code, alreadyRegistered }
   }
 
   async function resetPassword(email: string, captchaToken?: string) {

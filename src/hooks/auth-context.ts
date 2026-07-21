@@ -32,13 +32,15 @@ export interface AuthContextValue {
   ) => Promise<{ error: string | null; code?: string }>
   /** Registro público — crea la cuenta; el trigger handle_new_user la
    * aprovisiona con una organización Demo propia. Con confirmación de correo
-   * activa, no devuelve sesión hasta que el usuario confirma. */
+   * activa, no devuelve sesión hasta que el usuario confirma.
+   * `alreadyRegistered` es true cuando Supabase respondió "éxito" pero en
+   * realidad el correo ya tenía cuenta y no mandó nada (ver AuthContext). */
   signUp: (
     email: string,
     password: string,
     fullName: string,
     captchaToken?: string,
-  ) => Promise<{ error: string | null; code?: string }>
+  ) => Promise<{ error: string | null; code?: string; alreadyRegistered?: boolean }>
   /** Envía el correo de recuperación de contraseña. */
   resetPassword: (email: string, captchaToken?: string) => Promise<{ error: string | null; code?: string }>
   signOut: () => Promise<void>

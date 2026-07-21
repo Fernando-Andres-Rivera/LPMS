@@ -81,11 +81,13 @@ export function LoginPage() {
         return
       }
       setSubmitting(true)
-      const { error, code } = await signUp(email.trim(), password, fullName.trim(), captchaToken)
+      const { error, code, alreadyRegistered } = await signUp(email.trim(), password, fullName.trim(), captchaToken)
       setSubmitting(false)
       setCaptchaResetSignal((k) => k + 1)
       if (error) {
         setError(describeAuthError('register', code, error))
+      } else if (alreadyRegistered) {
+        setError(describeAuthError('register', 'user_already_exists', 'Ya existe una cuenta con este correo.'))
       } else {
         setSuccess(
           `Te enviamos un correo a ${email.trim()} para confirmar tu cuenta y entrar a tu entorno de prueba. ` +
