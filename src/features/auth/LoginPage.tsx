@@ -262,6 +262,14 @@ export function LoginPage() {
             )}
           </div>
         </form>
+
+        <div className="login-foot" aria-hidden="true">
+          <span>Cascada diaria por niveles</span>
+          <span className="login-foot__dot" />
+          <span>Tableros SQDCP</span>
+          <span className="login-foot__dot" />
+          <span>Mejora continua</span>
+        </div>
       </div>
     </div>
   )
