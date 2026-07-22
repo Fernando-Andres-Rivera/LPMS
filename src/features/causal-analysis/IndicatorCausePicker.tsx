@@ -56,16 +56,35 @@ export function IndicatorCausePicker({
   }
 
   async function handleCreate() {
-    if (!newNodeName.trim()) return
+    const name = newNodeName.trim()
+    if (!name) return
+
+    // Si ya existe un hermano con este mismo nombre (sin distinguir
+    // mayúsculas), no se crea nada nuevo — se navega directo a él. Esto
+    // evita duplicados cuando tocar el nodo ya existente en la lista de
+    // arriba no funcionó (ej. en algunos navegadores móviles) y la persona
+    // termina escribiendo la misma causa a mano.
+    const existing = children.find((c) => c.name.trim().toLowerCase() === name.toLowerCase())
+    if (existing) {
+      setNewNodeName('')
+      descend(existing)
+      return
+    }
+
     setCreating(true)
     try {
       const created = await createIndicatorCause({
         indicatorId,
         parentId: currentParentId,
-        name: newNodeName.trim(),
+        name,
         createdBy,
       })
-      onCausesChange([...causes, created])
+      // createIndicatorCause también puede devolver un nodo YA existente
+      // (choque de unicidad en el servidor, ej. otra persona lo creó al
+      // mismo tiempo) — solo se agrega a la lista si de verdad es nuevo.
+      if (!causes.some((c) => c.id === created.id)) {
+        onCausesChange([...causes, created])
+      }
       setNewNodeName('')
       descend(created)
     } finally {

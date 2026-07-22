@@ -34,6 +34,12 @@ export async function fetchIndicatorCausesForMany(indicatorIds: string[]): Promi
   return map
 }
 
+/** Crea un nodo del árbol de causas propio del indicador. Si ya existe un
+ * hermano con el mismo nombre bajo el mismo padre (sin distinguir
+ * mayúsculas) — típico de un reintento: un tap que no seleccionó el nodo
+ * existente en el árbol, seguido de escribirlo a mano — no es un error de
+ * verdad: se recupera esa fila existente en vez de crear un duplicado que
+ * el Pareto contaría como una causa distinta. */
 export async function createIndicatorCause(params: {
   indicatorId: string
   parentId: string | null
@@ -51,8 +57,20 @@ export async function createIndicatorCause(params: {
     .select('*')
     .single()
 
-  if (error) throw error
-  return data
+  if (!error) return data
+
+  if (error.code === '23505') {
+    let query = supabase
+      .from('indicator_causes')
+      .select('*')
+      .eq('indicator_id', params.indicatorId)
+      .ilike('name', params.name)
+    query = params.parentId ? query.eq('parent_id', params.parentId) : query.is('parent_id', null)
+    const { data: existing, error: fetchError } = await query.single()
+    if (fetchError) throw fetchError
+    return existing
+  }
+  throw error
 }
 
 export async function fetchIndicatorRootCauses(indicatorId: string): Promise<IndicatorRootCause[]> {

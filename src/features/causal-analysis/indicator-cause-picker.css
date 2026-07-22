@@ -54,8 +54,9 @@
 .indicator-cause-picker__children button {
   background: none;
   border: none;
-  padding: 6px 0 6px 14px;
-  font-size: 0.8rem;
+  padding: 10px 4px 10px 16px;
+  min-height: 44px;
+  font-size: 0.85rem;
   cursor: pointer;
   color: var(--color-text);
 }
@@ -65,9 +66,10 @@
 }
 
 .indicator-cause-picker__children button.indicator-cause-picker__delete {
-  padding: 6px 12px;
+  padding: 10px 16px;
+  min-width: 44px;
   color: var(--color-text-muted);
-  font-size: 0.9rem;
+  font-size: 1rem;
   line-height: 1;
 }
 
