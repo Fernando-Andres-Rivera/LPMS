@@ -2,20 +2,26 @@ import { supabase } from '../../lib/supabase'
 import type { Axis, Indicator, Profile, Site } from '../../lib/types'
 
 export interface IndicatorWithRelations extends Indicator {
-  axes: Pick<Axis, 'id' | 'name' | 'color'> | null
+  axes: Pick<Axis, 'id' | 'name' | 'color' | 'sort_order'> | null
   sites: Pick<Site, 'id' | 'name'> | null
 }
 
 export async function fetchIndicators(organizationId: string): Promise<IndicatorWithRelations[]> {
   const { data, error } = await supabase
     .from('indicators')
-    .select('*, axes(id, name, color), sites(id, name)')
+    .select('*, axes(id, name, color, sort_order), sites(id, name)')
     .eq('organization_id', organizationId)
     .order('level', { ascending: false })
     .order('name', { ascending: true })
 
   if (error) throw error
-  return (data ?? []) as unknown as IndicatorWithRelations[]
+  // El orden de presentación de los pilares SMQDCEP (Seguridad, Mantenimiento,
+  // Calidad, Disponibilidad, Costos, Estándar, Personas) manda sobre nivel y
+  // nombre — sin esto, indicadores de distintos ejes quedaban intercalados
+  // en el orden en que PostgREST resolvía el join, no el del modelo.
+  return ((data ?? []) as unknown as IndicatorWithRelations[]).sort(
+    (a, b) => (a.axes?.sort_order ?? 99) - (b.axes?.sort_order ?? 99),
+  )
 }
 
 export async function fetchIndicatorById(id: string): Promise<Indicator | null> {

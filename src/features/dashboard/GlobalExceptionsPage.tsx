@@ -5,7 +5,7 @@ import { Semaforo } from '../../components/ui/Semaforo'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo } from '../../lib/semaforo'
 import { defaultRange } from '../../lib/dateRange'
-import { fetchIndicatorStatusesInRange, type IndicatorStatus } from './dashboardApi'
+import { fetchActiveAxes, fetchIndicatorStatusesInRange, type IndicatorStatus } from './dashboardApi'
 import { fetchSites } from '../indicators/indicatorsApi'
 import { formatIndicatorValue, type SemaforoEstado, type Site } from '../../lib/types'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -31,10 +31,18 @@ export function GlobalExceptionsPage() {
   const [rows, setRows] = useState<ExceptionRow[]>([])
   const [sinDatosCount, setSinDatosCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  // Orden de presentación de los pilares SMQDCEP (Seguridad, Mantenimiento,
+  // Calidad, Disponibilidad, Costos, Estándar, Personas) — esta pantalla
+  // mezcla indicadores de todos los ejes en una sola tabla, así que sin esto
+  // quedaban en el orden en que llegaba la consulta, no el del modelo.
+  const [axisOrder, setAxisOrder] = useState<Map<string, number>>(new Map())
 
   useEffect(() => {
     if (!organizationId) return
     fetchSites(organizationId).then(setSites)
+    fetchActiveAxes(organizationId).then((axes) => {
+      setAxisOrder(new Map(axes.map((a) => [a.id, a.sort_order])))
+    })
   }, [organizationId])
 
   useEffect(() => {
@@ -55,7 +63,14 @@ export function GlobalExceptionsPage() {
       setRows(
         evaluated
           .filter((row) => row.estado === 'incumple' || row.estado === 'riesgo')
-          .sort((a, b) => ESTADO_ORDEN[a.estado] - ESTADO_ORDEN[b.estado]),
+          .sort((a, b) => {
+            const estadoDiff = ESTADO_ORDEN[a.estado] - ESTADO_ORDEN[b.estado]
+            if (estadoDiff !== 0) return estadoDiff
+            const axisDiff =
+              (axisOrder.get(a.status.axis_id) ?? 99) - (axisOrder.get(b.status.axis_id) ?? 99)
+            if (axisDiff !== 0) return axisDiff
+            return a.status.name.localeCompare(b.status.name)
+          }),
       )
       setSinDatosCount(evaluated.filter((row) => row.estado === 'sin_datos').length)
       setLoading(false)
@@ -65,7 +80,7 @@ export function GlobalExceptionsPage() {
     return () => {
       cancelled = true
     }
-  }, [organizationId, range, siteId])
+  }, [organizationId, range, siteId, axisOrder])
 
   return (
     <div>
