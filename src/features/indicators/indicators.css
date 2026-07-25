@@ -130,7 +130,11 @@
   gap: 16px;
 }
 
-.indicator-form label {
+/* .indicator-form__field es un <div> con la misma pinta que un <label>, para
+   campos que contienen BOTONES (ej. UnitPicker): ahí un <label> se asocia al
+   primer botón que encuentre dentro y Safari/iOS le reenvía clics sintéticos. */
+.indicator-form label,
+.indicator-form__field {
   display: flex;
   flex-direction: column;
   gap: 6px;

@@ -121,7 +121,12 @@
   text-transform: uppercase;
 }
 
-.causal-form label {
+/* .causal-form__field es un <div> con la misma pinta que un <label>, para
+   los campos que contienen BOTONES (árbol de causas, causa raíz, taxonomía):
+   ahí un <label> se asocia al primer botón que encuentre dentro y Safari/iOS
+   le reenvía clics sintéticos, rompiendo la selección. */
+.causal-form label,
+.causal-form__field {
   display: flex;
   flex-direction: column;
   gap: 6px;

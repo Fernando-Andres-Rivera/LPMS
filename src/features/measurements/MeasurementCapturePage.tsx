@@ -376,14 +376,17 @@ export function MeasurementCapturePage() {
             )}
           </label>
 
-          <label className="capture-label">
+          {/* <div> y no <label>: PeriodPicker trae botones dentro, y un
+              <label> se asocia al primer elemento "etiquetable" que tenga —
+              en Safari/iOS eso reenvía clics sintéticos a ese botón. */}
+          <div className="capture-label">
             {selectedIndicator?.frequency === 'diaria' || !selectedIndicator ? 'Fecha' : 'Período'}
             <PeriodPicker
               frequency={selectedIndicator?.frequency ?? 'diaria'}
               value={periodDate}
               onChange={setPeriodDate}
             />
-          </label>
+          </div>
 
           {dateClosed && levelCutoff && (
             <p className="capture-cutoff-warning">

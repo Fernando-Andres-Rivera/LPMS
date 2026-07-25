@@ -350,8 +350,12 @@ export function IndicatorFormPage() {
         </div>
 
         <div className="indicator-form__row">
+          {/* El bloque de abajo usa <div> y no <label>: UnitPicker trae un
+              botón dentro, y un <label> se asocia al primer elemento
+              "etiquetable" que tenga — en Safari/iOS eso reenvía clics
+              sintéticos a ese botón. */}
           {(form.value_type === 'numerico' || form.value_type === 'razon') && (
-            <label>
+            <div className="indicator-form__field">
               Unidad de medida {form.value_type === 'razon' && '(qué se cuenta, ej. personas, equipos)'}
               {organizationId && profile && (
                 <UnitPicker
@@ -361,7 +365,7 @@ export function IndicatorFormPage() {
                   onChange={(v) => update('unit', v)}
                 />
               )}
-            </label>
+            </div>
           )}
 
           <label>

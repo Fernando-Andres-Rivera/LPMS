@@ -89,7 +89,11 @@
   gap: 16px;
 }
 
-.onboarding-form label {
+/* .onboarding-form__field es un <div> con la misma pinta que un <label>, para
+   campos que pueden contener BOTONES: ahí un <label> reenvía clics sintéticos
+   a su control asociado (en Safari/iOS de forma problemática). */
+.onboarding-form label,
+.onboarding-form__field {
   display: flex;
   flex-direction: column;
   gap: 6px;

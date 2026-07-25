@@ -96,7 +96,10 @@ export function NewOrganizationPage() {
           <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         </label>
 
-        <label>
+        {/* <div> y no <label>: la variante "Otra, especificar…" trae un botón
+            dentro, y un <label> reenvía clics sintéticos a su control
+            asociado — en Safari/iOS eso interfiere con ese botón. */}
+        <div className="onboarding-form__field">
           Industria (opcional)
           {showCustomIndustry ? (
             <div className="industry-picker">
@@ -138,7 +141,7 @@ export function NewOrganizationPage() {
               <option value={OTHER_INDUSTRY}>Otra, especificar…</option>
             </select>
           )}
-        </label>
+        </div>
 
         <div className="onboarding-form__row">
           <label>

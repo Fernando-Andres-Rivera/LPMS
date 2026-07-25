@@ -343,7 +343,11 @@ export function CausalAnalysisPage() {
           </div>
         )}
 
-        <label>
+        {/* <div> y no <label>: contiene botones, y un <label> se asocia al
+            primer elemento "etiquetable" que tenga dentro — al tocar un chip,
+            Safari/iOS reenviaba un clic sintético a ese botón y deshacía la
+            selección. */}
+        <div className="causal-form__field">
           Clasificación estructurada (para el Pareto)
           {profile && (
             <CauseTaxonomyPicker
@@ -355,7 +359,7 @@ export function CausalAnalysisPage() {
               onSelectedChange={setSelectedTags}
             />
           )}
-        </label>
+        </div>
 
         <label>
           Causa raíz identificada

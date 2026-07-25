@@ -293,7 +293,13 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
       )}
 
       <form className="causal-form" onSubmit={handleSubmit}>
-        <label>
+        {/* Estos dos bloques NO pueden ser <label>: contienen botones, y un
+            <label> se asocia automáticamente al primer elemento "etiquetable"
+            que tenga dentro — que aquí resultaba ser un botón. Al tocar un
+            chip, Safari/iOS reenviaba además un clic sintético a ese primer
+            botón (ej. "Raíz"), deshaciendo la selección recién hecha; por eso
+            fallaba solo en iPhone y solo cuando ya había causas registradas. */}
+        <div className="causal-form__field">
           Árbol de causas de este indicador
           <IndicatorCausePicker
             indicatorId={indicator.id}
@@ -305,9 +311,9 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
             onSelectedChange={setSelectedCause}
             onDeleted={reloadTree}
           />
-        </label>
+        </div>
 
-        <label>
+        <div className="causal-form__field">
           Causa raíz identificada
           <RootCausePicker
             key={rootCauseResetKey}
@@ -316,7 +322,7 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
             value={rootCause}
             onChange={setRootCause}
           />
-        </label>
+        </div>
 
         <label>
           Valor de esta causa (opcional)
