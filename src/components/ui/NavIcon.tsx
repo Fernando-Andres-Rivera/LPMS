@@ -7,6 +7,7 @@ export type NavIconName =
   | 'account'
   | 'axes'
   | 'levels'
+  | 'quick-win'
   | 'capture'
   | 'safety'
   | 'panorama'
@@ -38,6 +39,14 @@ const PATHS: Record<NavIconName, React.ReactNode> = {
       <circle cx="6" cy="5.3" r="2.1" />
       <circle cx="12.2" cy="5.3" r="2.1" />
       <path d="M2.4 15c0-2.2 1.6-3.6 3.6-3.6s3.6 1.4 3.6 3.6M8.7 15c0-2.2 1.6-3.6 3.5-3.6 2 0 3.4 1.4 3.4 3.6" />
+    </>
+  ),
+  'quick-win': (
+    <>
+      <circle cx="9" cy="9" r="6.6" />
+      <circle cx="9" cy="9" r="3.6" />
+      <circle cx="9" cy="9" r="0.9" fill="currentColor" />
+      <path d="m12.6 5.4 2.6-2.6M15.2 2.8v2.2h-2.2" />
     </>
   ),
   capture: (

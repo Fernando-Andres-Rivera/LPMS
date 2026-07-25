@@ -57,6 +57,7 @@ export function AppLayout() {
           <span className="app-sidebar__section">Diario</span>
           {item('/', 'axes', 'Ejes', true)}
           {item('/niveles/1', 'levels', 'Reunión por nivel')}
+          {item('/quick-win', 'quick-win', 'Quick Win')}
           {item('/captura', 'capture', 'Captura de mediciones')}
           {item('/seguridad', 'safety', 'Seguridad y Salud en el Trabajo')}
 

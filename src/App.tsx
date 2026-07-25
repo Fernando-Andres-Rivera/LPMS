@@ -9,6 +9,7 @@ import { AxesOverviewPage } from './features/dashboard/AxesOverviewPage'
 import { GeneralDashboardPage } from './features/dashboard/GeneralDashboardPage'
 import { AxisDashboardPage } from './features/dashboard/AxisDashboardPage'
 import { LevelDashboardPage } from './features/dashboard/LevelDashboardPage'
+import { QuickWinPage } from './features/quick-win/QuickWinPage'
 import { GlobalExceptionsPage } from './features/dashboard/GlobalExceptionsPage'
 import { IndicatorsListPage } from './features/indicators/IndicatorsListPage'
 import { IndicatorFormPage } from './features/indicators/IndicatorFormPage'
@@ -47,6 +48,7 @@ function App() {
               <Route index element={<AxesOverviewPage />} />
               <Route path="ejes/:axisId" element={<AxisDashboardPage />} />
               <Route path="niveles/:level" element={<LevelDashboardPage />} />
+              <Route path="quick-win" element={<QuickWinPage />} />
               <Route path="captura" element={<MeasurementCapturePage />} />
               <Route path="seguridad" element={<SafetyDashboardPage />} />
               <Route path="cascada/:indicatorId" element={<CascadeViewPage />} />

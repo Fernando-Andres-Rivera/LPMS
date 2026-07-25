@@ -1,0 +1,227 @@
+.quick-win-page {
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.quick-win-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.quick-win-date {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.quick-win-date input {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+/* Encabezado automático de pilares: verde si el eje cumplió el día
+   anterior, rojo si no, gris si todavía no hay mediciones de ese día — solo
+   se muestran los pilares que este sitio realmente gestiona (los que
+   tienen al menos un indicador propio o corporativo). */
+.quick-win-pillars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.quick-win-pillar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: white;
+}
+
+.quick-win-pillar--ok {
+  background: var(--color-ok);
+}
+
+.quick-win-pillar--fail {
+  background: var(--color-fail);
+}
+
+.quick-win-pillar--sin_datos {
+  background: var(--color-text-muted);
+}
+
+.quick-win-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.quick-win-card h2 {
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+
+.quick-win-card textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  resize: vertical;
+}
+
+.quick-win-saving {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.quick-win-error {
+  color: var(--color-fail);
+  margin-bottom: 12px;
+}
+
+.quick-win-candidates {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.quick-win-candidate-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  border-left: 4px solid transparent;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quick-win-candidate-card--green {
+  border-left-color: var(--color-ok);
+  background: color-mix(in srgb, var(--color-ok) 6%, var(--color-surface));
+}
+
+.quick-win-candidate-card--red {
+  border-left-color: var(--color-fail);
+  background: color-mix(in srgb, var(--color-fail) 6%, var(--color-surface));
+}
+
+.quick-win-candidate-card__axis {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.quick-win-candidate-card__description {
+  font-weight: 600;
+  margin: 0;
+}
+
+.quick-win-candidate-card__meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.quick-win-candidate-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.quick-win-candidate-card__actions button {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.quick-win-candidate-card__actions button:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.quick-win-toggle {
+  border: none !important;
+  color: white !important;
+}
+
+.quick-win-toggle--green {
+  background: var(--color-ok) !important;
+}
+
+.quick-win-toggle--green:hover {
+  color: white !important;
+}
+
+.quick-win-toggle--red {
+  background: var(--color-fail) !important;
+}
+
+.quick-win-toggle--red:hover {
+  color: white !important;
+}
+
+.quick-win-candidate-card--form {
+  gap: 12px;
+}
+
+.quick-win-candidate-card--form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.quick-win-candidate-card--form input,
+.quick-win-candidate-card--form select,
+.quick-win-candidate-card--form textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-weight: 400;
+}
+
+.quick-win-add-card {
+  min-height: 140px;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text-muted);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.quick-win-add-card:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
