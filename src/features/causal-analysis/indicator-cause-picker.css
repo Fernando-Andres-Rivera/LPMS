@@ -42,7 +42,14 @@
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 999px;
-  overflow: hidden;
+  /* Antes recortaba las esquinas de los botones con overflow: hidden en
+     vez de redondearlos ellos mismos — Safari/WebKit (iPhone) tiene fallas
+     de hit-testing ya documentadas cuando un contenedor con overflow:
+     hidden + border-radius envuelve varios botones interactivos: el toque
+     a veces no llega al botón aunque se vea bien (no pasa en Chrome/
+     Android, que usa un motor distinto). Cada botón redondea su propia
+     esquina exterior (ver abajo) para lograr la misma píldora visual sin
+     depender de recortar nada. */
 }
 
 .indicator-cause-picker__children li.indicator-cause-picker__children-item--confirming {
@@ -66,6 +73,15 @@
      empieza a hacer scroll, y el botón "no responde" a la primera. */
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0.08);
+  /* Redondea su propia esquina izquierda — junto con .indicator-cause
+     -picker__delete (a la derecha) o :only-child (cuando no hay botón de
+     borrar, ej. RootCausePicker) arma la píldora completa sin overflow:
+     hidden en el contenedor. */
+  border-radius: 999px 0 0 999px;
+}
+
+.indicator-cause-picker__children button:only-child {
+  border-radius: 999px;
 }
 
 .indicator-cause-picker__children li:hover {
@@ -88,6 +104,7 @@
   color: var(--color-text-muted);
   font-size: 1rem;
   line-height: 1;
+  border-radius: 0 999px 999px 0;
 }
 
 .indicator-cause-picker__children button.indicator-cause-picker__delete:hover {
