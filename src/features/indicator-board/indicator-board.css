@@ -240,6 +240,7 @@
 
 .board-plan-item__body {
   flex: 1;
+  min-width: 0;
 }
 
 .board-plan-item__description {

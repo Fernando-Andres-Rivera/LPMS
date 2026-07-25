@@ -1,4 +1,5 @@
 import { ActionPlanProgress } from './ActionPlanProgress'
+import { ActionPlanEvidence } from './ActionPlanEvidence'
 import { ACTION_PLAN_STEPS, type PdcaStatus } from '../../lib/types'
 import './DueActionsPanel.css'
 
@@ -15,6 +16,11 @@ interface DueActionsPanelProps {
   actions: DueAction[]
   advancingId: string | null
   onAdvance: (actionId: string, status: PdcaStatus) => void
+  /** Para adjuntar evidencia directo desde la reunión — mismos datos que
+   * exige el registro de calidad (quién sube, a qué organización). */
+  organizationId: string
+  uploadedBy: string
+  canRemoveEvidence: boolean
 }
 
 /**
@@ -25,7 +31,14 @@ interface DueActionsPanelProps {
  * KPI. Siempre ocupa el mismo alto (ver .due-actions-panel en el CSS) para
  * que la cuadrícula de tarjetas quede pareja, tenga o no acciones ese día.
  */
-export function DueActionsPanel({ actions, advancingId, onAdvance }: DueActionsPanelProps) {
+export function DueActionsPanel({
+  actions,
+  advancingId,
+  onAdvance,
+  organizationId,
+  uploadedBy,
+  canRemoveEvidence,
+}: DueActionsPanelProps) {
   return (
     <div className="due-actions-panel">
       <span className="due-actions-panel__title">Acciones que vencen hoy</span>
@@ -63,6 +76,12 @@ export function DueActionsPanel({ actions, advancingId, onAdvance }: DueActionsP
                       ))}
                     </div>
                   )}
+                  <ActionPlanEvidence
+                    actionPlanId={action.id}
+                    organizationId={organizationId}
+                    uploadedBy={uploadedBy}
+                    canRemove={canRemoveEvidence}
+                  />
                 </div>
               </div>
             )

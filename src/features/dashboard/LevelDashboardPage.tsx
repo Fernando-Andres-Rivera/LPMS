@@ -38,7 +38,11 @@ export function LevelDashboardPage() {
   const { level: levelParam } = useParams<{ level: string }>()
   const level = (Number(levelParam) as 1 | 2 | 3) || 1
 
-  const { organizationId, siteIds } = useAuth()
+  const { profile, organizationId, siteIds } = useAuth()
+  // Mismo criterio que el RLS de action_plan_evidence: solo estos roles
+  // pueden quitar evidencia ya subida.
+  const canRemoveEvidence =
+    profile?.role === 'admin_consultora' || profile?.role === 'admin_cliente' || profile?.role === 'gerente'
   const [axes, setAxes] = useState<Axis[]>([])
   const [sites, setSites] = useState<Site[]>([])
   // null = todavía no lo tocó el usuario; en ese caso se usa el primer sitio asignado por defecto.
@@ -268,11 +272,16 @@ export function LevelDashboardPage() {
                     estadoOverride={estadoOverride}
                     isFocus={indicator.is_focus}
                   />
-                  <DueActionsPanel
-                    actions={dueActions.get(indicator.id) ?? []}
-                    advancingId={advancingId}
-                    onAdvance={(actionId, status) => handleAdvance(indicator.id, actionId, status)}
-                  />
+                  {profile && organizationId && (
+                    <DueActionsPanel
+                      actions={dueActions.get(indicator.id) ?? []}
+                      advancingId={advancingId}
+                      onAdvance={(actionId, status) => handleAdvance(indicator.id, actionId, status)}
+                      organizationId={organizationId}
+                      uploadedBy={profile.id}
+                      canRemoveEvidence={canRemoveEvidence}
+                    />
+                  )}
                 </div>
               ))}
             </div>

@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { Semaforo } from '../../components/ui/Semaforo'
 import { ActionPlanProgress } from '../../components/ui/ActionPlanProgress'
+import { ActionPlanEvidence } from '../../components/ui/ActionPlanEvidence'
 import { ParetoAxisTick } from '../../components/ui/ParetoAxisTick'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { TrendSparkline } from '../../components/ui/TrendSparkline'
@@ -164,6 +165,11 @@ export function IndicatorBoardPage() {
   }, [indicatorId, organizationId, range])
 
   const estado = calcularSemaforo(latestValue, target?.target_value, indicator?.improvement_direction ?? 'mayor_mejor')
+  // Mismo criterio que el RLS de action_plan_evidence: solo estos roles
+  // pueden quitar evidencia ya subida (un operativo puede adjuntar pero no
+  // ocultar evidencia después).
+  const canRemoveEvidence =
+    profile?.role === 'admin_consultora' || profile?.role === 'admin_cliente' || profile?.role === 'gerente'
   const latestCause = causes[0]
   const eventLocationName = latestCause?.measurements?.site_locations?.name
   const whereLabel = eventLocationName
@@ -429,6 +435,14 @@ export function IndicatorBoardPage() {
                       </button>
                     ))}
                   </div>
+                )}
+                {profile && organizationId && (
+                  <ActionPlanEvidence
+                    actionPlanId={plan.id}
+                    organizationId={organizationId}
+                    uploadedBy={profile.id}
+                    canRemove={canRemoveEvidence}
+                  />
                 )}
               </div>
             </div>
