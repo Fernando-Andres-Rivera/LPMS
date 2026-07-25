@@ -1,0 +1,102 @@
+/* min-height fija el piso: una tarjeta sin acciones a vencer ocupa el mismo
+   espacio que una con una acción normal, para que la cuadrícula de la
+   reunión quede pareja. Si hay más de una acción, el panel simplemente
+   crece — align-items: stretch en .indicators-grid pareja el resto de la
+   fila con la tarjeta más alta. */
+.due-actions-panel {
+  min-height: 168px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.due-actions-panel__title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.due-actions-panel__empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.due-actions-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.due-action-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.due-action-item + .due-action-item {
+  border-top: 1px solid var(--color-border);
+  padding-top: 10px;
+}
+
+.due-action-item__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.due-action-item__description {
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin: 0 0 4px;
+}
+
+.due-action-item__cause {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin: 0 0 4px;
+}
+
+.due-action-item__meta {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  margin: 0 0 6px;
+}
+
+.due-action-item__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.due-action-item__actions button {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.due-action-item__actions button:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.due-action-item__actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

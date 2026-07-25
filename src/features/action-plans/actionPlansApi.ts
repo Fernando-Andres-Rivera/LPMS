@@ -31,6 +31,38 @@ export async function fetchActionPlanCounts(indicatorIds: string[]): Promise<Map
   return map
 }
 
+/**
+ * Planes de acción cuyo plazo vence en `dueDate` (normalmente hoy, el día
+ * de la reunión), para varios indicadores a la vez — una sola consulta en
+ * vez de una por indicador, igual que fetchActionPlanCounts. Ya cerrados
+ * ("Eficaz") se excluyen: si ya se marcó eficaz, no hay nada pendiente que
+ * seguir en la reunión.
+ */
+export async function fetchActionPlansDueForIndicators(
+  indicatorIds: string[],
+  dueDate: string,
+): Promise<Map<string, ActionPlanWithNames[]>> {
+  if (indicatorIds.length === 0) return new Map()
+  const { data, error } = await supabase
+    .from('action_plans')
+    .select(
+      '*, responsible:profiles!action_plans_responsible_id_fkey(full_name), creator:profiles!action_plans_created_by_fkey(full_name), causal_analysis:causal_analyses(root_cause)',
+    )
+    .in('indicator_id', indicatorIds)
+    .eq('due_date', dueDate)
+    .neq('status', 'cerrado')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  const map = new Map<string, ActionPlanWithNames[]>()
+  for (const row of (data ?? []) as unknown as ActionPlanWithNames[]) {
+    const list = map.get(row.indicator_id) ?? []
+    list.push(row)
+    map.set(row.indicator_id, list)
+  }
+  return map
+}
+
 export interface NewActionPlan {
   organization_id: string
   indicator_id: string

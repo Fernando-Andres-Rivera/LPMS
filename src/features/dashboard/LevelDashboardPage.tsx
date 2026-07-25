@@ -3,14 +3,16 @@ import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { RangePicker } from '../../components/ui/RangePicker'
+import { DueActionsPanel, type DueAction } from '../../components/ui/DueActionsPanel'
 import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
-import { defaultRange } from '../../lib/dateRange'
+import { defaultRange, today } from '../../lib/dateRange'
 import {
   fetchActiveAxes,
   fetchCurrentTargetsForIndicators,
   fetchIndicatorsByLevel,
   fetchMeasurementsInRange,
 } from './dashboardApi'
+import { fetchActionPlansDueForIndicators, advanceActionPlanStatus } from '../action-plans/actionPlansApi'
 import { fetchSites } from '../indicators/indicatorsApi'
 import {
   computeDaysWithoutAccidents,
@@ -18,7 +20,7 @@ import {
   fetchSafetyEventsInRange,
   isDaysWithoutAccidentsIndicatorName,
 } from '../safety/safetyApi'
-import type { Axis, Indicator, SemaforoEstado, Site } from '../../lib/types'
+import type { Axis, Indicator, PdcaStatus, SemaforoEstado, Site } from '../../lib/types'
 import { PageHeader } from '../../components/ui/PageHeader'
 import './dashboard.css'
 
@@ -46,6 +48,8 @@ export function LevelDashboardPage() {
   const [range, setRange] = useState(defaultRange())
   const [rows, setRows] = useState<IndicatorRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [dueActions, setDueActions] = useState<Map<string, DueAction[]>>(new Map())
+  const [advancingId, setAdvancingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!organizationId) return
@@ -70,12 +74,28 @@ export function LevelDashboardPage() {
       const buckets = buildPeriodBucketsInRange('dia', from, to)
       const ids = indicators.map((i) => i.id)
 
-      // 2 consultas en total en vez de 2 por indicador (patrón N+1).
-      const [measRows, targetMap] = await Promise.all([
+      // 3 consultas en total en vez de una por indicador (patrón N+1).
+      const [measRows, targetMap, dueActionsMap] = await Promise.all([
         fetchMeasurementsInRange(ids, range.from, range.to),
         fetchCurrentTargetsForIndicators(ids, to.getFullYear(), to.getMonth() + 1),
+        fetchActionPlansDueForIndicators(ids, today()),
       ])
       if (cancelled) return
+      setDueActions(
+        new Map(
+          Array.from(dueActionsMap.entries()).map(([indicatorId, plans]) => [
+            indicatorId,
+            plans.map((p) => ({
+              id: p.id,
+              description: p.description,
+              status: p.status,
+              responsibleName: p.responsible?.full_name ?? null,
+              creatorName: p.creator?.full_name ?? null,
+              rootCause: p.causal_analysis?.root_cause ?? null,
+            })),
+          ]),
+        ),
+      )
 
       const measByIndicator = new Map<string, { period_date: string; value: number }[]>()
       for (const m of measRows) {
@@ -154,6 +174,28 @@ export function LevelDashboardPage() {
     }
   }, [organizationId, level, selectedSite, range, sites])
 
+  /** Avanza el estado de un plan de acción directo desde la tarjeta de la
+   * reunión (ej. "Marcar: Eficaz"), sin tener que entrar al tablero del
+   * KPI. Si queda cerrado, ya no está "pendiente por vencer" — se quita de
+   * la lista en vez de esperar a recargar toda la pantalla. */
+  async function handleAdvance(indicatorId: string, actionId: string, status: PdcaStatus) {
+    setAdvancingId(actionId)
+    try {
+      await advanceActionPlanStatus(actionId, status)
+      setDueActions((current) => {
+        const next = new Map(current)
+        const list = next.get(indicatorId) ?? []
+        next.set(
+          indicatorId,
+          status === 'cerrado' ? list.filter((a) => a.id !== actionId) : list.map((a) => (a.id === actionId ? { ...a, status } : a)),
+        )
+        return next
+      })
+    } finally {
+      setAdvancingId(null)
+    }
+  }
+
   const axisById = new Map(axes.map((a) => [a.id, a]))
   const rowsByAxis = new Map<string, IndicatorRow[]>()
   for (const row of rows) {
@@ -212,20 +254,26 @@ export function LevelDashboardPage() {
             <h3 style={{ color: axisById.get(axis.id)?.color }}>{axis.name}</h3>
             <div className="indicators-grid">
               {axisRows.map(({ indicator, latestValue, targetValue, trend, estadoOverride }) => (
-                <IndicatorCard
-                  key={indicator.id}
-                  id={indicator.id}
-                  name={indicator.name}
-                  unit={indicator.unit}
-                  level={indicator.level}
-                  improvementDirection={indicator.improvement_direction}
-                  valueType={indicator.value_type}
-                  latestValue={latestValue}
-                  targetValue={targetValue}
-                  trend={trend}
-                  estadoOverride={estadoOverride}
-                  isFocus={indicator.is_focus}
-                />
+                <div key={indicator.id} className="indicator-cell">
+                  <IndicatorCard
+                    id={indicator.id}
+                    name={indicator.name}
+                    unit={indicator.unit}
+                    level={indicator.level}
+                    improvementDirection={indicator.improvement_direction}
+                    valueType={indicator.value_type}
+                    latestValue={latestValue}
+                    targetValue={targetValue}
+                    trend={trend}
+                    estadoOverride={estadoOverride}
+                    isFocus={indicator.is_focus}
+                  />
+                  <DueActionsPanel
+                    actions={dueActions.get(indicator.id) ?? []}
+                    advancingId={advancingId}
+                    onAdvance={(actionId, status) => handleAdvance(indicator.id, actionId, status)}
+                  />
+                </div>
               ))}
             </div>
           </div>
