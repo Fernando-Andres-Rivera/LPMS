@@ -1,6 +1,7 @@
 .compliance-filters {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 12px;
   margin-bottom: 20px;
 }

@@ -3,6 +3,8 @@ import { useAuth } from '../../hooks/useAuth'
 import { fetchSites } from '../indicators/indicatorsApi'
 import { fetchActiveAxes } from '../dashboard/dashboardApi'
 import { fetchCapturedDates, fetchDailyIndicators, type IndicatorWithSiteName } from './measurementsApi'
+import { RangePicker } from '../../components/ui/RangePicker'
+import { today } from '../../lib/dateRange'
 import type { Axis, Site } from '../../lib/types'
 import { PageHeader } from '../../components/ui/PageHeader'
 import './compliance.css'
@@ -11,13 +13,20 @@ function pad(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-/** Días del mes en curso, del 1 hasta hoy — no tiene sentido mostrar días
- * futuros que todavía no se pueden capturar. */
-function currentMonthDatesToToday(): string[] {
+/** Del primer día del mes en curso hasta hoy — mismo punto de partida que
+ * antes tenía fijo esta pantalla, ahora editable con el Rango de análisis. */
+function currentMonthToTodayRange(): { from: string; to: string } {
   const now = new Date()
+  return { from: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`, to: today() }
+}
+
+/** Todos los días entre from y to, ambos incluidos — una columna por día en
+ * la tabla de cumplimiento. */
+function datesInRange(from: string, to: string): string[] {
   const dates: string[] = []
-  for (let day = 1; day <= now.getDate(); day++) {
-    dates.push(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(day)}`)
+  const end = new Date(`${to}T00:00:00`)
+  for (const d = new Date(`${from}T00:00:00`); d <= end; d.setDate(d.getDate() + 1)) {
+    dates.push(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`)
   }
   return dates
 }
@@ -25,11 +34,6 @@ function currentMonthDatesToToday(): string[] {
 function formatDay(iso: string): string {
   const d = new Date(iso + 'T00:00:00')
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit' })
-}
-
-function currentMonthLabel(): string {
-  const label = new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })
-  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 export function CaptureCompliancePage() {
@@ -41,8 +45,9 @@ export function CaptureCompliancePage() {
   const [indicators, setIndicators] = useState<IndicatorWithSiteName[]>([])
   const [capturedByIndicator, setCapturedByIndicator] = useState<Map<string, Set<string>>>(new Map())
   const [loading, setLoading] = useState(true)
+  const [range, setRange] = useState(currentMonthToTodayRange())
 
-  const dates = currentMonthDatesToToday()
+  const dates = datesInRange(range.from, range.to)
 
   useEffect(() => {
     if (!organizationId) return
@@ -85,17 +90,19 @@ export function CaptureCompliancePage() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationId, selectedSite, selectedAxis])
+  }, [organizationId, selectedSite, selectedAxis, range.from, range.to])
 
   return (
     <div>
       <PageHeader
         eyebrow="Diario · Disciplina de captura"
         title="Cumplimiento de captura"
-        subtitle={`Indicadores de frecuencia diaria y si su medición fue registrada en cada día de ${currentMonthLabel()}.`}
+        subtitle="Indicadores de frecuencia diaria y si su medición fue registrada en cada día del rango elegido."
       />
 
       <div className="compliance-filters">
+        <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
+
         {axes.length > 0 && (
           <select
             className="level-site-select compliance-site-select"
