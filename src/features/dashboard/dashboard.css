@@ -235,14 +235,23 @@
   align-items: stretch;
 }
 
-/* align-items: stretch (arriba) hace que cada celda de una fila ocupe la
-   misma altura; dentro de la celda, IndicatorCard tiene flex: 1 y crece
-   para llenar ese espacio — así el diagnóstico de cada columna arranca en
-   el mismo renglón, sin importar si el nombre ocupa una o dos líneas. */
+/* Cada .indicator-cell ocupa 2 renglones (tarjeta + panel de abajo, ej.
+   diagnóstico o acciones a vencer) y usa subgrid para tomar prestados los
+   renglones del grid EXTERNO en vez de medirse solo: así el renglón 1 (las
+   tarjetas) se dimensiona por la tarjeta más alta de esa fila y el renglón
+   2 (el panel) por el panel más alto — el límite entre tarjeta y panel
+   queda parejo en toda la fila, sin importar que un KPI numérico (con
+   línea de "Objetivo") sea unos píxeles más alto que uno binario (Sí/No)
+   o que un panel tenga más contenido que otro. align-items: stretch
+   (heredado del grid externo) hace que IndicatorCard y el panel de abajo
+   efectivamente CREZCAN hasta llenar su renglón — por eso IndicatorCard
+   tiene margin-top: auto en su sparkline, para absorber ese espacio extra
+   sin que el resto del contenido se separe raro. */
 .indicator-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  row-gap: 10px;
 }
 
 .indicator-diagnostic {

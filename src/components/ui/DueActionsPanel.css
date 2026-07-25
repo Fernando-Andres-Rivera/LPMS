@@ -1,8 +1,8 @@
 /* min-height fija el piso: una tarjeta sin acciones a vencer ocupa el mismo
-   espacio que una con una acción normal, para que la cuadrícula de la
-   reunión quede pareja. Si hay más de una acción, el panel simplemente
-   crece — align-items: stretch en .indicators-grid pareja el resto de la
-   fila con la tarjeta más alta. */
+   espacio que una con una acción normal. Si hay más de una acción, o si la
+   tarjeta de indicador de al lado es más alta, el panel crece para llenar
+   su renglón del subgrid (ver .indicator-cell en dashboard.css) — así el
+   límite entre tarjeta y panel queda parejo en toda la fila. */
 .due-actions-panel {
   min-height: 168px;
   border: 1px solid var(--color-border);
@@ -11,7 +11,6 @@
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  flex: 1;
 }
 
 .due-actions-panel__title {
