@@ -20,34 +20,15 @@
   gap: 10px;
 }
 
+/* Un indicador, su análisis de causas y su plan de acción — cada uno
+   cubriendo el ancho completo de la pantalla, apilados en ese orden, en
+   vez de columnas lado a lado (antes el plan de acción quedaba angosto en
+   una columna aparte). */
 .board-columns {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 20px;
-  align-items: start;
-}
-
-.board-columns__main,
-.board-columns__side {
   display: flex;
   flex-direction: column;
   gap: 20px;
   min-width: 0;
-}
-
-.board-card--plans {
-  position: sticky;
-  top: 20px;
-}
-
-@media (max-width: 900px) {
-  .board-columns {
-    grid-template-columns: 1fr;
-  }
-
-  .board-card--plans {
-    position: static;
-  }
 }
 
 .board-card {

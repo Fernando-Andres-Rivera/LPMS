@@ -262,7 +262,6 @@ export function IndicatorBoardPage() {
       </div>
 
       <div className="board-columns">
-      <div className="board-columns__main">
       <section
         className={`board-card board-result${indicator.is_focus ? ' kpi-focus' : ''}`}
         style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
@@ -340,9 +339,7 @@ export function IndicatorBoardPage() {
           {latestCause ? 'Ver historial / registrar otra causa' : 'Registrar análisis de causa'}
         </Link>
       </section>
-      </div>
 
-      <div className="board-columns__side">
       <section className="board-card board-card--plans">
         <div className="board-plans-header">
           <h2>Plan de acción</h2>
@@ -438,7 +435,6 @@ export function IndicatorBoardPage() {
           ))}
         </div>
       </section>
-      </div>
       </div>
     </div>
   )
