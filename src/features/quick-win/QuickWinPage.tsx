@@ -8,6 +8,7 @@ import { today, daysAgo } from '../../lib/dateRange'
 import {
   createQuickWinBoard,
   createQuickWinCandidate,
+  escalateQuickWin,
   fetchQuickWinBoard,
   fetchQuickWinCandidates,
   setQuickWinEscalation,
@@ -16,7 +17,7 @@ import {
   type QuickWinBoard,
   type QuickWinCandidateWithNames,
 } from './quickWinApi'
-import { QuickWinEvidence } from './QuickWinEvidence'
+import { QuickWinCandidateCard } from './QuickWinCandidateCard'
 import { AxisIcon } from '../../components/ui/AxisIcon'
 import { PageHeader } from '../../components/ui/PageHeader'
 import type { Axis, Profile, Site } from '../../lib/types'
@@ -200,6 +201,12 @@ export function QuickWinPage() {
     if (board) setCandidates(await fetchQuickWinCandidates(board.id))
   }
 
+  async function handleEscalate(candidate: QuickWinCandidateWithNames) {
+    if (candidate.level >= 3) return
+    await escalateQuickWin(candidate.id, (candidate.level + 1) as 2 | 3)
+    if (board) setCandidates(await fetchQuickWinCandidates(board.id))
+  }
+
   return (
     <div className="quick-win-page">
       <PageHeader
@@ -274,53 +281,23 @@ export function QuickWinPage() {
           {error && <p className="quick-win-error">{error}</p>}
 
           <div className="quick-win-candidates">
-            {candidates.map((candidate) => (
-              <div
-                key={candidate.id}
-                className={`quick-win-candidate-card${
-                  candidate.is_selected
-                    ? candidate.needs_escalation
-                      ? ' quick-win-candidate-card--red'
-                      : ' quick-win-candidate-card--green'
-                    : ''
-                }`}
-              >
-                <div className="quick-win-candidate-card__axis" style={{ color: candidate.axisColor }}>
-                  <AxisIcon icon={allAxes.find((a) => a.id === candidate.axis_id)?.icon ?? null} size={16} />
-                  {candidate.axisName}
-                </div>
-                <p className="quick-win-candidate-card__description">{candidate.description}</p>
-                <p className="quick-win-candidate-card__meta">
-                  Responsable: {candidate.responsibleName ?? 'Sin asignar'}
-                  {candidate.execution_time && ` · Hora: ${candidate.execution_time.slice(0, 5)}`}
-                  {candidate.proposedByName && ` · Propuso: ${candidate.proposedByName}`}
-                </p>
-
-                <div className="quick-win-candidate-card__actions">
-                  <button type="button" onClick={() => handleToggleSelected(candidate)}>
-                    {candidate.is_selected ? '✓ Elegido como el win' : 'Elegir como el win'}
-                  </button>
-                  {candidate.is_selected && (
-                    <button
-                      type="button"
-                      className={`quick-win-toggle quick-win-toggle--${candidate.needs_escalation ? 'red' : 'green'}`}
-                      onClick={() => handleToggleEscalation(candidate)}
-                    >
-                      {candidate.needs_escalation ? '● Escala a Nivel 2' : '● Se resuelve aquí'}
-                    </button>
-                  )}
-                </div>
-
-                {candidate.is_selected && profile && organizationId && (
-                  <QuickWinEvidence
-                    candidateId={candidate.id}
-                    organizationId={organizationId}
-                    uploadedBy={profile.id}
-                    canRemove={canRemoveEvidence}
-                  />
-                )}
-              </div>
-            ))}
+            {candidates.map((candidate) =>
+              profile && organizationId ? (
+                <QuickWinCandidateCard
+                  key={candidate.id}
+                  candidate={candidate}
+                  organizationId={organizationId}
+                  uploadedBy={profile.id}
+                  canRemoveEvidence={canRemoveEvidence}
+                  // Una vez escalado, ya no es decisión de Nivel 1 — la
+                  // tarjeta queda de solo lectura con la nota de a qué
+                  // nivel subió.
+                  onToggleSelected={candidate.level === 1 ? () => handleToggleSelected(candidate) : undefined}
+                  onToggleEscalation={candidate.level === 1 ? () => handleToggleEscalation(candidate) : undefined}
+                  onEscalate={candidate.level === 1 ? () => handleEscalate(candidate) : undefined}
+                />
+              ) : null,
+            )}
 
             {showAddForm ? (
               <div className="quick-win-candidate-card quick-win-candidate-card--form">

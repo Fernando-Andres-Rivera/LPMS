@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { DueActionsPanel, type DueAction } from '../../components/ui/DueActionsPanel'
+import { EscalatedQuickWins } from '../quick-win/EscalatedQuickWins'
 import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
 import { defaultRange, today } from '../../lib/dateRange'
 import {
@@ -245,6 +246,16 @@ export function LevelDashboardPage() {
           </select>
         )}
       </div>
+
+      {(level === 2 || level === 3) && profile && organizationId && (
+        <EscalatedQuickWins
+          organizationId={organizationId}
+          level={level}
+          siteId={selectedSite}
+          uploadedBy={profile.id}
+          canRemoveEvidence={canRemoveEvidence}
+        />
+      )}
 
       {loading && <p>Cargando indicadores…</p>}
 
