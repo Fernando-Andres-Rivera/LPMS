@@ -59,6 +59,13 @@
   font-size: 0.85rem;
   cursor: pointer;
   color: var(--color-text);
+  /* manipulation: quita el retraso de ~300ms que algunos navegadores
+     móviles (y WebViews embebidos, ej. el de WhatsApp) meten antes de
+     confirmar un tap, por si el usuario iba a hacer doble-tap para zoom —
+     sin esto, un tap real a veces no se distingue bien de un toque que
+     empieza a hacer scroll, y el botón "no responde" a la primera. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.08);
 }
 
 .indicator-cause-picker__children li:hover {

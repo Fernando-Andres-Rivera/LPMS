@@ -350,6 +350,7 @@ export function ParetoPage() {
           </p>
 
           <div className="pareto-chart">
+            <div style={{ minWidth: Math.max(320, chartData.length * 110), height: 320 }}>
             <ResponsiveContainer width="100%" height={320}>
               <ComposedChart
                 data={chartData}
@@ -360,7 +361,7 @@ export function ParetoPage() {
                 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={<ParetoAxisTick />} interval={0} height={50} />
+                <XAxis dataKey="name" tick={<ParetoAxisTick />} interval={0} height={65} />
                 <YAxis yAxisId="left" allowDecimals={false} />
                 <YAxis yAxisId="right" orientation="right" domain={[0, 100]} unit="%" />
                 <Tooltip />
@@ -375,6 +376,7 @@ export function ParetoPage() {
                 />
               </ComposedChart>
             </ResponsiveContainer>
+            </div>
           </div>
 
           <div className="table-scroll">

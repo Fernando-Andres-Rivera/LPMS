@@ -150,6 +150,10 @@
 
 .board-causes-pareto {
   margin-bottom: 18px;
+  /* Con muchas causas en una pantalla angosta, el nombre no cabe sin
+     encimarse con el de al lado — mejor desplazar horizontalmente (el
+     interior lleva un min-width según la cantidad de barras). */
+  overflow-x: auto;
 }
 
 .board-plan-item__cause {

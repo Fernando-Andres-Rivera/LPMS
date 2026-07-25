@@ -52,6 +52,12 @@
   box-shadow: var(--shadow-card);
   padding: 16px;
   margin-bottom: 20px;
+  /* Con muchas barras en una pantalla angosta, cada nombre no cabe sin
+     encimarse con el de al lado por más que se envuelva en líneas — mejor
+     dejar que el gráfico se desplace horizontalmente (el interior lleva un
+     min-width según la cantidad de barras) que comprimir el texto hasta
+     que sea ilegible. */
+  overflow-x: auto;
 }
 
 .pareto-table {

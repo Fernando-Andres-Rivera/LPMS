@@ -320,10 +320,11 @@ export function IndicatorBoardPage() {
         </p>
         {causeParetoData.length > 0 && (
           <div className="board-causes-pareto">
+            <div style={{ minWidth: Math.max(320, causeParetoData.length * 110), height: 220 }}>
             <ResponsiveContainer width="100%" height={220}>
               <ComposedChart data={causeParetoData} margin={{ bottom: 12 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={<ParetoAxisTick />} interval={0} height={50} />
+                <XAxis dataKey="name" tick={<ParetoAxisTick />} interval={0} height={65} />
                 <YAxis yAxisId="left" allowDecimals={false} />
                 <YAxis yAxisId="right" orientation="right" domain={[0, 100]} unit="%" />
                 <Tooltip />
@@ -338,6 +339,7 @@ export function IndicatorBoardPage() {
                 />
               </ComposedChart>
             </ResponsiveContainer>
+            </div>
           </div>
         )}
         {causeParetoData.length === 0 && <p>Sin causas registradas dentro de este rango.</p>}
