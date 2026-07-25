@@ -6,6 +6,9 @@ export interface QuickWinBoard {
   site_id: string
   board_date: string
   problema_del_dia: string | null
+  /** Pilar SMQDCEP del problema del día — independiente del pilar de cada
+   * win candidato, que puede ser de un eje distinto al del problema. */
+  axis_id: string | null
   created_by: string | null
   created_at: string
   updated_at: string
@@ -87,6 +90,16 @@ export async function updateProblemaDelDia(boardId: string, problemaDelDia: stri
   if (error) throw error
 }
 
+/** Pilar SMQDCEP del problema del día — separado del texto porque cambia
+ * con el <select>, no al perder foco como el textarea. */
+export async function updateProblemaAxis(boardId: string, axisId: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('quick_win_boards')
+    .update({ axis_id: axisId, updated_at: new Date().toISOString() })
+    .eq('id', boardId)
+  if (error) throw error
+}
+
 const CANDIDATE_SELECT =
   '*, axes(name, color, icon), responsible:profiles!quick_win_candidates_responsible_id_fkey(full_name), proposer:profiles!quick_win_candidates_proposed_by_fkey(full_name)'
 
@@ -164,10 +177,21 @@ export async function createQuickWinCandidate(params: {
   if (error) throw error
 }
 
-/** Marca (o desmarca) un candidato como "el win" que el equipo eligió —
- * no es excluyente entre sí: si la reunión decide sacar adelante más de un
- * win ese día, cada uno se marca por su cuenta. */
-export async function setQuickWinSelected(id: string, isSelected: boolean): Promise<void> {
+/**
+ * Marca (o desmarca) un candidato como "el win" que el equipo eligió —
+ * exclusivo dentro del tablero (un solo win elegido por sitio/día): al
+ * elegir uno nuevo, cualquier otro que ya estuviera marcado en este mismo
+ * tablero se desmarca primero.
+ */
+export async function setQuickWinSelected(boardId: string, id: string, isSelected: boolean): Promise<void> {
+  if (isSelected) {
+    const { error: deselectError } = await supabase
+      .from('quick_win_candidates')
+      .update({ is_selected: false })
+      .eq('board_id', boardId)
+      .neq('id', id)
+    if (deselectError) throw deselectError
+  }
   const { error } = await supabase.from('quick_win_candidates').update({ is_selected: isSelected }).eq('id', id)
   if (error) throw error
 }

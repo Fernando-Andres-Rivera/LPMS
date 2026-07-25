@@ -82,6 +82,25 @@
   resize: vertical;
 }
 
+.quick-win-problema-axis {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  max-width: 260px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.quick-win-problema-axis select {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-weight: 400;
+  font-family: inherit;
+}
+
 .quick-win-saving {
   display: inline-block;
   margin-top: 6px;

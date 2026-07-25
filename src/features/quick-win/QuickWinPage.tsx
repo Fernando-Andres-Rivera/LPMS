@@ -13,6 +13,7 @@ import {
   fetchQuickWinCandidates,
   setQuickWinEscalation,
   setQuickWinSelected,
+  updateProblemaAxis,
   updateProblemaDelDia,
   type QuickWinBoard,
   type QuickWinCandidateWithNames,
@@ -35,6 +36,8 @@ export function QuickWinPage() {
   const [boardDate, setBoardDate] = useState(today())
   const [board, setBoard] = useState<QuickWinBoard | null>(null)
   const [problemaDelDia, setProblemaDelDia] = useState('')
+  const [problemaAxisId, setProblemaAxisId] = useState('')
+  const [savingProblemaAxis, setSavingProblemaAxis] = useState(false)
   const [candidates, setCandidates] = useState<QuickWinCandidateWithNames[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [allAxes, setAllAxes] = useState<Axis[]>([])
@@ -88,6 +91,7 @@ export function QuickWinPage() {
       if (cancelled) return
       setBoard(boardData)
       setProblemaDelDia(boardData?.problema_del_dia ?? '')
+      setProblemaAxisId(boardData?.axis_id ?? '')
       const candidatesData = boardData ? await fetchQuickWinCandidates(boardData.id) : []
       if (cancelled) return
       setCandidates(candidatesData)
@@ -160,6 +164,21 @@ export function QuickWinPage() {
     }
   }
 
+  async function handleChangeProblemaAxis(axisId: string) {
+    setProblemaAxisId(axisId)
+    setSavingProblemaAxis(true)
+    setError(null)
+    try {
+      const currentBoard = await ensureBoard()
+      await updateProblemaAxis(currentBoard.id, axisId || null)
+      setBoard({ ...currentBoard, axis_id: axisId || null })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el pilar del problema.')
+    } finally {
+      setSavingProblemaAxis(false)
+    }
+  }
+
   async function handleAddCandidate() {
     if (!newAxisId || !newDescription.trim() || !profile) {
       setError('Elige el pilar y describe el win propuesto.')
@@ -192,8 +211,9 @@ export function QuickWinPage() {
   }
 
   async function handleToggleSelected(candidate: QuickWinCandidateWithNames) {
-    await setQuickWinSelected(candidate.id, !candidate.is_selected)
-    if (board) setCandidates(await fetchQuickWinCandidates(board.id))
+    if (!board) return
+    await setQuickWinSelected(board.id, candidate.id, !candidate.is_selected)
+    setCandidates(await fetchQuickWinCandidates(board.id))
   }
 
   async function handleToggleEscalation(candidate: QuickWinCandidateWithNames) {
@@ -268,6 +288,18 @@ export function QuickWinPage() {
         <>
           <section className="quick-win-card">
             <h2>Problema del día</h2>
+            <label className="quick-win-problema-axis">
+              Pilar
+              <select value={problemaAxisId} onChange={(e) => handleChangeProblemaAxis(e.target.value)}>
+                <option value="">Sin pilar asignado</option>
+                {sitePillars.map((axis) => (
+                  <option key={axis.id} value={axis.id}>
+                    {axis.name}
+                  </option>
+                ))}
+              </select>
+              {savingProblemaAxis && <span className="quick-win-saving">Guardando…</span>}
+            </label>
             <textarea
               rows={2}
               value={problemaDelDia}
