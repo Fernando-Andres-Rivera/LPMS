@@ -72,6 +72,16 @@
   border-color: var(--color-primary);
 }
 
+.indicator-cause-picker__children li.indicator-cause-picker__children-item--active {
+  border-color: var(--color-primary);
+  background: rgba(63, 81, 181, 0.1);
+}
+
+.indicator-cause-picker__children li.indicator-cause-picker__children-item--active button {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
 .indicator-cause-picker__children button.indicator-cause-picker__delete {
   padding: 10px 16px;
   min-width: 44px;

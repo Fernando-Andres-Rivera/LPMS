@@ -3,8 +3,6 @@ import { createIndicatorRootCause, fetchIndicatorRootCauses } from './standardCa
 import type { IndicatorRootCause } from '../../lib/types'
 import './indicator-cause-picker.css'
 
-const OTHER_VALUE = '__other__'
-
 interface RootCausePickerProps {
   indicatorId: string
   createdBy: string
@@ -18,13 +16,17 @@ function findMatch(causes: IndicatorRootCause[], text: string): IndicatorRootCau
 }
 
 /**
- * Desplegable de "causa raíz identificada" por indicador, en vez de texto
- * libre: reduce que "frecuencia de cambio de EPP" y "cambio de EPP muy
- * espaciado" queden como dos causas distintas cuando en realidad son la
- * misma. "Otra, especificar" permite escribir una nueva y queda guardada en
- * el catálogo de este indicador — si lo que se escribe ya existe (sin
- * distinguir mayúsculas), se reutiliza la entrada existente en vez de crear
- * un casi-duplicado.
+ * Botones de "causa raíz identificada" por indicador (en vez de un
+ * desplegable nativo `<select>`), para reutilizar una causa ya registrada
+ * con un solo toque: reduce que "frecuencia de cambio de EPP" y "cambio de
+ * EPP muy espaciado" queden como dos causas distintas cuando en realidad
+ * son la misma. Un `<select>` nativo no abre de forma confiable dentro de
+ * algunos navegadores embebidos (ej. el navegador in-app de WhatsApp) —
+ * los botones, en cambio, responden igual en cualquier navegador. "+ Otra
+ * causa" permite escribir una nueva y queda guardada en el catálogo de
+ * este indicador — si lo que se escribe ya existe (sin distinguir
+ * mayúsculas), se reutiliza la entrada existente en vez de crear un
+ * casi-duplicado.
  */
 export function RootCausePicker({ indicatorId, createdBy, value, onChange }: RootCausePickerProps) {
   const [causes, setCauses] = useState<IndicatorRootCause[]>([])
@@ -46,15 +48,15 @@ export function RootCausePicker({ indicatorId, createdBy, value, onChange }: Roo
     setCustomValue(value)
   }
 
-  function handleSelectChange(next: string) {
-    if (next === OTHER_VALUE) {
-      setShowCustom(true)
-      setCustomValue('')
-      onChange('')
-      return
-    }
+  function selectExisting(cause: IndicatorRootCause) {
     setShowCustom(false)
-    onChange(next)
+    onChange(cause.text)
+  }
+
+  function startCustom() {
+    setShowCustom(true)
+    setCustomValue('')
+    onChange('')
   }
 
   async function handleCustomBlur() {
@@ -111,16 +113,32 @@ export function RootCausePicker({ indicatorId, createdBy, value, onChange }: Roo
   }
 
   return (
-    <select value={value} onChange={(e) => handleSelectChange(e.target.value)} required>
-      <option value="" disabled>
-        Selecciona una causa raíz
-      </option>
-      {causes.map((c) => (
-        <option key={c.id} value={c.text}>
-          {c.text}
-        </option>
-      ))}
-      <option value={OTHER_VALUE}>Otra, especificar…</option>
-    </select>
+    <div className="indicator-cause-picker">
+      {causes.length > 0 ? (
+        <ul className="indicator-cause-picker__children">
+          {causes.map((c) => (
+            <li key={c.id} className={value === c.text ? 'indicator-cause-picker__children-item--active' : ''}>
+              <button type="button" onClick={() => selectExisting(c)}>
+                {c.text}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="indicator-cause-picker__hint">Todavía no hay causas raíz registradas para este indicador.</p>
+      )}
+
+      <div className="indicator-cause-picker__new">
+        <button type="button" onClick={startCustom}>
+          + Otra causa
+        </button>
+      </div>
+
+      {value && !showCustom && (
+        <p className="indicator-cause-picker__selected">
+          Causa elegida: <strong>{value}</strong>
+        </p>
+      )}
+    </div>
   )
 }
