@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import {
+  addPillarResponsible,
   assignSiteToOrgUnit,
   createOrgUnit,
   createSite,
@@ -10,8 +11,10 @@ import {
   deleteSiteLocation,
   fetchOrganizationAxisStates,
   fetchOrgUnits,
+  fetchPillarResponsibles,
   fetchSiteLocationsForSites,
   fetchSitesWithOrgUnit,
+  removePillarResponsible,
   renameOrgUnit,
   renameSite,
   renameSiteLocation,
@@ -19,11 +22,19 @@ import {
   setSiteActive,
   setSiteLocationActive,
   type AxisState,
+  type PillarResponsible,
 } from './orgStructureApi'
+import { fetchOrganizationUsers, type OrgUserRow } from '../onboarding/onboardingApi'
 import type { OrgUnit, Site, SiteLocation } from '../../lib/types'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { AxisIcon } from '../../components/ui/AxisIcon'
 import './org-structure.css'
+
+/** Roles que gestionan pilares en toda la organización, sin importar el
+ * sitio — pueden ser responsables de un pilar en cualquier sitio, a
+ * diferencia de administrativo/operativo que necesitan estar asignados a
+ * ESE sitio puntual (mismo criterio que user_has_site en el backend). */
+const ORG_WIDE_ROLES = ['admin_consultora', 'admin_cliente', 'gerente']
 
 type StructureKind = 'org_unit' | 'site' | 'location'
 
@@ -54,6 +65,11 @@ export function OrgStructurePage() {
   const [savingAxisId, setSavingAxisId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const [users, setUsers] = useState<OrgUserRow[]>([])
+  const [responsibles, setResponsibles] = useState<PillarResponsible[]>([])
+  const [savingResponsibleCell, setSavingResponsibleCell] = useState<string | null>(null)
+  const canDeleteRecords = profile?.role === 'admin_consultora'
+
   const [newBusinessUnit, setNewBusinessUnit] = useState('')
   const [newRegionName, setNewRegionName] = useState<Record<string, string>>({})
   const [newLocationName, setNewLocationName] = useState<Record<string, string>>({})
@@ -72,14 +88,18 @@ export function OrgStructurePage() {
   async function loadAll() {
     if (!organizationId) return
     setLoading(true)
-    const [orgUnitsData, sitesData, axisStatesData] = await Promise.all([
+    const [orgUnitsData, sitesData, axisStatesData, usersData, responsiblesData] = await Promise.all([
       fetchOrgUnits(organizationId),
       fetchSitesWithOrgUnit(organizationId),
       fetchOrganizationAxisStates(organizationId),
+      fetchOrganizationUsers(organizationId),
+      fetchPillarResponsibles(organizationId),
     ])
     setOrgUnits(orgUnitsData)
     setSites(sitesData)
     setAxisStates(axisStatesData)
+    setUsers(usersData)
+    setResponsibles(responsiblesData)
 
     const locations = await fetchSiteLocationsForSites(sitesData.map((s) => s.id))
     const grouped: Record<string, SiteLocation[]> = {}
@@ -98,11 +118,15 @@ export function OrgStructurePage() {
       fetchOrgUnits(organizationId),
       fetchSitesWithOrgUnit(organizationId),
       fetchOrganizationAxisStates(organizationId),
-    ]).then(async ([orgUnitsData, sitesData, axisStatesData]) => {
+      fetchOrganizationUsers(organizationId),
+      fetchPillarResponsibles(organizationId),
+    ]).then(async ([orgUnitsData, sitesData, axisStatesData, usersData, responsiblesData]) => {
       if (cancelled) return
       setOrgUnits(orgUnitsData)
       setSites(sitesData)
       setAxisStates(axisStatesData)
+      setUsers(usersData)
+      setResponsibles(responsiblesData)
 
       const locations = await fetchSiteLocationsForSites(sitesData.map((s) => s.id))
       if (cancelled) return
@@ -127,6 +151,32 @@ export function OrgStructurePage() {
       setAxisStates((current) => current.map((s) => (s.axis.id === axisId ? { ...s, active } : s)))
     } finally {
       setSavingAxisId(null)
+    }
+  }
+
+  function cellKey(siteId: string, axisId: string): string {
+    return `${siteId}:${axisId}`
+  }
+
+  async function handleAddResponsible(siteId: string, axisId: string, profileId: string) {
+    if (!organizationId || !profile || !profileId) return
+    setSavingResponsibleCell(cellKey(siteId, axisId))
+    try {
+      await addPillarResponsible({ organizationId, siteId, axisId, profileId, createdBy: profile.id })
+      setResponsibles(await fetchPillarResponsibles(organizationId))
+    } finally {
+      setSavingResponsibleCell(null)
+    }
+  }
+
+  async function handleRemoveResponsible(responsible: PillarResponsible) {
+    if (!organizationId) return
+    setSavingResponsibleCell(cellKey(responsible.site_id, responsible.axis_id))
+    try {
+      await removePillarResponsible(responsible.id)
+      setResponsibles((current) => current.filter((r) => r.id !== responsible.id))
+    } finally {
+      setSavingResponsibleCell(null)
     }
   }
 
@@ -293,6 +343,7 @@ export function OrgStructurePage() {
 
   const orgUnitOptions = buildOrgUnitOptions(orgUnits)
   const businessUnits = orgUnits.filter((u) => u.level === 2)
+  const activeAxes = axisStates.filter((s) => s.active).map((s) => s.axis)
 
   if (loading) return <p>Cargando estructura organizacional…</p>
 
@@ -505,6 +556,91 @@ export function OrgStructurePage() {
             </label>
           ))}
         </div>
+      </section>
+
+      <section className="org-structure-card">
+        <h2>4. Responsables por pilar</h2>
+        <p className="org-structure-card__subtitle">
+          Quién responde por cada pilar en cada sitio — puede haber más de uno (ej. un responsable y su
+          suplente). Solo se listan los sitios y los pilares activos de arriba, y solo se puede elegir gente
+          asignada a ese sitio (o con un rol de gestión).
+        </p>
+        {activeAxes.length === 0 ? (
+          <p>Activa al menos un pilar arriba para poder asignar responsables.</p>
+        ) : sites.length === 0 ? (
+          <p>Crea al menos un sitio arriba para poder asignar responsables.</p>
+        ) : (
+          <div className="table-scroll">
+            <table className="org-structure-responsibles-table">
+              <thead>
+                <tr>
+                  <th>Sitio</th>
+                  {activeAxes.map((axis) => (
+                    <th key={axis.id}>
+                      <span className="org-structure-responsibles-axis-header" style={{ color: axis.color }}>
+                        <AxisIcon icon={axis.icon} size={14} /> {axis.name}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sites.map((site) => {
+                  const eligibleUsers = users.filter(
+                    (u) => ORG_WIDE_ROLES.includes(u.role) || u.siteIds.includes(site.id),
+                  )
+                  return (
+                    <tr key={site.id}>
+                      <td>{site.name}</td>
+                      {activeAxes.map((axis) => {
+                        const cellResponsibles = responsibles.filter(
+                          (r) => r.site_id === site.id && r.axis_id === axis.id,
+                        )
+                        const assignedIds = new Set(cellResponsibles.map((r) => r.profile_id))
+                        const availableUsers = eligibleUsers.filter((u) => !assignedIds.has(u.id))
+                        const saving = savingResponsibleCell === cellKey(site.id, axis.id)
+                        return (
+                          <td key={axis.id} className="org-structure-responsibles-cell">
+                            {cellResponsibles.map((r) => (
+                              <span key={r.id} className="org-structure-responsible-chip">
+                                {r.profileName}
+                                {canDeleteRecords && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveResponsible(r)}
+                                    disabled={saving}
+                                    title={`Quitar a ${r.profileName}`}
+                                  >
+                                    ×
+                                  </button>
+                                )}
+                              </span>
+                            ))}
+                            {availableUsers.length > 0 && (
+                              <select
+                                className="org-structure-responsible-add"
+                                value=""
+                                disabled={saving}
+                                onChange={(e) => handleAddResponsible(site.id, axis.id, e.target.value)}
+                              >
+                                <option value="">+ Agregar…</option>
+                                {availableUsers.map((u) => (
+                                  <option key={u.id} value={u.id}>
+                                    {u.full_name}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   )

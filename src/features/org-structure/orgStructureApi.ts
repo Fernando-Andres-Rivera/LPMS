@@ -234,3 +234,65 @@ export async function fetchSitesWithOrgUnit(organizationId: string): Promise<Sit
   if (error) throw error
   return data ?? []
 }
+
+export interface PillarResponsible {
+  id: string
+  site_id: string
+  axis_id: string
+  profile_id: string
+  profileName: string
+}
+
+interface RawPillarResponsibleRow {
+  id: string
+  site_id: string
+  axis_id: string
+  profile_id: string
+  profiles: { full_name: string } | null
+}
+
+/** Responsables de cada pilar por sitio, para toda la organización de una
+ * sola vez — la matriz sitio × pilar los agrupa en el cliente en vez de
+ * pedir una consulta por celda. */
+export async function fetchPillarResponsibles(organizationId: string): Promise<PillarResponsible[]> {
+  const { data, error } = await supabase
+    .from('pillar_responsibles')
+    .select('id, site_id, axis_id, profile_id, profiles(full_name)')
+    .eq('organization_id', organizationId)
+
+  if (error) throw error
+  return ((data ?? []) as unknown as RawPillarResponsibleRow[]).map((row) => ({
+    id: row.id,
+    site_id: row.site_id,
+    axis_id: row.axis_id,
+    profile_id: row.profile_id,
+    profileName: row.profiles?.full_name ?? '—',
+  }))
+}
+
+/** Agrega un responsable a un pilar de un sitio. Si esa persona ya estaba
+ * asignada a ese pilar/sitio (choque de unicidad), no es un error de
+ * verdad — se ignora en silencio en vez de mostrar un mensaje confuso. */
+export async function addPillarResponsible(params: {
+  organizationId: string
+  siteId: string
+  axisId: string
+  profileId: string
+  createdBy: string
+}): Promise<void> {
+  const { error } = await supabase.from('pillar_responsibles').insert({
+    organization_id: params.organizationId,
+    site_id: params.siteId,
+    axis_id: params.axisId,
+    profile_id: params.profileId,
+    created_by: params.createdBy,
+  })
+  if (error && error.code !== '23505') throw error
+}
+
+/** Quita un responsable de un pilar — borrado físico, restringido a
+ * admin_consultora por RLS. */
+export async function removePillarResponsible(id: string): Promise<void> {
+  const { error } = await supabase.from('pillar_responsibles').delete().eq('id', id)
+  if (error) throw error
+}
