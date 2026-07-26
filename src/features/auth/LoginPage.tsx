@@ -2,26 +2,9 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Turnstile } from '../../components/ui/Turnstile'
+import { CascadeSystem } from './CascadeSystem'
 import { describeAuthError } from './authErrorMessages'
 import './login.css'
-
-const CASCADE_STAGES = [
-  {
-    key: 1,
-    tag: 'Nivel 1 · 07:00 AM',
-    text: 'Operarios y líder de equipo revisan el tablero SQDCP y resuelven bloqueos en minutos.',
-  },
-  {
-    key: 2,
-    tag: 'Nivel 2 · 08:30 AM',
-    text: 'Supervisión identifica tendencias entre equipos y asigna soporte donde se necesita.',
-  },
-  {
-    key: 3,
-    tag: 'Nivel 3 · 10:00 AM',
-    text: 'Dirección revisa las desviaciones del sistema y define las prioridades del día.',
-  },
-]
 
 type Mode = 'login' | 'register' | 'forgot'
 
@@ -123,20 +106,13 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-hero">
-        <img
-          src="/cascada-niveles-lpms-v2.png"
-          alt="La cascada diaria de reuniones por niveles en LPMS: tres plataformas industriales con anillos de luz, equipos revisando indicadores en pantallas digitales, del nivel operativo a la dirección."
-          className="login-hero__image"
-        />
+        {/* La planta queda de ambiente, muy atenuada: el protagonista es el
+            sistema que se dibuja encima. */}
+        <img src="/cascada-niveles-lpms-v2.png" alt="" aria-hidden="true" className="login-hero__image" />
         <div className="login-hero__scrim" aria-hidden="true" />
 
-        <div className="login-hero__captions">
-          {CASCADE_STAGES.map((stage) => (
-            <div key={stage.key} className={`login-hero__caption login-hero__caption--${stage.key}`}>
-              <span className="login-hero__caption-tag">{stage.tag}</span>
-              <p>{stage.text}</p>
-            </div>
-          ))}
+        <div className="login-hero__system">
+          <CascadeSystem />
         </div>
       </div>
 
@@ -263,6 +239,28 @@ export function LoginPage() {
             )}
           </div>
         </form>
+
+        {/* En móvil la portada no cabe legible (el nombre de cada equipo
+            quedaría en ~10px), así que el sistema se resume aquí — debajo del
+            formulario, para que entrar siga siendo lo primero. */}
+        <ol className="login-cascade-mini">
+          <li className="login-cascade-mini__step login-cascade-mini__step--3">
+            <span className="login-cascade-mini__level">Nivel 3</span>
+            Gerencia + Director de Planta
+          </li>
+          <li className="login-cascade-mini__step login-cascade-mini__step--2">
+            <span className="login-cascade-mini__level">Nivel 2</span>
+            Líderes de Equipo + Jefe de Producción
+          </li>
+          <li className="login-cascade-mini__step login-cascade-mini__step--1">
+            <span className="login-cascade-mini__level">Nivel 1</span>
+            Operarios + Líder de Equipo
+          </li>
+        </ol>
+        <p className="login-cascade-mini__flow">
+          <span className="is-up">↑ Los resultados suben</span>
+          <span className="is-down">↓ El soporte baja</span>
+        </p>
 
         <div className="login-foot" aria-hidden="true">
           <span>Cascada diaria por niveles</span>
