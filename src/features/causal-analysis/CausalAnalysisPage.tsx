@@ -307,6 +307,7 @@ export function CausalAnalysisPage() {
             indicator={indicator}
             measurementId={measurementId}
             createdBy={profile.id}
+            canDelete={profile.role === 'admin_consultora'}
             onSaved={loadAll}
           />
         )

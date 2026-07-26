@@ -21,6 +21,9 @@ interface DueActionsPanelProps {
   organizationId: string
   uploadedBy: string
   canRemoveEvidence: boolean
+  /** Borrado físico del plan — solo admin_consultora. */
+  canDeleteRecords: boolean
+  onDelete: (action: DueAction) => void
 }
 
 /**
@@ -38,6 +41,8 @@ export function DueActionsPanel({
   organizationId,
   uploadedBy,
   canRemoveEvidence,
+  canDeleteRecords,
+  onDelete,
 }: DueActionsPanelProps) {
   return (
     <div className="due-actions-panel">
@@ -82,6 +87,15 @@ export function DueActionsPanel({
                     uploadedBy={uploadedBy}
                     canRemove={canRemoveEvidence}
                   />
+                  {canDeleteRecords && (
+                    <button
+                      type="button"
+                      className="due-action-item__delete"
+                      onClick={() => onDelete(action)}
+                    >
+                      Eliminar plan
+                    </button>
+                  )}
                 </div>
               </div>
             )

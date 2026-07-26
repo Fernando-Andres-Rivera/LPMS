@@ -236,6 +236,18 @@
   vertical-align: middle;
 }
 
+.indicator-form__target-delete {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-fail);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .indicator-form__error {
   color: var(--color-fail);
 }

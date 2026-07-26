@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  deleteQuickWinCandidate,
   escalateQuickWin,
   fetchEscalatedQuickWins,
   setQuickWinEscalation,
@@ -14,6 +15,7 @@ interface EscalatedQuickWinsProps {
   siteId: string | null
   uploadedBy: string
   canRemoveEvidence: boolean
+  canDeleteRecords: boolean
 }
 
 /**
@@ -22,7 +24,14 @@ interface EscalatedQuickWinsProps {
  * acuerdo en el win, su(s) responsable(s) y la hora de entrega, igual que
  * ya se decidió en la reunión de origen.
  */
-export function EscalatedQuickWins({ organizationId, level, siteId, uploadedBy, canRemoveEvidence }: EscalatedQuickWinsProps) {
+export function EscalatedQuickWins({
+  organizationId,
+  level,
+  siteId,
+  uploadedBy,
+  canRemoveEvidence,
+  canDeleteRecords,
+}: EscalatedQuickWinsProps) {
   const [wins, setWins] = useState<EscalatedQuickWin[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -56,6 +65,18 @@ export function EscalatedQuickWins({ organizationId, level, siteId, uploadedBy, 
     await reload()
   }
 
+  async function handleDelete(win: EscalatedQuickWin) {
+    if (
+      !window.confirm(
+        `¿Eliminar definitivamente el win "${win.description}"? Se borra también su evidencia adjunta. Esta acción no se puede deshacer.`,
+      )
+    ) {
+      return
+    }
+    await deleteQuickWinCandidate(win.id)
+    await reload()
+  }
+
   if (loading || wins.length === 0) return null
 
   return (
@@ -75,6 +96,8 @@ export function EscalatedQuickWins({ organizationId, level, siteId, uploadedBy, 
             siteName={win.siteName}
             onToggleEscalation={() => handleToggleEscalation(win.id, win.needs_escalation)}
             onEscalate={level < 3 ? () => handleEscalate(win.id, (level + 1) as 2 | 3) : undefined}
+            canDeleteRecords={canDeleteRecords}
+            onDelete={() => handleDelete(win)}
           />
         ))}
       </div>

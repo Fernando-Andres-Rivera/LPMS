@@ -217,3 +217,10 @@ export async function escalateQuickWin(id: string, nextLevel: 2 | 3): Promise<vo
     .eq('id', id)
   if (error) throw error
 }
+
+/** Borrado físico e irreversible — restringido a admin_consultora por RLS.
+ * La evidencia adjunta al win se borra en cascada. */
+export async function deleteQuickWinCandidate(id: string): Promise<void> {
+  const { error } = await supabase.from('quick_win_candidates').delete().eq('id', id)
+  if (error) throw error
+}

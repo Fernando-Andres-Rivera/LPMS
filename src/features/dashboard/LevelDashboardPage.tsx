@@ -13,7 +13,7 @@ import {
   fetchIndicatorsByLevel,
   fetchMeasurementsInRange,
 } from './dashboardApi'
-import { fetchActionPlansDueForIndicators, advanceActionPlanStatus } from '../action-plans/actionPlansApi'
+import { fetchActionPlansDueForIndicators, advanceActionPlanStatus, deleteActionPlan } from '../action-plans/actionPlansApi'
 import { fetchSites } from '../indicators/indicatorsApi'
 import {
   computeDaysWithoutAccidents,
@@ -44,6 +44,8 @@ export function LevelDashboardPage() {
   // pueden quitar evidencia ya subida.
   const canRemoveEvidence =
     profile?.role === 'admin_consultora' || profile?.role === 'admin_cliente' || profile?.role === 'gerente'
+  // Borrado físico de registros: solo admin_consultora.
+  const canDeleteRecords = profile?.role === 'admin_consultora'
   const [axes, setAxes] = useState<Axis[]>([])
   const [sites, setSites] = useState<Site[]>([])
   // null = todavía no lo tocó el usuario; en ese caso se usa el primer sitio asignado por defecto.
@@ -201,6 +203,22 @@ export function LevelDashboardPage() {
     }
   }
 
+  async function handleDeletePlan(indicatorId: string, action: DueAction) {
+    if (
+      !window.confirm(
+        `¿Eliminar definitivamente el plan "${action.description}"? Se borra también su evidencia adjunta. Esta acción no se puede deshacer.`,
+      )
+    ) {
+      return
+    }
+    await deleteActionPlan(action.id)
+    setDueActions((current) => {
+      const next = new Map(current)
+      next.set(indicatorId, (next.get(indicatorId) ?? []).filter((a) => a.id !== action.id))
+      return next
+    })
+  }
+
   const axisById = new Map(axes.map((a) => [a.id, a]))
   const rowsByAxis = new Map<string, IndicatorRow[]>()
   for (const row of rows) {
@@ -254,6 +272,7 @@ export function LevelDashboardPage() {
           siteId={selectedSite}
           uploadedBy={profile.id}
           canRemoveEvidence={canRemoveEvidence}
+          canDeleteRecords={canDeleteRecords}
         />
       )}
 
@@ -291,6 +310,8 @@ export function LevelDashboardPage() {
                       organizationId={organizationId}
                       uploadedBy={profile.id}
                       canRemoveEvidence={canRemoveEvidence}
+                      canDeleteRecords={canDeleteRecords}
+                      onDelete={(action) => handleDeletePlan(indicator.id, action)}
                     />
                   )}
                 </div>

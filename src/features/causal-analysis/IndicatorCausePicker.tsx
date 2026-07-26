@@ -14,6 +14,8 @@ interface IndicatorCausePickerProps {
   /** Se llama después de borrar un nodo, para que el padre recargue el árbol
    * y las etiquetas (el borrado cascada también quita etiquetas). */
   onDeleted: () => void | Promise<void>
+  /** Solo admin_consultora puede borrar nodos del árbol. */
+  canDelete: boolean
 }
 
 /**
@@ -32,6 +34,7 @@ export function IndicatorCausePicker({
   selected,
   onSelectedChange,
   onDeleted,
+  canDelete,
 }: IndicatorCausePickerProps) {
   const [path, setPath] = useState<IndicatorCause[]>([])
   const [newNodeName, setNewNodeName] = useState('')
@@ -153,14 +156,16 @@ export function IndicatorCausePicker({
                 <button type="button" onClick={() => descend(child)}>
                   {child.name}
                 </button>
-                <button
-                  type="button"
-                  className="indicator-cause-picker__delete"
-                  title={`Eliminar ${child.name}`}
-                  onClick={() => setConfirmingDeleteId(child.id)}
-                >
-                  ×
-                </button>
+                {canDelete && (
+                  <button
+                    type="button"
+                    className="indicator-cause-picker__delete"
+                    title={`Eliminar ${child.name}`}
+                    onClick={() => setConfirmingDeleteId(child.id)}
+                  >
+                    ×
+                  </button>
+                )}
               </li>
             )
           })}

@@ -87,3 +87,11 @@ export async function advanceActionPlanStatus(id: string, status: PdcaStatus): P
 
   if (error) throw error
 }
+
+/** Borrado físico e irreversible — restringido a admin_consultora por RLS.
+ * La evidencia adjunta al plan se borra en cascada (el archivo en Storage
+ * queda huérfano, pero deja de estar referenciado). */
+export async function deleteActionPlan(id: string): Promise<void> {
+  const { error } = await supabase.from('action_plans').delete().eq('id', id)
+  if (error) throw error
+}

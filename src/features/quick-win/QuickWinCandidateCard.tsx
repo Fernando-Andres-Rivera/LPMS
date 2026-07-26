@@ -18,6 +18,9 @@ interface QuickWinCandidateCardProps {
   /** En el panel de wins escalados (Nivel 2/3) se ven de varios sitios a
    * la vez, así que hace falta aclarar de cuál es cada uno. */
   siteName?: string
+  /** Borrado físico del win — solo admin_consultora. */
+  canDeleteRecords: boolean
+  onDelete: () => void
 }
 
 /**
@@ -35,6 +38,8 @@ export function QuickWinCandidateCard({
   onToggleEscalation,
   onEscalate,
   siteName,
+  canDeleteRecords,
+  onDelete,
 }: QuickWinCandidateCardProps) {
   return (
     <div
@@ -91,6 +96,12 @@ export function QuickWinCandidateCard({
           uploadedBy={uploadedBy}
           canRemove={canRemoveEvidence}
         />
+      )}
+
+      {canDeleteRecords && (
+        <button type="button" className="quick-win-candidate-card__delete" onClick={onDelete}>
+          Eliminar win
+        </button>
       )}
     </div>
   )

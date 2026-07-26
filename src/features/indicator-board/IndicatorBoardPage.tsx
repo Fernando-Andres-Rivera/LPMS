@@ -33,6 +33,7 @@ import { fetchCausalAnalyses, type CausalAnalysisWithAuthor } from '../causal-an
 import {
   advanceActionPlanStatus,
   createActionPlan,
+  deleteActionPlan,
   fetchActionPlansForIndicator,
   type ActionPlanWithNames,
 } from '../action-plans/actionPlansApi'
@@ -170,6 +171,9 @@ export function IndicatorBoardPage() {
   // ocultar evidencia después).
   const canRemoveEvidence =
     profile?.role === 'admin_consultora' || profile?.role === 'admin_cliente' || profile?.role === 'gerente'
+  // Borrado físico de registros: solo admin_consultora, mismo criterio que
+  // el RLS de action_plans/causal_analyses/indicator_causes/safety_events.
+  const canDeleteRecords = profile?.role === 'admin_consultora'
   const latestCause = causes[0]
   const eventLocationName = latestCause?.measurements?.site_locations?.name
   const whereLabel = eventLocationName
@@ -252,6 +256,18 @@ export function IndicatorBoardPage() {
 
   async function handleAdvance(planId: string, nextStatus: PdcaStatus) {
     await advanceActionPlanStatus(planId, nextStatus)
+    await loadAll()
+  }
+
+  async function handleDeletePlan(plan: ActionPlanWithNames) {
+    if (
+      !window.confirm(
+        `¿Eliminar definitivamente el plan "${plan.description}"? Se borra también su evidencia adjunta. Esta acción no se puede deshacer.`,
+      )
+    ) {
+      return
+    }
+    await deleteActionPlan(plan.id)
     await loadAll()
   }
 
@@ -427,6 +443,15 @@ export function IndicatorBoardPage() {
                   Responsable: {plan.responsible?.full_name ?? 'Sin asignar'} · Plazo:{' '}
                   {plan.due_date ?? '—'} · Registró: {plan.creator?.full_name ?? '—'}
                 </p>
+                {canDeleteRecords && (
+                  <button
+                    type="button"
+                    className="board-plan-item__delete"
+                    onClick={() => handleDeletePlan(plan)}
+                  >
+                    Eliminar plan
+                  </button>
+                )}
                 {plan.status !== 'cerrado' && (
                   <div className="board-plan-item__actions">
                     {ACTION_PLAN_STEPS.filter(

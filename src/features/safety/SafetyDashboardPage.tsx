@@ -454,9 +454,11 @@ export function SafetyDashboardPage() {
                   <span className="safety-event-list__site">{sites.find((s) => s.id === ev.site_id)?.name}</span>
                   {ev.severity && <span>{ACCIDENT_SEVERITY_LABEL[ev.severity]}</span>}
                   {ev.description && <span className="safety-event-list__description">{ev.description}</span>}
-                  <button type="button" onClick={() => handleDeleteEvent(ev.id)}>
-                    Eliminar
-                  </button>
+                  {profile?.role === 'admin_consultora' && (
+                    <button type="button" onClick={() => handleDeleteEvent(ev.id)}>
+                      Eliminar
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

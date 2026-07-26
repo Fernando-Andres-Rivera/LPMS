@@ -8,6 +8,7 @@ import { today, daysAgo } from '../../lib/dateRange'
 import {
   createQuickWinBoard,
   createQuickWinCandidate,
+  deleteQuickWinCandidate,
   escalateQuickWin,
   fetchQuickWinBoard,
   fetchQuickWinCandidates,
@@ -56,6 +57,8 @@ export function QuickWinPage() {
 
   const canRemoveEvidence =
     profile?.role === 'admin_consultora' || profile?.role === 'admin_cliente' || profile?.role === 'gerente'
+  // Borrado físico de registros: solo admin_consultora.
+  const canDeleteRecords = profile?.role === 'admin_consultora'
 
   useEffect(() => {
     if (!organizationId) return
@@ -227,6 +230,18 @@ export function QuickWinPage() {
     if (board) setCandidates(await fetchQuickWinCandidates(board.id))
   }
 
+  async function handleDeleteCandidate(candidate: QuickWinCandidateWithNames) {
+    if (
+      !window.confirm(
+        `¿Eliminar definitivamente el win "${candidate.description}"? Se borra también su evidencia adjunta. Esta acción no se puede deshacer.`,
+      )
+    ) {
+      return
+    }
+    await deleteQuickWinCandidate(candidate.id)
+    if (board) setCandidates(await fetchQuickWinCandidates(board.id))
+  }
+
   return (
     <div className="quick-win-page">
       <PageHeader
@@ -327,6 +342,8 @@ export function QuickWinPage() {
                   onToggleSelected={candidate.level === 1 ? () => handleToggleSelected(candidate) : undefined}
                   onToggleEscalation={candidate.level === 1 ? () => handleToggleEscalation(candidate) : undefined}
                   onEscalate={candidate.level === 1 ? () => handleEscalate(candidate) : undefined}
+                  canDeleteRecords={canDeleteRecords}
+                  onDelete={() => handleDeleteCandidate(candidate)}
                 />
               ) : null,
             )}

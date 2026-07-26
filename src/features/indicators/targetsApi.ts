@@ -44,3 +44,9 @@ export async function saveAnnualTarget(params: {
   })
   if (error) throw error
 }
+
+/** Borrado físico e irreversible — restringido a admin_consultora por RLS. */
+export async function deleteTarget(id: string): Promise<void> {
+  const { error } = await supabase.from('targets').delete().eq('id', id)
+  if (error) throw error
+}

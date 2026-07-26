@@ -27,7 +27,7 @@ import {
   type IndicatorFormValues,
 } from './indicatorsApi'
 import { fetchSiteLocations } from '../org-structure/orgStructureApi'
-import { fetchAnnualTarget, saveAnnualTarget } from './targetsApi'
+import { deleteTarget, fetchAnnualTarget, saveAnnualTarget } from './targetsApi'
 import { UnitPicker } from './UnitPicker'
 import { Semaforo } from '../../components/ui/Semaforo'
 import './indicators.css'
@@ -98,6 +98,7 @@ export function IndicatorFormPage() {
   const [parentCandidates, setParentCandidates] = useState<Indicator[]>([])
   const [selectedParents, setSelectedParents] = useState<string[]>([])
   const [targetValue, setTargetValue] = useState('')
+  const [targetId, setTargetId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -155,7 +156,10 @@ export function IndicatorFormPage() {
         }
       })
       fetchIndicatorParentIds(id).then(setSelectedParents)
-      fetchAnnualTarget(id, CURRENT_YEAR).then((target) => setTargetValue(target ? String(target.target_value) : ''))
+      fetchAnnualTarget(id, CURRENT_YEAR).then((target) => {
+        setTargetValue(target ? String(target.target_value) : '')
+        setTargetId(target?.id ?? null)
+      })
     }
   }, [organizationId, id])
 
@@ -204,6 +208,16 @@ export function IndicatorFormPage() {
     setSelectedParents((current) =>
       current.includes(parentId) ? current.filter((p) => p !== parentId) : [...current, parentId],
     )
+  }
+
+  async function handleDeleteTarget() {
+    if (!targetId) return
+    if (!window.confirm(`¿Quitar el objetivo ${CURRENT_YEAR} de este indicador? Esta acción no se puede deshacer.`)) {
+      return
+    }
+    await deleteTarget(targetId)
+    setTargetId(null)
+    setTargetValue('')
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -480,6 +494,11 @@ export function IndicatorFormPage() {
                 placeholder={`Ej. 0 ${form.unit} por ${FRECUENCIA_SUSTANTIVO[form.frequency]}`.trim()}
               />
             </label>
+            {targetId && profile?.role === 'admin_consultora' && (
+              <button type="button" className="indicator-form__target-delete" onClick={handleDeleteTarget}>
+                Quitar objetivo
+              </button>
+            )}
             <p className="indicator-form__target-rule">
               Como la frecuencia de captura es <strong>{form.frequency}</strong>, este objetivo se evalúa contra
               cada valor {FRECUENCIA_ADJETIVO[form.frequency]} — no contra un total del año. Regla estándar de

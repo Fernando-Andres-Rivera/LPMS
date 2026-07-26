@@ -23,6 +23,9 @@ interface StandardCausesPanelProps {
   indicator: Indicator
   measurementId: string | null
   createdBy: string
+  /** Solo admin_consultora puede borrar registros — causas de un día
+   * puntual y nodos del árbol de causas posibles. */
+  canDelete: boolean
   onSaved: () => void
 }
 
@@ -32,7 +35,7 @@ interface StandardCausesPanelProps {
  * un Pareto que se re-enfoca al entrar a un nodo — "paradas por máquina"
  * cambia a "fallas por componentes de esa máquina" al hacer clic en ella.
  */
-export function StandardCausesPanel({ indicator, measurementId, createdBy, onSaved }: StandardCausesPanelProps) {
+export function StandardCausesPanel({ indicator, measurementId, createdBy, canDelete, onSaved }: StandardCausesPanelProps) {
   const [causes, setCauses] = useState<IndicatorCause[]>([])
   const [tags, setTags] = useState<IndicatorCauseTag[]>([])
   const [loading, setLoading] = useState(true)
@@ -281,9 +284,11 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
                       Con plan
                     </span>
                   ) : (
-                    <button type="button" className="causal-day-item__delete" onClick={() => handleDeleteDayCause(cause)}>
-                      Eliminar
-                    </button>
+                    canDelete && (
+                      <button type="button" className="causal-day-item__delete" onClick={() => handleDeleteDayCause(cause)}>
+                        Eliminar
+                      </button>
+                    )
                   )}
                 </li>
               ))}
@@ -310,6 +315,7 @@ export function StandardCausesPanel({ indicator, measurementId, createdBy, onSav
             selected={selectedCause}
             onSelectedChange={setSelectedCause}
             onDeleted={reloadTree}
+            canDelete={canDelete}
           />
         </div>
 
