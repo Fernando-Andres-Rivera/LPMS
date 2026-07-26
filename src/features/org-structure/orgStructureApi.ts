@@ -257,7 +257,7 @@ interface RawPillarResponsibleRow {
 export async function fetchPillarResponsibles(organizationId: string): Promise<PillarResponsible[]> {
   const { data, error } = await supabase
     .from('pillar_responsibles')
-    .select('id, site_id, axis_id, profile_id, profiles(full_name)')
+    .select('id, site_id, axis_id, profile_id, profiles!pillar_responsibles_profile_id_fkey(full_name)')
     .eq('organization_id', organizationId)
 
   if (error) throw error
