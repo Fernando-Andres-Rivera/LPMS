@@ -2,9 +2,16 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Turnstile } from '../../components/ui/Turnstile'
-import { CascadeSystem } from './CascadeSystem'
 import { describeAuthError } from './authErrorMessages'
 import './login.css'
+
+/* Cada rótulo nombra a quién se sienta en esa reunión, y nada más — el
+   recorrido de cámara de la portada va parando en el nivel que se nombra. */
+const CASCADE_STAGES = [
+  { key: 1, tag: 'Nivel 1', text: 'Operarios + Líder de Equipo' },
+  { key: 2, tag: 'Nivel 2', text: 'Líderes de Equipo + Jefe de Producción' },
+  { key: 3, tag: 'Nivel 3', text: 'Gerencia + Director de Planta' },
+]
 
 type Mode = 'login' | 'register' | 'forgot'
 
@@ -106,13 +113,20 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-hero">
-        {/* La planta queda de ambiente, muy atenuada: el protagonista es el
-            sistema que se dibuja encima. */}
-        <img src="/cascada-niveles-lpms-v2.png" alt="" aria-hidden="true" className="login-hero__image" />
+        <img
+          src="/cascada-niveles-lpms-v2.png"
+          alt="La cascada diaria de reuniones por niveles en LPMS: tres plataformas industriales con anillos de luz, equipos revisando indicadores en pantallas digitales, del nivel operativo a la dirección."
+          className="login-hero__image"
+        />
         <div className="login-hero__scrim" aria-hidden="true" />
 
-        <div className="login-hero__system">
-          <CascadeSystem />
+        <div className="login-hero__captions">
+          {CASCADE_STAGES.map((stage) => (
+            <div key={stage.key} className={`login-hero__caption login-hero__caption--${stage.key}`}>
+              <span className="login-hero__caption-tag">{stage.tag}</span>
+              <p>{stage.text}</p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -240,27 +254,17 @@ export function LoginPage() {
           </div>
         </form>
 
-        {/* En móvil la portada no cabe legible (el nombre de cada equipo
-            quedaría en ~10px), así que el sistema se resume aquí — debajo del
-            formulario, para que entrar siga siendo lo primero. */}
+        {/* En móvil la portada no se muestra, así que los tres niveles se
+            repiten aquí — debajo del formulario, para que entrar siga siendo
+            lo primero. */}
         <ol className="login-cascade-mini">
-          <li className="login-cascade-mini__step login-cascade-mini__step--3">
-            <span className="login-cascade-mini__level">Nivel 3</span>
-            Gerencia + Director de Planta
-          </li>
-          <li className="login-cascade-mini__step login-cascade-mini__step--2">
-            <span className="login-cascade-mini__level">Nivel 2</span>
-            Líderes de Equipo + Jefe de Producción
-          </li>
-          <li className="login-cascade-mini__step login-cascade-mini__step--1">
-            <span className="login-cascade-mini__level">Nivel 1</span>
-            Operarios + Líder de Equipo
-          </li>
+          {[...CASCADE_STAGES].reverse().map((stage) => (
+            <li key={stage.key} className={`login-cascade-mini__step login-cascade-mini__step--${stage.key}`}>
+              <span className="login-cascade-mini__level">{stage.tag}</span>
+              {stage.text}
+            </li>
+          ))}
         </ol>
-        <p className="login-cascade-mini__flow">
-          <span className="is-up">↑ Los resultados suben</span>
-          <span className="is-down">↓ El soporte baja</span>
-        </p>
 
         <div className="login-foot" aria-hidden="true">
           <span>Cascada diaria por niveles</span>

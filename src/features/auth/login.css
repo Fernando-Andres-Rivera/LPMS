@@ -12,39 +12,179 @@
   background: #0a1626;
 }
 
-/* La planta queda como ambiente: oscurecida y desaturada para que el sistema
-   dibujado encima sea lo que se lee. Sin recorrido de cámara — el movimiento
-   ahora lo lleva el flujo del propio sistema, y dos animaciones compitiendo
-   se restaban fuerza entre sí. */
 .login-hero__image {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 50% 55%;
-  filter: grayscale(0.55) brightness(0.42) contrast(1.05);
+  object-position: 50% 72%;
+  transform: scale(1.08);
+  animation: loginCascadeZoom 18s ease-in-out infinite;
+}
+
+/*
+ * Recorre las 3 plataformas de la imagen en el mismo orden en que ocurre la
+ * cascada real: Nivel 1 (operativa, abajo) -> Nivel 2 (supervisión, en medio)
+ * -> Nivel 3 (dirección, arriba). object-position mueve el foco; el scale
+ * acompaña con un leve acercamiento — así "primero se agranda la reunión de
+ * nivel 1, luego el zoom a la de nivel 2 y luego a la de nivel 3".
+ */
+@keyframes loginCascadeZoom {
+  0%,
+  19% {
+    object-position: 50% 72%;
+    transform: scale(1.08);
+  }
+  33%,
+  53% {
+    object-position: 50% 46%;
+    transform: scale(1.16);
+  }
+  67%,
+  86% {
+    object-position: 50% 20%;
+    transform: scale(1.1);
+  }
+  100% {
+    object-position: 50% 72%;
+    transform: scale(1.08);
+  }
 }
 
 .login-hero__scrim {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(120% 90% at 50% 40%, rgba(10, 22, 38, 0.3) 0%, rgba(8, 16, 32, 0.88) 78%),
-    linear-gradient(180deg, rgba(8, 16, 32, 0.82) 0%, rgba(8, 16, 32, 0.5) 40%, rgba(8, 16, 32, 0.9) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(8, 16, 32, 0.6) 0%,
+    rgba(8, 16, 32, 0.05) 24%,
+    rgba(8, 16, 32, 0.05) 60%,
+    rgba(8, 16, 32, 0.8) 100%
+  );
   pointer-events: none;
 }
 
-/* El sistema ocupa el alto disponible y se centra; el viewBox del SVG hace
-   todo el escalado. */
-.login-hero__system {
+.login-hero__captions {
+  position: absolute;
+  left: 36px;
+  right: 36px;
+  bottom: 32px;
+  z-index: 2;
+  min-height: 86px;
+}
+
+.login-hero__caption {
   position: absolute;
   inset: 0;
-  z-index: 2;
-  display: flex;
+  opacity: 0;
+}
+
+.login-hero__caption-tag {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 36px 28px;
+  margin-bottom: 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(38, 166, 154, 0.2);
+  border: 1px solid rgba(38, 166, 154, 0.45);
+  color: var(--color-teal);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Punto "en vivo" — hace que la reunión de la portada se sienta en curso. */
+.login-hero__caption-tag::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-teal);
+  margin-right: 7px;
+  animation: login-live-pulse 1.8s ease-out infinite;
+}
+
+@keyframes login-live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(38, 166, 154, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(38, 166, 154, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(38, 166, 154, 0);
+  }
+}
+
+/* El rótulo pasó de ser una frase explicativa a el nombre de quién se reúne;
+   como nombre necesita peso de título, no de párrafo. */
+.login-hero__caption p {
+  margin: 0;
+  max-width: 480px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: white;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+}
+
+.login-hero__caption--1 {
+  animation: loginCaption1 18s ease-in-out infinite;
+}
+
+.login-hero__caption--2 {
+  animation: loginCaption2 18s ease-in-out infinite;
+}
+
+.login-hero__caption--3 {
+  animation: loginCaption3 18s ease-in-out infinite;
+}
+
+@keyframes loginCaption1 {
+  0%,
+  14% {
+    opacity: 1;
+  }
+  22%,
+  92% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes loginCaption2 {
+  0%,
+  27% {
+    opacity: 0;
+  }
+  33%,
+  48% {
+    opacity: 1;
+  }
+  56%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes loginCaption3 {
+  0%,
+  61% {
+    opacity: 0;
+  }
+  67%,
+  82% {
+    opacity: 1;
+  }
+  90%,
+  100% {
+    opacity: 0;
+  }
 }
 
 /* ---- Panel de acceso ---- */
@@ -330,18 +470,28 @@
   }
 }
 
-/* El movimiento del sistema se apaga en cascade-system.css; aquí ya no queda
-   nada animado en la portada. */
+@media (prefers-reduced-motion: reduce) {
+  .login-hero__image,
+  .login-hero__caption--1,
+  .login-hero__caption--2,
+  .login-hero__caption--3 {
+    animation: none !important;
+  }
 
-/* ---- Resumen del sistema para móvil ----
-   El diagrama de la portada es denso: a 375px sus rótulos caerían a ~10px.
-   En su lugar, en pantallas sin portada el sistema se resume en tres pasos
-   legibles, ubicados DEBAJO del formulario para no estorbar el acceso. */
-.login-cascade-mini {
-  display: none;
+  .login-hero__image {
+    object-position: 50% 46%;
+  }
+
+  .login-hero__caption--2 {
+    opacity: 1;
+  }
 }
 
-.login-cascade-mini__flow {
+/* ---- Los tres niveles, para móvil ----
+   La portada (y con ella sus rótulos) se oculta por debajo de 900px, así que
+   los mismos tres niveles se repiten aquí en texto. Van DEBAJO del formulario
+   para no empujar el acceso hacia abajo. */
+.login-cascade-mini {
   display: none;
 }
 
@@ -371,7 +521,7 @@
   }
 
   .login-cascade-mini__step--3 {
-    border-left-color: #4F9BE8;
+    border-left-color: var(--color-primary-light);
   }
 
   .login-cascade-mini__step--2 {
@@ -388,24 +538,5 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--color-text-muted);
-  }
-
-  .login-cascade-mini__flow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 18px;
-    width: 100%;
-    max-width: 420px;
-    margin: 12px 0 0;
-    font-size: 0.78rem;
-    font-weight: 700;
-  }
-
-  .login-cascade-mini__flow .is-up {
-    color: var(--color-teal);
-  }
-
-  .login-cascade-mini__flow .is-down {
-    color: var(--color-primary-light);
   }
 }
