@@ -24,8 +24,24 @@
 
 .org-structure-axes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
+}
+
+/* Con 4 columnas fijas, una tarjeta angosta le deja al nombre del pilar muy
+   poco espacio junto al checkbox y la insignia — por debajo de cierto ancho
+   hay que bajar a menos columnas o el texto se parte carácter por carácter
+   en vez de por palabra completa. */
+@media (max-width: 900px) {
+  .org-structure-axes {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .org-structure-axes {
+    grid-template-columns: 1fr;
+  }
 }
 
 .org-structure-axis-option {
