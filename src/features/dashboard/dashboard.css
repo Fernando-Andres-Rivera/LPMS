@@ -183,9 +183,21 @@
   transition: transform var(--dur) var(--ease-out);
 }
 
-/* El ícono cobra vida al pasar por la tarjeta: un pequeño impulso. */
-.axis-card:hover .axis-card__badge {
-  transform: scale(1.08) rotate(-4deg);
+/* Halo del color del propio pilar: un lavado muy tenue que nace bajo la
+   insignia y le da identidad a cada tarjeta sin competir con el dato.
+   --axis-color lo inyecta la página desde el catálogo de ejes. */
+.axis-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(130px 96px at 20% 0%, var(--axis-color, transparent), transparent 72%);
+  opacity: 0.12;
+  pointer-events: none;
+  transition: opacity var(--dur) var(--ease-out);
+}
+
+.axis-card > * {
+  position: relative;
 }
 
 .axis-card__name {
@@ -200,19 +212,51 @@
   bottom: 16px;
   font-size: 1.15rem;
   color: var(--color-teal);
-  opacity: 0;
-  transform: translateX(-6px);
   transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
 }
 
-.axis-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
+/* Realce al pasar el puntero — solo donde existe un puntero real. Sin este
+   filtro, el móvil hereda el estado :hover "pegado" tras cada toque y, peor,
+   deja la flecha en opacity: 0 de forma permanente (ver bloque táctil). */
+@media (hover: hover) {
+  .axis-card__go {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+
+  .axis-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+  }
+
+  .axis-card:hover::before {
+    opacity: 0.2;
+  }
+
+  /* El ícono cobra vida al pasar por la tarjeta: un pequeño impulso. */
+  .axis-card:hover .axis-card__badge {
+    transform: scale(1.08) rotate(-4deg);
+  }
+
+  .axis-card:hover .axis-card__go {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-.axis-card:hover .axis-card__go {
-  opacity: 1;
-  transform: translateX(0);
+/* En pantallas táctiles no hay hover: la flecha se muestra siempre (atenuada,
+   para que indique "esto lleva a algún lado" sin gritar). */
+@media (hover: none) {
+  .axis-card__go {
+    opacity: 0.55;
+  }
+}
+
+/* Respuesta al toque — el equivalente táctil del realce de escritorio: la
+   tarjeta se hunde un poco bajo el dedo. Funciona en ambos mundos. */
+.axis-card:active {
+  transform: translateY(-1px) scale(0.985);
+  box-shadow: var(--shadow-md);
 }
 
 .axis-card:focus-visible {

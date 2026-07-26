@@ -68,9 +68,20 @@
   overflow-wrap: break-word;
 }
 
-.org-structure-axis-option:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+/* Solo donde hay puntero real: en táctil el :hover se queda "pegado" tras el
+   toque y la tarjeta permanece levantada aunque el dedo ya se fue. */
+@media (hover: hover) {
+  .org-structure-axis-option:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+/* Respuesta al toque: el pilar se hunde bajo el dedo. Es la única
+   confirmación de "te leí" que recibe quien usa la app en el piso, sin
+   puntero. */
+.org-structure-axis-option:active {
+  transform: scale(0.98);
 }
 
 /* El eje activo se ve "encendido" — borde de acento y elevación. */
@@ -92,8 +103,10 @@
   transition: transform var(--dur) var(--ease-out);
 }
 
-.org-structure-axis-option:hover .org-structure-axis-badge {
-  transform: scale(1.08) rotate(-4deg);
+@media (hover: hover) {
+  .org-structure-axis-option:hover .org-structure-axis-badge {
+    transform: scale(1.08) rotate(-4deg);
+  }
 }
 
 /* Ítem inactivo: la insignia se atenúa hasta que se enciende. */
@@ -106,19 +119,6 @@
   margin-bottom: 18px;
   padding-bottom: 18px;
   border-bottom: 1px solid var(--color-border);
-}
-
-.org-structure-add-row--site input,
-.org-structure-add-row--site select {
-  flex: 1 1 180px;
-}
-
-.org-structure-add-row--site select {
-  padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-text);
 }
 
 .org-structure-add-row--site button {
@@ -156,6 +156,11 @@
 
 .org-structure-add-row {
   display: flex;
+  /* wrap: el botón ("+ Agregar unidad de negocio") lleva white-space: nowrap,
+     así que su ancho mínimo es el del texto completo. Sin wrap se quedaba con
+     casi toda la fila y el input se encogía hasta mostrar dos letras ("Nu…")
+     en móvil; ahora el botón baja a la línea siguiente y el campo se lee. */
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
 }
@@ -164,11 +169,20 @@
   margin-top: 0;
 }
 
-.org-structure-add-row input {
-  flex: 1;
+/* Base real (no 0) para que el wrap de arriba tenga contra qué decidir: con
+   flex-basis 0 todos los campos caben "en teoría" en cualquier ancho y nunca
+   se separan en varias líneas. Cubre también el <select> de la fila de sitios,
+   que antes tenía su propia regla y quedaba anulada por esta por venir después
+   con la misma especificidad. */
+.org-structure-add-row input,
+.org-structure-add-row select {
+  flex: 1 1 200px;
+  min-width: 0;
   padding: 8px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .org-structure-add-row button {
@@ -274,6 +288,7 @@
 }
 
 .org-structure-item-actions button {
+  position: relative;
   background: none;
   border: none;
   padding: 0 3px;
@@ -281,6 +296,28 @@
   color: var(--color-text-muted);
   font-size: 0.85rem;
   line-height: 1;
+  transition: color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+/* El glifo mide ~14px: con puntero se acierta, con el pulgar no. En táctil se
+   agranda el área REAL (padding + separación), no con un pseudo-elemento
+   invisible: "eliminar" está pegado a "renombrar", y dos áreas invisibles de
+   40px se solaparían — el dedo apuntaría a ✎ y podría caer en ×. Con
+   separación real cada objetivo es propio y el borrado no se toca por error. */
+@media (hover: none) {
+  .org-structure-item-actions {
+    gap: 10px;
+    margin-left: 10px;
+  }
+
+  .org-structure-item-actions button {
+    padding: 9px 11px;
+    font-size: 1rem;
+  }
+}
+
+.org-structure-item-actions button:active {
+  transform: scale(0.86);
 }
 
 .org-structure-item-actions button:hover {

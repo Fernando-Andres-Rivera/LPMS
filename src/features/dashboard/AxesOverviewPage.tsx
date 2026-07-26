@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Legend, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
@@ -171,7 +171,15 @@ export function AxesOverviewPage() {
             key={axis.id}
             to={`/ejes/${axis.id}`}
             className="axis-card reveal"
-            style={{ borderTopColor: axis.color, animationDelay: `${i * 60}ms` }}
+            // --axis-color alimenta el halo del color del pilar en el CSS de
+            // la tarjeta; el catálogo de ejes es la única fuente del color.
+            style={
+              {
+                borderTopColor: axis.color,
+                animationDelay: `${i * 60}ms`,
+                '--axis-color': axis.color,
+              } as CSSProperties
+            }
           >
             <span className="axis-card__badge" style={{ background: axis.color }} aria-hidden="true">
               <AxisIcon icon={axis.icon} />

@@ -147,11 +147,15 @@
 .industry-picker {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
+/* "← Elegir de la lista" lleva white-space: nowrap (~150px). Con base 0 el
+   campo se encogía a la mitad en móvil; con base real el enlace baja. */
 .industry-picker input {
-  flex: 1;
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .industry-picker__back {

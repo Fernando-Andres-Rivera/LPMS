@@ -64,11 +64,16 @@
 
 .taxonomy-new {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
+/* Base real (no 0): con flex-basis 0 el campo "cabe" en cualquier ancho y
+   nunca deja que el botón baje de línea, así que en móvil se encoge hasta
+   ocultar el placeholder. Con 200px de base, el botón salta abajo. */
 .taxonomy-new input {
-  flex: 1;
+  flex: 1 1 200px;
+  min-width: 0;
   padding: 8px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
