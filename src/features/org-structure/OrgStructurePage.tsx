@@ -501,7 +501,7 @@ export function OrgStructurePage() {
               <span className="org-structure-axis-badge" style={{ background: axis.color }} aria-hidden="true">
                 <AxisIcon icon={axis.icon} size={18} />
               </span>
-              {axis.name}
+              <span className="org-structure-axis-option__name">{axis.name}</span>
             </label>
           ))}
         </div>

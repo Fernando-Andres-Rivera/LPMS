@@ -38,8 +38,18 @@
   border-radius: var(--radius-md);
   background: var(--color-surface);
   cursor: pointer;
+  /* Sin esto, el ítem con el nombre más largo ("Disponibilidad") le gana
+     espacio a los demás en vez de repartirse el ancho en partes iguales —
+     un elemento de grid/flex no se encoge por debajo del ancho de su
+     contenido a menos que se le diga explícitamente. */
+  min-width: 0;
   transition: border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out),
     transform var(--dur) var(--ease-out);
+}
+
+.org-structure-axis-option__name {
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .org-structure-axis-option:hover {
