@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { describeAuthError } from '../auth/authErrorMessages'
 
 export interface DemoSignupRow {
   id: string
@@ -39,6 +40,38 @@ export async function fetchDemoSignups(): Promise<DemoSignupRow[]> {
     orgName: row.organizations?.name ?? '—',
     createdAt: row.created_at,
   }))
+}
+
+export interface CreateDemoSignupResult {
+  userId: string
+  email: string
+  /** Contraseña temporal generada por el servidor — se muestra UNA vez al
+   * admin para que la entregue al prospecto. Se cambia luego en "Seguridad
+   * de la cuenta". */
+  tempPassword: string
+}
+
+/**
+ * Crea un registro Demo con acceso inmediato (correo ya confirmado +
+ * contraseña temporal), sin que la persona tenga que autorregistrarse ni
+ * depender de ningún correo de confirmación — el mismo motivo que
+ * inviteUser: el plan actual de Supabase falla por límite de envíos. Corre
+ * en una Edge Function porque requiere la service role key.
+ */
+export async function createDemoSignup(input: { email: string; fullName: string }): Promise<CreateDemoSignupResult> {
+  const { data, error } = await supabase.functions.invoke('create-demo-signup', {
+    body: { email: input.email, fullName: input.fullName },
+  })
+  if (error) {
+    const context = (error as { context?: Response }).context
+    if (context) {
+      const body = await context.json().catch(() => null)
+      if (body?.error) throw new Error(describeAuthError('invite', body.code, body.error))
+    }
+    throw error
+  }
+  if (data?.error) throw new Error(describeAuthError('invite', data.code, data.error))
+  return { userId: data.userId, email: data.email, tempPassword: data.tempPassword }
 }
 
 /**

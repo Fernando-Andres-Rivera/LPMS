@@ -159,7 +159,11 @@ Deno.serve(async (req: Request) => {
     email,
     password: tempPassword,
     email_confirm: true,
-    user_metadata: { full_name: fullName },
+    // skip_demo_org: sin esto, el trigger on_auth_user_created ve un usuario
+    // nuevo sin perfil todavía (el insert de profiles de abajo corre
+    // después) y lo trata como auto-registro público, creándole su propia
+    // organización Demo — que choca con el insert de profiles que sigue.
+    user_metadata: { full_name: fullName, skip_demo_org: true },
   })
   if (createError || !created.user) {
     return json({ error: createError?.message ?? 'No se pudo crear el usuario.', code: createError?.code }, 500)

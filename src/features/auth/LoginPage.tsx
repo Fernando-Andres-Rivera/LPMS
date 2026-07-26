@@ -246,14 +246,15 @@ export function LoginPage() {
 
           <div className="login-switch">
             {mode === 'login' && (
-              <>
-                <button type="button" className="login-link" onClick={() => switchMode('register')}>
-                  Crear una cuenta Demo
-                </button>
-                <button type="button" className="login-link" onClick={() => switchMode('forgot')}>
-                  ¿Olvidaste tu contraseña?
-                </button>
-              </>
+              // El autorregistro público (modo 'register') queda sin botón por
+              // ahora: sin SMTP propio, Supabase ni siquiera entrega el correo
+              // de confirmación a nadie fuera del equipo de la organización. El
+              // formulario y el flujo siguen intactos para reactivarlo apenas
+              // se configure un proveedor de correo — mientras tanto, admin_
+              // consultora crea los registros Demo desde "Registros Demo".
+              <button type="button" className="login-link" onClick={() => switchMode('forgot')}>
+                ¿Olvidaste tu contraseña?
+              </button>
             )}
             {mode !== 'login' && (
               <button type="button" className="login-link" onClick={() => switchMode('login')}>

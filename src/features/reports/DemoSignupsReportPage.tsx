@@ -1,9 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { fetchDemoSignups, deleteDemoSignup, type DemoSignupRow } from './demoSignupsApi'
+import {
+  fetchDemoSignups,
+  deleteDemoSignup,
+  createDemoSignup,
+  type DemoSignupRow,
+  type CreateDemoSignupResult,
+} from './demoSignupsApi'
 import './capture-authorizations.css'
 import '../onboarding/clients.css'
+import '../onboarding/onboarding.css'
 
 /** Fecha local (no UTC) en formato YYYY-MM-DD — evita el corrimiento de un día
  * para zonas horarias con offset negativo (Colombia, GMT-5) al pasar de la
@@ -24,6 +31,52 @@ export function DemoSignupsReportPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [createdResult, setCreatedResult] = useState<CreateDemoSignupResult | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  async function handleCreate(e: FormEvent) {
+    e.preventDefault()
+    if (!fullName.trim() || !email.trim()) {
+      setCreateError('Completa el nombre y el correo.')
+      return
+    }
+    setCreating(true)
+    setCreateError(null)
+    setCreatedResult(null)
+    setCopied(false)
+    try {
+      const result = await createDemoSignup({ email: email.trim(), fullName: fullName.trim() })
+      setCreatedResult(result)
+      setFullName('')
+      setEmail('')
+      const data = await fetchDemoSignups()
+      setRows(data)
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'No se pudo crear el registro.')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  async function copyCredentials() {
+    if (!createdResult) return
+    const text =
+      `Acceso Demo a LPMS\n` +
+      `Correo: ${createdResult.email}\n` +
+      `Contraseña temporal: ${createdResult.tempPassword}\n` +
+      `Entra en https://lpms-rouge.vercel.app y cámbiala en "Seguridad de la cuenta".`
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+    } catch {
+      setCopied(false)
+    }
+  }
 
   async function handleDelete(row: DemoSignupRow) {
     setBusyId(row.id)
@@ -84,15 +137,65 @@ export function DemoSignupsReportPage() {
       <PageHeader
         eyebrow="Consultora · Posibles clientes"
         title="Registros Demo"
-        subtitle="Cada persona que se registró por su cuenta desde la pantalla de inicio y quedó con su propio entorno Demo — tu base de posibles clientes, con cuántos llegan por día."
+        subtitle="Cada persona con su propio entorno Demo — autorregistrada desde la pantalla de inicio o creada aquí manualmente por el equipo — tu base de posibles clientes, con cuántos llegan por día."
       />
+
+      <section className="capture-auth-card">
+        <h2>Crear registro Demo manualmente</h2>
+        <p className="capture-auth-card__subtitle">
+          Para cuando el equipo levanta la cuenta durante una llamada con un prospecto, en vez de que se
+          autorregistre — no depende de ningún correo de confirmación.
+        </p>
+        <form className="onboarding-form" onSubmit={handleCreate}>
+          <div className="onboarding-form__row">
+            <label>
+              Nombre completo
+              <input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+            </label>
+            <label>
+              Correo
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </label>
+          </div>
+
+          {createError && <p className="capture-auth-error">{createError}</p>}
+          {createdResult && (
+            <div className="onboarding-credentials">
+              <p className="onboarding-credentials__title">
+                Registro Demo creado. Entrega estas credenciales al prospecto — no se envía correo.
+              </p>
+              <dl className="onboarding-credentials__grid">
+                <dt>Correo</dt>
+                <dd>{createdResult.email}</dd>
+                <dt>Contraseña temporal</dt>
+                <dd>
+                  <code>{createdResult.tempPassword}</code>
+                </dd>
+              </dl>
+              <p className="onboarding-credentials__hint">
+                La persona entra con estos datos y cambia la contraseña en «Seguridad de la cuenta». Esta
+                contraseña no se vuelve a mostrar.
+              </p>
+              <button type="button" className="onboarding-credentials__copy" onClick={copyCredentials}>
+                {copied ? '✓ Copiado' : 'Copiar credenciales'}
+              </button>
+            </div>
+          )}
+
+          <div className="onboarding-form__actions">
+            <button type="submit" className="button-primary" disabled={creating}>
+              {creating ? 'Creando…' : 'Crear registro Demo'}
+            </button>
+          </div>
+        </form>
+      </section>
 
       {loadError && <p className="capture-auth-error">No se pudo cargar el reporte: {loadError}</p>}
 
       {loading ? (
         <p>Cargando…</p>
       ) : rows.length === 0 ? (
-        <p>Todavía nadie se ha registrado por su cuenta.</p>
+        <p>Todavía no hay ningún registro Demo.</p>
       ) : (
         <>
           <div className="capture-auth-summary">
