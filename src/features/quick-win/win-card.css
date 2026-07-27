@@ -331,6 +331,13 @@
   border-right: 1px solid var(--wc-line);
 }
 
+/* Redundante con .win-card__wins-head en escritorio (ahí ya dice
+   "Responsable" / "Hora de bouclage" arriba de toda la columna) — solo se
+   muestra cuando ese encabezado se oculta, en el breakpoint móvil de abajo. */
+.win-card__win-cell-label {
+  display: none;
+}
+
 .win-card__win-cell:last-child {
   border-right: none;
 }
@@ -427,6 +434,15 @@
   color: var(--color-text-muted);
 }
 
+/* --- Pista de "hay más" para las matrices por pilar --- */
+.win-card__scroll-wrap {
+  position: relative;
+}
+
+.win-card__scroll-hint {
+  display: none;
+}
+
 /* En pantallas angostas los renglones de win dejan de ser una grilla de 5
    columnas (no caben sin aplastar los campos) y se apilan; las matrices por
    pilar siguen desplazándose dentro de su .table-scroll. */
@@ -452,6 +468,32 @@
     flex-wrap: wrap;
   }
 
+  /* Sin el encabezado de columnas, Responsable y Hora quedan como dos
+     casillas iguales sin decir qué es cada una — se apilan con su propia
+     etiqueta arriba, como un campo de formulario normal. */
+  .win-card__win-cell {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .win-card__win-cell-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+
+  /* La casilla de borrar no tiene etiqueta que apilar — sin esto, el cambio
+     a columna de arriba (misma clase base .win-card__win-cell) también la
+     alcanzaría y perdería el centrado vertical de la acción. */
+  .win-card__win-cell--tools {
+    flex-direction: row;
+    align-items: center;
+  }
+
   .win-card__win-cell {
     border-right: none;
     border-top: 1px dashed var(--wc-line);
@@ -464,5 +506,51 @@
   .win-card__problema .win-card__rowlabel {
     border-right: none;
     border-bottom: 1px solid var(--wc-line);
+  }
+
+  /* minmax(104px, 1fr) reparte el espacio SOBRANTE del contenedor — pero
+     dentro de un .table-scroll que ya se desborda no sobra nada, así que el
+     1fr deja de repartir por igual y cada columna termina con el ancho de
+     su propio contenido (un pilar con nombre largo queda más ancho que uno
+     corto). Un ancho fijo iguala las columnas sin importar el nombre. */
+  .win-card__matrix {
+    grid-template-columns: var(--wc-label) repeat(var(--wc-pillars), 92px);
+  }
+
+  /* Insignia flotante sobre el borde derecho de la matriz — no se apoya en
+     un degradado hacia un color de fondo porque las celdas de pilar cambian
+     de color (verde/rojo/gris) y un degradado fijo desentonaría contra
+     cualquiera de los tres. pointer-events: none para no robarle el toque
+     al deslizamiento de la matriz que tiene debajo. */
+  .win-card__scroll-hint {
+    display: flex;
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(27, 54, 93, 0.75);
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 900;
+    line-height: 1;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    animation: win-card-scroll-hint 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes win-card-scroll-hint {
+  0%,
+  100% {
+    transform: translateY(-50%) translateX(0);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-50%) translateX(4px);
+    opacity: 1;
   }
 }

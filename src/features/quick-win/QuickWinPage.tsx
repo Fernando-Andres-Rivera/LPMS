@@ -337,31 +337,39 @@ export function QuickWinPage() {
           {/* N1 RESULTADOS — una casilla por pilar que este sitio gestiona,
               pintada con el mismo semáforo de los indicadores: cumplió ayer,
               no cumplió, o todavía sin datos. */}
-          <div className="table-scroll">
-            <div className="win-card__matrix" style={{ '--wc-pillars': sitePillars.length } as CSSProperties}>
-              <div className="win-card__rowlabel">
-                <span>N1 Resultados</span>
-                <span className="win-card__rowlabel-date">Resultados del {resultsDate}</span>
+          <div className="win-card__scroll-wrap">
+            <div className="table-scroll">
+              <div className="win-card__matrix" style={{ '--wc-pillars': sitePillars.length } as CSSProperties}>
+                <div className="win-card__rowlabel">
+                  <span>N1 Resultados</span>
+                  <span className="win-card__rowlabel-date">Resultados del {resultsDate}</span>
+                </div>
+                {sitePillars.map((axis) => {
+                  const status = pillarStatus.get(axis.id) ?? 'sin_datos'
+                  return (
+                    <div
+                      key={axis.id}
+                      className={`win-card__pillar win-card__pillar--${status}`}
+                      title={
+                        status === 'ok'
+                          ? 'Cumplió ayer'
+                          : status === 'fail'
+                            ? 'No cumplió ayer'
+                            : 'Sin mediciones de ayer todavía'
+                      }
+                    >
+                      {axis.name}
+                    </div>
+                  )
+                })}
               </div>
-              {sitePillars.map((axis) => {
-                const status = pillarStatus.get(axis.id) ?? 'sin_datos'
-                return (
-                  <div
-                    key={axis.id}
-                    className={`win-card__pillar win-card__pillar--${status}`}
-                    title={
-                      status === 'ok'
-                        ? 'Cumplió ayer'
-                        : status === 'fail'
-                          ? 'No cumplió ayer'
-                          : 'Sin mediciones de ayer todavía'
-                    }
-                  >
-                    {axis.name}
-                  </div>
-                )
-              })}
             </div>
+            {/* Solo se ve en móvil (ver win-card.css) — ahí la matriz siempre
+                desborda su ancho y esta es la única pista de que hay más
+                pilares deslizando a la derecha. */}
+            <span className="win-card__scroll-hint" aria-hidden="true">
+              ›
+            </span>
           </div>
 
           {/* Problema del día — en el mismo lugar que en la tarjeta física:
@@ -440,34 +448,42 @@ export function QuickWinPage() {
           {/* Puntos a ser remontados sistemáticos — los indicadores marcados
               como foco para este sitio, por pilar. Solo lectura: el foco se
               define en la ficha del indicador. */}
-          <div className="table-scroll">
-            <div className="win-card__matrix win-card__matrix--focos" style={{ '--wc-pillars': sitePillars.length } as CSSProperties}>
-              <div className="win-card__rowlabel win-card__rowlabel--strong">
-                Puntos a ser remontados sistemáticos
-              </div>
-              {sitePillars.map((axis) => (
-                <div key={`h-${axis.id}`} className="win-card__focos-head" style={{ color: axis.color }}>
-                  {axis.name}
+          <div className="win-card__scroll-wrap">
+            <div className="table-scroll">
+              <div
+                className="win-card__matrix win-card__matrix--focos"
+                style={{ '--wc-pillars': sitePillars.length } as CSSProperties}
+              >
+                <div className="win-card__rowlabel win-card__rowlabel--strong">
+                  Puntos a ser remontados sistemáticos
                 </div>
-              ))}
-              <div className="win-card__rowlabel win-card__rowlabel--spacer" aria-hidden="true" />
-              {sitePillars.map((axis) => {
-                const focos = focosByAxis.get(axis.id) ?? []
-                return (
-                  <div key={`c-${axis.id}`} className="win-card__focos-cell">
-                    {focos.length === 0 ? (
-                      <span className="win-card__focos-empty">—</span>
-                    ) : (
-                      <ul>
-                        {focos.map((name) => (
-                          <li key={name}>{name}</li>
-                        ))}
-                      </ul>
-                    )}
+                {sitePillars.map((axis) => (
+                  <div key={`h-${axis.id}`} className="win-card__focos-head" style={{ color: axis.color }}>
+                    {axis.name}
                   </div>
-                )
-              })}
+                ))}
+                <div className="win-card__rowlabel win-card__rowlabel--spacer" aria-hidden="true" />
+                {sitePillars.map((axis) => {
+                  const focos = focosByAxis.get(axis.id) ?? []
+                  return (
+                    <div key={`c-${axis.id}`} className="win-card__focos-cell">
+                      {focos.length === 0 ? (
+                        <span className="win-card__focos-empty">—</span>
+                      ) : (
+                        <ul>
+                          {focos.map((name) => (
+                            <li key={name}>{name}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
+            <span className="win-card__scroll-hint" aria-hidden="true">
+              ›
+            </span>
           </div>
         </section>
       )}

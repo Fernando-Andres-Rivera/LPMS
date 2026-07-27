@@ -123,6 +123,11 @@ export function WinCardRow({
       </div>
 
       <div className="win-card__win-cell">
+        {/* El encabezado de columnas se oculta en móvil (no cabe la grilla
+            de 5 columnas), así que esta etiqueta es la única forma de saber
+            qué se registra en esta casilla ahí — en escritorio queda oculta
+            por ser redundante con el encabezado. */}
+        <span className="win-card__win-cell-label">Responsable</span>
         <select
           value={responsibleId}
           onChange={(e) => {
@@ -141,6 +146,7 @@ export function WinCardRow({
       </div>
 
       <div className="win-card__win-cell">
+        <span className="win-card__win-cell-label">Hora de bouclage</span>
         <input
           type="time"
           value={executionTime}
