@@ -31,6 +31,7 @@
   gap: 10px 16px;
   padding: 10px 16px;
   background: var(--color-gray);
+  color: white;
   transition: background-color var(--dur) var(--ease-out);
 }
 
@@ -47,6 +48,13 @@
   font-weight: 900;
   letter-spacing: 0.1em;
   color: white;
+}
+
+/* El nombre de un pilar ("Disponibilidad") no es una sigla corta como "WIN
+   CARD" — con el mismo letter-spacing se ve estirado y raro. */
+.win-card__title--pillar {
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .win-card__head-meta {
@@ -397,6 +405,163 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-text-muted);
+}
+
+/* --- Aviso de "el problema está en otro pilar" --- */
+.win-card__problema-elsewhere {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.win-card__problema-elsewhere p {
+  margin: 0;
+}
+
+.win-card__problema-elsewhere button {
+  padding: 6px 12px;
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  background: none;
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.win-card__problema-elsewhere button:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
+.win-card__problema-elsewhere button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ============================================================
+   Resumen — la pestaña de aterrizaje: el win elegido, de solo lectura.
+   ============================================================ */
+.win-card-summary {
+  padding: 20px 24px;
+}
+
+.win-card-summary--empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  color: var(--color-text-muted);
+}
+
+.win-card-summary--empty p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.win-card-summary__pillar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.win-card-summary__description {
+  margin: 0 0 16px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.win-card-summary__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px 20px;
+  margin: 0 0 18px;
+}
+
+.win-card-summary__meta dt {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.win-card-summary__meta dd {
+  margin: 2px 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.win-card-summary__edit {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: white;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.win-card-summary__edit:hover {
+  background: var(--color-primary-light);
+}
+
+/* ============================================================
+   Pestañas de subcategoría — Resumen, Operaciones, y un pilar por cada eje
+   que este sitio gestiona.
+   ============================================================ */
+.win-card-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.win-card-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.win-card-tabs button:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.win-card-tabs button.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+/* Cada pestaña de pilar lleva el color de SU eje cuando está activa — la
+   misma identidad de color que ya usa el resto de la app para ese pilar
+   (badges, tarjetas de eje), en vez del azul genérico de Resumen/Operaciones. */
+.win-card-tabs__pillar.is-active {
+  background: var(--tab-color, var(--color-primary));
+  border-color: var(--tab-color, var(--color-primary));
 }
 
 /* --- Puntos a ser remontados sistemáticos --- */

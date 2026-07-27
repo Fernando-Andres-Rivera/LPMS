@@ -22,7 +22,10 @@ import {
 } from './quickWinApi'
 import { WinCardRow, type WinRowValues } from './WinCardRow'
 import { QuickWinEvidence } from './QuickWinEvidence'
+import { ChosenWinSummary } from './ChosenWinSummary'
+import { PillarWinCard } from './PillarWinCard'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { AxisIcon } from '../../components/ui/AxisIcon'
 import type { Axis, Profile, Site } from '../../lib/types'
 import './quick-win.css'
 import './win-card.css'
@@ -50,6 +53,11 @@ export function QuickWinPage() {
   const [savingProblema, setSavingProblema] = useState(false)
 
   const [error, setError] = useState<string | null>(null)
+
+  // 'resumen' = aterrizaje (el win elegido, de solo lectura), 'operaciones' =
+  // la vista consolidada de hoy (resultados + focos de todos los pilares), o
+  // el id de un pilar puntual.
+  const [activeTab, setActiveTab] = useState<string>('resumen')
 
   const canRemoveEvidence =
     profile?.role === 'admin_consultora' || profile?.role === 'admin_cliente' || profile?.role === 'gerente'
@@ -102,6 +110,13 @@ export function QuickWinPage() {
    * tablero. Se muestra en la fila para poder contrastarlo con la captura. */
   const resultsDate = dayBefore(boardDate)
   const chosen = candidates.find((c) => c.is_selected) ?? null
+
+  // Si el sitio cambia y el pilar activo ya no es de los que ese sitio
+  // gestiona, se cae de vuelta a Resumen en vez de mostrar una pestaña vacía
+  // sin nada seleccionado — sin necesidad de un efecto aparte.
+  const activePillar = sitePillars.find((a) => a.id === activeTab) ?? null
+  const effectiveTab = activeTab === 'resumen' || activeTab === 'operaciones' || activePillar ? activeTab : 'resumen'
+  const candidatesForActivePillar = activePillar ? candidates.filter((c) => c.axis_id === activePillar.id) : []
 
   // El marco entero de la tarjeta toma el color de la decisión: verde si el
   // win elegido se resuelve en este nivel, rojo si tiene que escalar.
@@ -305,9 +320,49 @@ export function QuickWinPage() {
         </label>
       </div>
 
+      {/* Resumen = lo primero que se ve, de solo lectura. Operaciones = la
+          vista consolidada de hoy (lo que era la pantalla completa). Cada
+          pilar = solo sus wins y su problema, como la tarjeta de referencia. */}
+      <nav className="win-card-tabs">
+        <button type="button" className={effectiveTab === 'resumen' ? 'is-active' : ''} onClick={() => setActiveTab('resumen')}>
+          Resumen
+        </button>
+        <button
+          type="button"
+          className={effectiveTab === 'operaciones' ? 'is-active' : ''}
+          onClick={() => setActiveTab('operaciones')}
+        >
+          Operaciones
+        </button>
+        {sitePillars.map((axis) => (
+          <button
+            key={axis.id}
+            type="button"
+            className={`win-card-tabs__pillar${effectiveTab === axis.id ? ' is-active' : ''}`}
+            style={{ '--tab-color': axis.color } as CSSProperties}
+            onClick={() => setActiveTab(axis.id)}
+          >
+            <AxisIcon icon={axis.icon} size={14} />
+            {axis.name}
+          </button>
+        ))}
+      </nav>
+
       {loading ? (
         <p>Cargando…</p>
       ) : (
+        <>
+          {effectiveTab === 'resumen' && (
+            <ChosenWinSummary
+              chosen={chosen}
+              siteName={siteName}
+              boardDate={boardDate}
+              onGoToPillar={(axisId) => setActiveTab(axisId)}
+              onGoToOperaciones={() => setActiveTab('operaciones')}
+            />
+          )}
+
+          {effectiveTab === 'operaciones' && (
         <section className={`win-card${frameModifier}`}>
           <header className="win-card__head">
             <h2 className="win-card__title">WIN CARD</h2>
@@ -486,6 +541,31 @@ export function QuickWinPage() {
             </span>
           </div>
         </section>
+          )}
+
+          {activePillar && effectiveTab === activePillar.id && (
+            <PillarWinCard
+              axis={activePillar}
+              siteName={siteName}
+              boardDate={boardDate}
+              profiles={profiles}
+              candidates={candidatesForActivePillar}
+              problemaDelDia={problemaDelDia}
+              problemaAxisId={problemaAxisId}
+              savingProblema={savingProblema}
+              savingProblemaAxis={savingProblemaAxis}
+              onChangeProblemaText={setProblemaDelDia}
+              onSaveProblema={handleSaveProblema}
+              onAssignProblemaHere={() => handleChangeProblemaAxis(activePillar.id)}
+              onChoose={handleToggleSelected}
+              onSave={handleSaveRow}
+              onToggleEscalation={handleToggleEscalation}
+              onEscalate={handleEscalate}
+              canDelete={canDeleteRecords}
+              onDelete={handleDeleteCandidate}
+            />
+          )}
+        </>
       )}
     </div>
   )

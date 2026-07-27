@@ -23,6 +23,10 @@ interface WinCardRowProps {
   onSave: (values: WinRowValues) => Promise<void>
   canDelete: boolean
   onDelete: (() => void) | null
+  /** Si se pasa, la fila vive en la pestaña de ESE pilar — no tiene sentido
+   * volver a elegirlo, así que el selector no se muestra y cada win nuevo
+   * se crea directo en él. */
+  lockedAxisId?: string
 }
 
 /**
@@ -44,8 +48,9 @@ export function WinCardRow({
   onSave,
   canDelete,
   onDelete,
+  lockedAxisId,
 }: WinCardRowProps) {
-  const [axisId, setAxisId] = useState(candidate?.axis_id ?? '')
+  const [axisId, setAxisId] = useState(lockedAxisId ?? candidate?.axis_id ?? '')
   const [description, setDescription] = useState(candidate?.description ?? '')
   const [responsibleId, setResponsibleId] = useState(candidate?.responsible_id ?? '')
   // El input type="time" trabaja en HH:MM; la base guarda HH:MM:SS.
@@ -91,23 +96,25 @@ export function WinCardRow({
       </div>
 
       <div className="win-card__win-body">
-        <select
-          className="win-card__win-axis"
-          value={axisId}
-          style={axisColor ? { color: axisColor, fontWeight: 700 } : undefined}
-          onChange={(e) => {
-            setAxisId(e.target.value)
-            commit({ axisId: e.target.value })
-          }}
-          aria-label={`Pilar del win ${position}`}
-        >
-          <option value="">Pilar…</option>
-          {pillars.map((axis) => (
-            <option key={axis.id} value={axis.id}>
-              {axis.name}
-            </option>
-          ))}
-        </select>
+        {!lockedAxisId && (
+          <select
+            className="win-card__win-axis"
+            value={axisId}
+            style={axisColor ? { color: axisColor, fontWeight: 700 } : undefined}
+            onChange={(e) => {
+              setAxisId(e.target.value)
+              commit({ axisId: e.target.value })
+            }}
+            aria-label={`Pilar del win ${position}`}
+          >
+            <option value="">Pilar…</option>
+            {pillars.map((axis) => (
+              <option key={axis.id} value={axis.id}>
+                {axis.name}
+              </option>
+            ))}
+          </select>
+        )}
         {/* El texto del win es lo más importante de la tarjeta: va en un
             textarea, no en un input de una línea, para que se pueda escribir
             y leer completo sin recortes. */}
