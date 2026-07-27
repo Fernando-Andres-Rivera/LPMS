@@ -30,6 +30,11 @@ import './safety.css'
 const EVENT_TYPES: SafetyEventType[] = ['accidente', 'incidente', 'acto_inseguro', 'condicion_insegura']
 const SEVERITIES: AccidentSeverity[] = ['fatal', 'serio', 'leve']
 
+/** Sentinel para "Todos los sitios" dentro del mismo <select> de un solo
+ * sitio que usa el resto de la app — no un id real, así que no puede
+ * chocar con un uuid de site. */
+const ALL_SITES_VALUE = 'todos'
+
 function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
@@ -43,7 +48,13 @@ function monthRange(year: number, month: number): { start: string; endExclusive:
 export function SafetyDashboardPage() {
   const { profile, organizationId, siteIds } = useAuth()
   const [sites, setSites] = useState<Site[]>([])
-  const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([])
+  // Mismo patrón de un solo <select> que el resto de la app (QuickWin,
+  // Reunión por nivel, …) — "Todos los sitios" vive como una opción más
+  // dentro de ese mismo select, no como chips de selección múltiple aparte.
+  // Arranca en "Todos los sitios" porque así lo tenía esta pantalla antes:
+  // el consolidado (días sin accidentes con la fecha de arranque más
+  // tardía, KPIs y pirámide agregados) sigue siendo la vista por defecto.
+  const [siteSelection, setSiteSelection] = useState<string>(ALL_SITES_VALUE)
   const [formSiteId, setFormSiteId] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -80,8 +91,11 @@ export function SafetyDashboardPage() {
           : data
       setSites(visible)
       if (visible.length) {
-        setSelectedSiteIds((current) =>
-          current.length ? current.filter((id) => visible.some((s) => s.id === id)) : visible.map((s) => s.id),
+        // Si el sitio (o "Todos los sitios") elegido ya no es válido para la
+        // lista visible actual — cambió de rol, o el sitio se desactivó — se
+        // cae de vuelta al consolidado en vez de quedar apuntando a nada.
+        setSiteSelection((current) =>
+          current === ALL_SITES_VALUE || visible.some((s) => s.id === current) ? current : ALL_SITES_VALUE,
         )
         setFormSiteId((current) => (current && visible.some((s) => s.id === current) ? current : visible[0].id))
       } else {
@@ -92,6 +106,7 @@ export function SafetyDashboardPage() {
     })
   }, [organizationId, profile, siteIds])
 
+  const selectedSiteIds = siteSelection === ALL_SITES_VALUE ? sites.map((s) => s.id) : [siteSelection]
   const selectedSites = sites.filter((s) => selectedSiteIds.includes(s.id))
   const sortedSelection = [...selectedSiteIds].sort().join(',')
   const loadKey = `${sortedSelection}|${referenceDate}|${range.from}|${range.to}`
@@ -183,10 +198,6 @@ export function SafetyDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortedSelection, referenceDate, range, sites])
 
-  function toggleSite(id: string) {
-    setSelectedSiteIds((current) => (current.includes(id) ? current.filter((s) => s !== id) : [...current, id]))
-  }
-
   async function handleSaveOperationStart(siteId: string) {
     const value = pendingStartDates[siteId]
     if (!value) return
@@ -255,27 +266,16 @@ export function SafetyDashboardPage() {
       />
 
       <div className="safety-filters">
-        <div className="safety-site-filter">
-          <button
-            type="button"
-            className={`safety-site-chip safety-site-chip--all${
-              selectedSiteIds.length === sites.length ? ' safety-site-chip--active' : ''
-            }`}
-            onClick={() => setSelectedSiteIds(sites.map((s) => s.id))}
-          >
-            Todos los sitios
-          </button>
-          {sites.map((site) => (
-            <button
-              key={site.id}
-              type="button"
-              className={`safety-site-chip${selectedSiteIds.includes(site.id) ? ' safety-site-chip--active' : ''}`}
-              onClick={() => toggleSite(site.id)}
-            >
-              {site.name}
-            </button>
-          ))}
-        </div>
+        {sites.length > 0 && (
+          <select value={siteSelection} onChange={(e) => setSiteSelection(e.target.value)} aria-label="Sitio">
+            <option value={ALL_SITES_VALUE}>Todos los sitios</option>
+            {sites.map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.name}
+              </option>
+            ))}
+          </select>
+        )}
         <label className="safety-date-filter">
           Fecha de referencia
           <input type="date" value={referenceDate} max={today()} onChange={(e) => setReferenceDate(e.target.value)} />
@@ -286,8 +286,6 @@ export function SafetyDashboardPage() {
         <span className="safety-range-row__label">Rango de análisis (KPIs y lista de eventos)</span>
         <RangePicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
       </div>
-
-      {selectedSiteIds.length === 0 && <p className="safety-error">Selecciona al menos un sitio para ver los datos.</p>}
 
       {sitesMissingStart.length > 0 && (
         <div className="safety-operation-start">
