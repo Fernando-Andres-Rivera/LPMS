@@ -153,7 +153,7 @@ export function WinCardRow({
       </div>
 
       <div className="win-card__win-cell">
-        <span className="win-card__win-cell-label">Hora de bouclage</span>
+        <span className="win-card__win-cell-label">Hora</span>
         <input
           type="time"
           value={executionTime}
@@ -161,7 +161,7 @@ export function WinCardRow({
             setExecutionTime(e.target.value)
             commit({ executionTime: e.target.value || null })
           }}
-          aria-label={`Hora de bouclage del win ${position}`}
+          aria-label={`Hora del win ${position}`}
         />
       </div>
 

@@ -43,7 +43,7 @@ export function ChosenWinSummary({ chosen, siteName, boardDate, onGoToPillar, on
           <dl className="win-card-summary__meta">
             <dt>Responsable</dt>
             <dd>{chosen.responsibleName ?? 'Sin asignar'}</dd>
-            <dt>Hora de bouclage</dt>
+            <dt>Hora</dt>
             <dd>{chosen.execution_time ? chosen.execution_time.slice(0, 5) : '—'}</dd>
             <dt>Estado</dt>
             <dd>

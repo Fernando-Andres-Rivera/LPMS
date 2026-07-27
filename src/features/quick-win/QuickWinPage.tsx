@@ -465,7 +465,7 @@ export function QuickWinPage() {
               <span />
               <span>Win propuesto</span>
               <span>Responsable</span>
-              <span>Hora de bouclage</span>
+              <span>Hora</span>
               <span />
             </div>
             {Array.from({ length: slotCount }, (_, i) => {

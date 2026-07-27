@@ -340,8 +340,8 @@
 }
 
 /* Redundante con .win-card__wins-head en escritorio (ahí ya dice
-   "Responsable" / "Hora de bouclage" arriba de toda la columna) — solo se
-   muestra cuando ese encabezado se oculta, en el breakpoint móvil de abajo. */
+   "Responsable" / "Hora" arriba de toda la columna) — solo se muestra
+   cuando ese encabezado se oculta, en el breakpoint móvil de abajo. */
 .win-card__win-cell-label {
   display: none;
 }
