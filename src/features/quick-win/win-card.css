@@ -201,10 +201,13 @@
   border-top: 1px solid var(--wc-line);
 }
 
+/* Responsable y Hora se recortan un poco frente a su ancho original — les
+   sobraba espacio — para cedérselo a la columna del win, que es lo que
+   realmente se lee en la reunión. */
 .win-card__wins-head,
 .win-card__win-row {
   display: grid;
-  grid-template-columns: var(--wc-label) minmax(0, 1fr) 168px 132px 44px;
+  grid-template-columns: var(--wc-label) minmax(0, 1fr) 146px 112px 40px;
   align-items: stretch;
 }
 
@@ -242,9 +245,9 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 5px;
-  padding: 10px 12px;
+  padding: 14px 12px;
   border-right: 1px solid var(--wc-line);
   background: var(--color-bg);
 }
@@ -285,9 +288,9 @@
 
 .win-card__win-body {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border-right: 1px solid var(--wc-line);
   min-width: 0;
 }
@@ -295,6 +298,7 @@
 .win-card__win-axis {
   flex: 0 0 132px;
   min-width: 0;
+  margin-top: 2px;
   padding: 7px 8px;
   border: 1px solid var(--wc-line);
   border-radius: var(--radius-sm);
@@ -303,19 +307,27 @@
   background: var(--color-surface);
 }
 
+/* El texto del win es lo más importante de la tarjeta — el resto de la
+   fila (pilar, responsable, hora) son datos de apoyo, así que este es el
+   único campo que crece: 3 líneas visibles de entrada y espacio de sobra
+   para seguir escribiendo con el resize. */
 .win-card__win-text {
   flex: 1 1 200px;
   min-width: 0;
-  padding: 7px 10px;
+  min-height: 72px;
+  padding: 9px 12px;
   border: 1px solid var(--wc-line);
   border-radius: var(--radius-sm);
   font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  resize: vertical;
 }
 
 .win-card__win-cell {
   display: flex;
-  align-items: center;
-  padding: 8px 10px;
+  align-items: flex-start;
+  padding: 14px 10px;
   border-right: 1px solid var(--wc-line);
 }
 
@@ -335,7 +347,11 @@
   background: var(--color-surface);
 }
 
+/* El botón de borrar es una acción, no un campo — se centra verticalmente
+   en vez de quedar pegado arriba como el resto de la fila, que ahora es
+   más alta por el textarea del win. */
 .win-card__win-cell--tools {
+  align-items: center;
   justify-content: center;
   gap: 4px;
 }

@@ -108,8 +108,12 @@ export function WinCardRow({
             </option>
           ))}
         </select>
-        <input
+        {/* El texto del win es lo más importante de la tarjeta: va en un
+            textarea, no en un input de una línea, para que se pueda escribir
+            y leer completo sin recortes. */}
+        <textarea
           className="win-card__win-text"
+          rows={2}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           onBlur={() => commit()}
