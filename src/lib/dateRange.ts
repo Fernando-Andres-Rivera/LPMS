@@ -28,6 +28,23 @@ export function yesterday(): string {
   return daysAgo(1)
 }
 
+/**
+ * Día anterior a una fecha dada (no a hoy) — para pantallas que se pueden
+ * consultar en retrospectiva: al abrir el tablero de un día pasado, los
+ * resultados que se revisaron en esa reunión son los del día anterior a ESE
+ * día, no los de ayer.
+ *
+ * Parte la cadena aaaa-mm-dd y arma la fecha con sus componentes en horario
+ * local; `new Date('2026-07-26')` se interpretaría como medianoche UTC y en
+ * Colombia (GMT-5) devolvería el día 25.
+ */
+export function dayBefore(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  const d = new Date(year, month - 1, day)
+  d.setDate(d.getDate() - 1)
+  return toLocalIso(d)
+}
+
 export interface DateRange {
   from: string
   to: string

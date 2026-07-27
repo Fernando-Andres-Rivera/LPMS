@@ -4,7 +4,7 @@ import { fetchIndicators, fetchProfiles, fetchSites } from '../indicators/indica
 import type { IndicatorWithRelations } from '../indicators/indicatorsApi'
 import { fetchActiveAxes, fetchIndicatorStatusesInRange } from '../dashboard/dashboardApi'
 import { calcularSemaforo } from '../../lib/semaforo'
-import { today, daysAgo } from '../../lib/dateRange'
+import { today, dayBefore } from '../../lib/dateRange'
 import {
   createQuickWinBoard,
   createQuickWinCandidate,
@@ -98,6 +98,9 @@ export function QuickWinPage() {
   const WIN_SLOTS = 3
   const slotCount = Math.max(WIN_SLOTS, candidates.length)
   const siteName = sites.find((s) => s.id === selectedSite)?.name ?? 'Sitio'
+  /** Día cuyos resultados se revisan en esta reunión: el anterior al del
+   * tablero. Se muestra en la fila para poder contrastarlo con la captura. */
+  const resultsDate = dayBefore(boardDate)
   const chosen = candidates.find((c) => c.is_selected) ?? null
 
   // El marco entero de la tarjeta toma el color de la decisión: verde si el
@@ -132,16 +135,21 @@ export function QuickWinPage() {
     }
   }, [organizationId, selectedSite, boardDate])
 
-  // Cumplimiento del día anterior (N-1) por pilar, para el encabezado
-  // automático — verde si TODOS los indicadores de ese eje que reportaron
-  // ese día cumplieron su objetivo, rojo si alguno no, gris si ninguno
-  // reportó todavía.
+  // Cumplimiento por pilar de la fila "N1 Resultados" — verde si TODOS los
+  // indicadores de ese eje que reportaron ese día cumplieron su objetivo,
+  // rojo si alguno no, gris si ninguno reportó.
+  //
+  // Se ancla al día anterior a la FECHA DEL TABLERO, no a ayer: al consultar
+  // la tarjeta de un día pasado hay que ver los resultados que se revisaron
+  // en esa reunión. Antes usaba daysAgo(1) fijo, así que cambiar la fecha
+  // volvía a pedir siempre el mismo día y el relleno nunca cambiaba.
   useEffect(() => {
     if (!organizationId || !selectedSite) return
     const orgId = organizationId
     const site = selectedSite
-    const referenceDate = daysAgo(1)
+    const referenceDate = dayBefore(boardDate)
     let cancelled = false
+
 
     fetchIndicatorStatusesInRange(orgId, { from: referenceDate, to: referenceDate }, site).then((statuses) => {
       if (cancelled) return
@@ -331,7 +339,10 @@ export function QuickWinPage() {
               no cumplió, o todavía sin datos. */}
           <div className="table-scroll">
             <div className="win-card__matrix" style={{ '--wc-pillars': sitePillars.length } as CSSProperties}>
-              <div className="win-card__rowlabel">N1 Resultados</div>
+              <div className="win-card__rowlabel">
+                <span>N1 Resultados</span>
+                <span className="win-card__rowlabel-date">Resultados del {resultsDate}</span>
+              </div>
               {sitePillars.map((axis) => {
                 const status = pillarStatus.get(axis.id) ?? 'sin_datos'
                 return (
