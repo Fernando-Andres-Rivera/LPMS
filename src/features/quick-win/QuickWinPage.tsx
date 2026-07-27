@@ -79,13 +79,16 @@ export function QuickWinPage() {
     })
   }, [organizationId])
 
-  // Pilares que este sitio realmente gestiona: ejes activos de la
-  // organización para los que el sitio (o el corporativo) tiene al menos un
-  // indicador — no hay una tabla de "ejes por sitio" aparte, así que se
-  // deriva de los indicadores ya existentes.
-  const sitePillars = allAxes.filter((axis) =>
-    allIndicators.some((i) => i.axis_id === axis.id && (i.site_id === selectedSite || i.site_id === null)),
-  )
+  // Los pilares de Quick Win tienen que ser los mismos que la organización
+  // activó en Estructura organizacional ("3. Ejes SMQDCEP") — allAxes ya es
+  // exactamente esa lista (fetchActiveAxes). Antes se filtraba además a los
+  // que ya tuvieran algún indicador cargado en este sitio, así que un pilar
+  // recién activado (sin indicadores todavía) desaparecía de Quick Win en
+  // vez de aparecer sin datos: si un cliente pilotea los 7 pilares desde
+  // que se conforma, los 7 tienen que estar aquí desde el primer día,
+  // aunque a algunos todavía no se les haya cargado ningún indicador — la
+  // fila N1 Resultados ya cae sola en "sin_datos" para esos casos.
+  const sitePillars = allAxes
 
   /**
    * Los focos de la zona "Puntos a ser remontados sistemáticos": los
