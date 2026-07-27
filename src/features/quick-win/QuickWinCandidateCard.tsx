@@ -21,6 +21,15 @@ interface QuickWinCandidateCardProps {
   /** Borrado físico del win — solo admin_consultora. */
   canDeleteRecords: boolean
   onDelete: () => void
+  /** 'blue' es el tono por defecto de un win propuesto, sin elegir todavía —
+   * lo usa el marco por pilar de la reunión de Nivel 1. El panel de wins
+   * escalados (Nivel 2/3) no pasa esto y se queda con el tono neutro de
+   * siempre. */
+  tone?: 'neutral' | 'blue'
+  /** Si el marco que envuelve la tarjeta ya pinta toda la zona al elegir el
+   * win (Nivel 1), la tarjeta no necesita repetir su propio color verde/rojo
+   * — solo el panel de escalados, que no tiene marco, sigue necesitándolo. */
+  showSelectedColor?: boolean
 }
 
 /**
@@ -40,11 +49,13 @@ export function QuickWinCandidateCard({
   siteName,
   canDeleteRecords,
   onDelete,
+  tone = 'neutral',
+  showSelectedColor = true,
 }: QuickWinCandidateCardProps) {
   return (
     <div
-      className={`quick-win-candidate-card${
-        candidate.is_selected
+      className={`quick-win-candidate-card${tone === 'blue' ? ' quick-win-candidate-card--blue' : ''}${
+        showSelectedColor && candidate.is_selected
           ? candidate.needs_escalation
             ? ' quick-win-candidate-card--red'
             : ' quick-win-candidate-card--green'

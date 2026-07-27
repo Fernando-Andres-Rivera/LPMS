@@ -47,8 +47,10 @@ export function QuickWinPage() {
   const [loading, setLoading] = useState(true)
   const [savingProblema, setSavingProblema] = useState(false)
 
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newAxisId, setNewAxisId] = useState('')
+  // Id del pilar cuyo formulario "+ Agregar win" está abierto — el marco de
+  // cada pilar tiene el suyo propio, así que solo uno a la vez puede estar
+  // abierto y ya sabe para qué eje es (no hace falta volver a elegirlo).
+  const [addingForAxisId, setAddingForAxisId] = useState<string | null>(null)
   const [newDescription, setNewDescription] = useState('')
   const [newResponsibleId, setNewResponsibleId] = useState('')
   const [newExecutionTime, setNewExecutionTime] = useState('')
@@ -82,6 +84,14 @@ export function QuickWinPage() {
   const sitePillars = allAxes.filter((axis) =>
     allIndicators.some((i) => i.axis_id === axis.id && (i.site_id === selectedSite || i.site_id === null)),
   )
+
+  // Cada pilar tiene su propio marco con sus propios wins propuestos — se
+  // agrupa una sola vez por render en vez de filtrar el arreglo completo
+  // dentro de cada iteración.
+  const candidatesByAxis = new Map<string, QuickWinCandidateWithNames[]>()
+  for (const candidate of candidates) {
+    candidatesByAxis.set(candidate.axis_id, [...(candidatesByAxis.get(candidate.axis_id) ?? []), candidate])
+  }
 
   useEffect(() => {
     if (!organizationId || !selectedSite) return
@@ -182,9 +192,9 @@ export function QuickWinPage() {
     }
   }
 
-  async function handleAddCandidate() {
-    if (!newAxisId || !newDescription.trim() || !profile) {
-      setError('Elige el pilar y describe el win propuesto.')
+  async function handleAddCandidate(axisId: string) {
+    if (!newDescription.trim() || !profile) {
+      setError('Describe el win propuesto.')
       return
     }
     setSaving(true)
@@ -193,7 +203,7 @@ export function QuickWinPage() {
       const currentBoard = await ensureBoard()
       await createQuickWinCandidate({
         boardId: currentBoard.id,
-        axisId: newAxisId,
+        axisId,
         description: newDescription.trim(),
         responsibleId: newResponsibleId || null,
         executionTime: newExecutionTime || null,
@@ -201,11 +211,10 @@ export function QuickWinPage() {
       })
       const refreshed = await fetchQuickWinCandidates(currentBoard.id)
       setCandidates(refreshed)
-      setNewAxisId('')
       setNewDescription('')
       setNewResponsibleId('')
       setNewExecutionTime('')
-      setShowAddForm(false)
+      setAddingForAxisId(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo agregar el win.')
     } finally {
@@ -273,30 +282,6 @@ export function QuickWinPage() {
         </label>
       </div>
 
-      {sitePillars.length > 0 && (
-        <div className="quick-win-pillars">
-          {sitePillars.map((axis) => {
-            const status = pillarStatus.get(axis.id) ?? 'sin_datos'
-            return (
-              <div
-                key={axis.id}
-                className={`quick-win-pillar quick-win-pillar--${status}`}
-                title={
-                  status === 'ok'
-                    ? 'Cumplió ayer'
-                    : status === 'fail'
-                      ? 'No cumplió ayer'
-                      : 'Sin mediciones de ayer todavía'
-                }
-              >
-                <AxisIcon icon={axis.icon} size={18} />
-                <span>{axis.name}</span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
       {loading ? (
         <p>Cargando…</p>
       ) : (
@@ -327,73 +312,125 @@ export function QuickWinPage() {
 
           {error && <p className="quick-win-error">{error}</p>}
 
-          <div className="quick-win-candidates">
-            {candidates.map((candidate) =>
-              profile && organizationId ? (
-                <QuickWinCandidateCard
-                  key={candidate.id}
-                  candidate={candidate}
-                  organizationId={organizationId}
-                  uploadedBy={profile.id}
-                  canRemoveEvidence={canRemoveEvidence}
-                  // Una vez escalado, ya no es decisión de Nivel 1 — la
-                  // tarjeta queda de solo lectura con la nota de a qué
-                  // nivel subió.
-                  onToggleSelected={candidate.level === 1 ? () => handleToggleSelected(candidate) : undefined}
-                  onToggleEscalation={candidate.level === 1 ? () => handleToggleEscalation(candidate) : undefined}
-                  onEscalate={candidate.level === 1 ? () => handleEscalate(candidate) : undefined}
-                  canDeleteRecords={canDeleteRecords}
-                  onDelete={() => handleDeleteCandidate(candidate)}
-                />
-              ) : null,
-            )}
+          {/* Un marco por pilar: a la izquierda el resultado de Operaciones
+              (misma lógica roja/verde de los indicadores), y a la derecha los
+              wins que los responsables trajeron para ESE pilar. Elegir uno
+              pinta el marco completo — la señal ya no vive solo en la
+              tarjeta, sino en toda la zona. */}
+          <div className="quick-win-pillar-frames">
+            {sitePillars.map((axis) => {
+              const axisCandidates = candidatesByAxis.get(axis.id) ?? []
+              const chosen = axisCandidates.find((c) => c.is_selected)
+              const status = pillarStatus.get(axis.id) ?? 'sin_datos'
+              const frameModifier = chosen
+                ? chosen.needs_escalation
+                  ? ' quick-win-pillar-frame--chosen-red'
+                  : ' quick-win-pillar-frame--chosen-green'
+                : ''
 
-            {showAddForm ? (
-              <div className="quick-win-candidate-card quick-win-candidate-card--form">
-                <label>
-                  Pilar
-                  <select value={newAxisId} onChange={(e) => setNewAxisId(e.target.value)}>
-                    <option value="">Selecciona un pilar…</option>
-                    {sitePillars.map((axis) => (
-                      <option key={axis.id} value={axis.id}>
-                        {axis.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Win propuesto
-                  <textarea rows={2} value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
-                </label>
-                <label>
-                  Responsable
-                  <select value={newResponsibleId} onChange={(e) => setNewResponsibleId(e.target.value)}>
-                    <option value="">Sin asignar</option>
-                    {profiles.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Hora de ejecución
-                  <input type="time" value={newExecutionTime} onChange={(e) => setNewExecutionTime(e.target.value)} />
-                </label>
-                <div className="quick-win-candidate-card__actions">
-                  <button type="button" className="button-primary" onClick={handleAddCandidate} disabled={saving}>
-                    {saving ? 'Guardando…' : 'Guardar win'}
-                  </button>
-                  <button type="button" onClick={() => setShowAddForm(false)} disabled={saving}>
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button type="button" className="quick-win-add-card" onClick={() => setShowAddForm(true)}>
-                + Agregar win
-              </button>
-            )}
+              return (
+                <section key={axis.id} className={`quick-win-pillar-frame${frameModifier}`}>
+                  <header className="quick-win-pillar-frame__header" style={{ color: axis.color }}>
+                    <AxisIcon icon={axis.icon} size={20} />
+                    <h2>{axis.name}</h2>
+                    {chosen && (
+                      <span className="quick-win-pillar-frame__chosen-tag">
+                        {chosen.needs_escalation ? '↑ Escala a Nivel 2' : '✓ Se resuelve aquí'}
+                      </span>
+                    )}
+                  </header>
+
+                  <div className="quick-win-pillar-frame__body">
+                    <div className={`quick-win-ops-card quick-win-ops-card--${status}`}>
+                      <span className="quick-win-ops-card__title">Operaciones</span>
+                      <span className="quick-win-ops-card__status">
+                        {status === 'ok' ? 'Cumplió ayer' : status === 'fail' ? 'No cumplió ayer' : 'Sin datos de ayer'}
+                      </span>
+                    </div>
+
+                    {axisCandidates.map((candidate) =>
+                      profile && organizationId ? (
+                        <QuickWinCandidateCard
+                          key={candidate.id}
+                          candidate={candidate}
+                          organizationId={organizationId}
+                          uploadedBy={profile.id}
+                          canRemoveEvidence={canRemoveEvidence}
+                          tone="blue"
+                          // El marco ya pinta la zona entera al elegir el win
+                          // — la tarjeta no repite su propio verde/rojo aquí.
+                          showSelectedColor={false}
+                          // Una vez escalado, ya no es decisión de Nivel 1 —
+                          // la tarjeta queda de solo lectura con la nota de a
+                          // qué nivel subió.
+                          onToggleSelected={candidate.level === 1 ? () => handleToggleSelected(candidate) : undefined}
+                          onToggleEscalation={
+                            candidate.level === 1 ? () => handleToggleEscalation(candidate) : undefined
+                          }
+                          onEscalate={candidate.level === 1 ? () => handleEscalate(candidate) : undefined}
+                          canDeleteRecords={canDeleteRecords}
+                          onDelete={() => handleDeleteCandidate(candidate)}
+                        />
+                      ) : null,
+                    )}
+
+                    {addingForAxisId === axis.id ? (
+                      <div className="quick-win-candidate-card quick-win-candidate-card--blue quick-win-candidate-card--form">
+                        <label>
+                          Win propuesto
+                          <textarea
+                            rows={2}
+                            value={newDescription}
+                            onChange={(e) => setNewDescription(e.target.value)}
+                            autoFocus
+                          />
+                        </label>
+                        <label>
+                          Responsable
+                          <select value={newResponsibleId} onChange={(e) => setNewResponsibleId(e.target.value)}>
+                            <option value="">Sin asignar</option>
+                            {profiles.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.full_name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Hora de ejecución
+                          <input
+                            type="time"
+                            value={newExecutionTime}
+                            onChange={(e) => setNewExecutionTime(e.target.value)}
+                          />
+                        </label>
+                        <div className="quick-win-candidate-card__actions">
+                          <button
+                            type="button"
+                            className="button-primary"
+                            onClick={() => handleAddCandidate(axis.id)}
+                            disabled={saving}
+                          >
+                            {saving ? 'Guardando…' : 'Guardar win'}
+                          </button>
+                          <button type="button" onClick={() => setAddingForAxisId(null)} disabled={saving}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="quick-win-add-card quick-win-add-card--compact"
+                        onClick={() => setAddingForAxisId(axis.id)}
+                      >
+                        + Agregar win
+                      </button>
+                    )}
+                  </div>
+                </section>
+              )
+            })}
           </div>
         </>
       )}

@@ -26,40 +26,6 @@
   border-radius: var(--radius-sm);
 }
 
-/* Encabezado automático de pilares: verde si el eje cumplió el día
-   anterior, rojo si no, gris si todavía no hay mediciones de ese día — solo
-   se muestran los pilares que este sitio realmente gestiona (los que
-   tienen al menos un indicador propio o corporativo). */
-.quick-win-pillars {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.quick-win-pillar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: white;
-}
-
-.quick-win-pillar--ok {
-  background: var(--color-ok);
-}
-
-.quick-win-pillar--fail {
-  background: var(--color-fail);
-}
-
-.quick-win-pillar--sin_datos {
-  background: var(--color-text-muted);
-}
-
 .quick-win-card {
   background: var(--color-surface);
   border-radius: var(--radius-md);
@@ -118,6 +84,128 @@
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
   align-items: start;
+}
+
+/* ============================================================
+   Un marco por pilar: el resultado de Operaciones (rojo/verde, igual que
+   cualquier tarjeta de indicador) junto a los wins que los responsables
+   trajeron para ESE pilar. Elegir uno pinta el marco completo — así la
+   reunión ve de un vistazo en qué pilar quedó el win del día.
+   ============================================================ */
+.quick-win-pillar-frames {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.quick-win-pillar-frame {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px 18px;
+  transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out);
+}
+
+.quick-win-pillar-frame__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.quick-win-pillar-frame__header h2 {
+  font-size: 1rem;
+  color: inherit;
+}
+
+.quick-win-pillar-frame__chosen-tag {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+
+.quick-win-pillar-frame__body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 14px;
+}
+
+/* Elegido y se resuelve aquí: toda la zona se pinta de verde — la misma
+   afirmación que antes vivía solo en el borde de una tarjeta, ahora ocupa
+   todo el marco del pilar. */
+.quick-win-pillar-frame--chosen-green {
+  background: color-mix(in srgb, var(--color-ok) 14%, var(--color-surface));
+  border-color: var(--color-ok);
+  box-shadow: 0 0 0 1px var(--color-ok), var(--shadow-md);
+}
+
+/* Elegido pero necesita escalar: mismo tratamiento, en rojo. */
+.quick-win-pillar-frame--chosen-red {
+  background: color-mix(in srgb, var(--color-fail) 14%, var(--color-surface));
+  border-color: var(--color-fail);
+  box-shadow: 0 0 0 1px var(--color-fail), var(--shadow-md);
+}
+
+/* La tarjeta "Operaciones": mismo lenguaje rojo/verde/gris que el
+   cumplimiento de cualquier indicador (calcularSemaforo), aplicado aquí al
+   pilar completo del día anterior. */
+.quick-win-ops-card {
+  flex: 0 0 148px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  color: white;
+}
+
+.quick-win-ops-card--ok {
+  background: var(--color-ok);
+}
+
+.quick-win-ops-card--fail {
+  background: var(--color-fail);
+}
+
+.quick-win-ops-card--sin_datos {
+  background: var(--color-text-muted);
+}
+
+.quick-win-ops-card__title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.quick-win-ops-card__status {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+/* Tono por defecto de un win propuesto sin elegir todavía — "trae la
+   posibilidad" en vez de afirmar un resultado, por eso azul y no
+   rojo/verde (esos ya los usa Operaciones y el marco al elegir). */
+.quick-win-candidate-card--blue {
+  flex: 1 1 240px;
+  min-width: 0;
+  border-left-color: var(--color-focus);
+  background: color-mix(in srgb, var(--color-focus) 5%, var(--color-surface));
+}
+
+.quick-win-add-card--compact {
+  flex: 0 0 160px;
+  min-height: auto;
+  align-self: stretch;
 }
 
 .quick-win-candidate-card {
