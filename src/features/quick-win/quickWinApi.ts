@@ -178,6 +178,19 @@ export async function createQuickWinCandidate(params: {
 }
 
 /**
+ * Edita un win ya registrado. La WIN CARD se llena en la reunión escribiendo
+ * directo sobre la fila (como en la tarjeta física), así que cada campo se
+ * guarda por separado a medida que se completa — de ahí el Partial.
+ */
+export async function updateQuickWinCandidate(
+  id: string,
+  fields: Partial<Pick<QuickWinCandidate, 'axis_id' | 'description' | 'responsible_id' | 'execution_time'>>,
+): Promise<void> {
+  const { error } = await supabase.from('quick_win_candidates').update(fields).eq('id', id)
+  if (error) throw error
+}
+
+/**
  * Marca (o desmarca) un candidato como "el win" que el equipo eligió —
  * exclusivo dentro del tablero (un solo win elegido por sitio/día): al
  * elegir uno nuevo, cualquier otro que ya estuviera marcado en este mismo

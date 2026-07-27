@@ -1,0 +1,439 @@
+/* ============================================================
+   WIN CARD — la tarjeta de la reunión de Nivel 1 a pantalla completa, con
+   las mismas cuatro zonas y el mismo orden que la tarjeta física: los
+   resultados por pilar, el problema del día, los 3 wins, y los puntos a
+   remontar sistemáticamente. El marco entero toma el color de la decisión.
+   ============================================================ */
+.win-card {
+  --wc-label: 168px;
+  --wc-line: #b9c0ca;
+  background: var(--color-surface);
+  border: 10px solid var(--color-gray);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: border-color var(--dur) var(--ease-out);
+}
+
+/* El win elegido se resuelve en este nivel. */
+.win-card--green {
+  border-color: var(--color-ok);
+}
+
+/* El win elegido tiene que escalar al nivel siguiente. */
+.win-card--red {
+  border-color: var(--color-fail);
+}
+
+.win-card__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 10px 16px;
+  background: var(--color-gray);
+  transition: background-color var(--dur) var(--ease-out);
+}
+
+.win-card--green .win-card__head {
+  background: var(--color-ok);
+}
+
+.win-card--red .win-card__head {
+  background: var(--color-fail);
+}
+
+.win-card__title {
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: white;
+}
+
+.win-card__head-meta {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.win-card__decision {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.win-card__decision-toggle,
+.win-card__escalate {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: white;
+}
+
+.win-card__decision-toggle--green {
+  color: var(--color-ok);
+}
+
+.win-card__decision-toggle--red {
+  color: var(--color-fail);
+}
+
+.win-card__escalate {
+  background: rgba(255, 255, 255, 0.22);
+  color: white;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+/* --- Matriz por pilar (resultados arriba, focos abajo) ---
+   Una columna por pilar que el cliente gestiona: la cantidad la inyecta la
+   página en --wc-pillars, así que la tarjeta se ajusta sola a cada cliente
+   sin tocar el CSS. */
+.win-card__matrix {
+  display: grid;
+  grid-template-columns: var(--wc-label) repeat(var(--wc-pillars), minmax(104px, 1fr));
+  border-top: 1px solid var(--wc-line);
+}
+
+.win-card__rowlabel {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-right: 1px solid var(--wc-line);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+  background: var(--color-bg);
+}
+
+.win-card__rowlabel--strong {
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.win-card__rowlabel--spacer {
+  background: var(--color-bg);
+}
+
+/* Casilla de resultado del pilar: el mismo semáforo que ya usa cualquier
+   tarjeta de indicador (cumplió / no cumplió / sin datos). */
+.win-card__pillar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10px 8px;
+  border-right: 1px solid var(--wc-line);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: white;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.win-card__pillar--ok {
+  background: var(--color-ok);
+}
+
+.win-card__pillar--fail {
+  background: var(--color-fail);
+}
+
+.win-card__pillar--sin_datos {
+  background: var(--color-text-muted);
+}
+
+/* --- Problema del día --- */
+.win-card__problema {
+  display: grid;
+  grid-template-columns: var(--wc-label) 1fr;
+  border-top: 1px solid var(--wc-line);
+}
+
+.win-card__problema-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #eceff3;
+}
+
+.win-card__problema-axis {
+  flex: 0 0 150px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--wc-line);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  background: var(--color-surface);
+}
+
+.win-card__problema-body textarea {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--wc-line);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  resize: vertical;
+}
+
+/* --- Los renglones de win --- */
+.win-card__wins {
+  border-top: 1px solid var(--wc-line);
+}
+
+.win-card__wins-head,
+.win-card__win-row {
+  display: grid;
+  grid-template-columns: var(--wc-label) minmax(0, 1fr) 168px 132px 44px;
+  align-items: stretch;
+}
+
+.win-card__wins-head {
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--wc-line);
+}
+
+.win-card__wins-head span {
+  padding: 7px 12px;
+  border-right: 1px solid var(--wc-line);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.win-card__win-row {
+  border-bottom: 1px solid var(--wc-line);
+  transition: background-color var(--dur) var(--ease-out);
+}
+
+.win-card__win-row:last-child {
+  border-bottom: none;
+}
+
+/* El renglón elegido se destaca dentro de la tarjeta; el color de la
+   decisión (verde/rojo) ya lo lleva el marco completo. */
+.win-card__win-row--chosen {
+  background: color-mix(in srgb, var(--color-focus) 9%, transparent);
+}
+
+.win-card__win-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 12px;
+  border-right: 1px solid var(--wc-line);
+  background: var(--color-bg);
+}
+
+.win-card__win-number {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: var(--color-primary);
+}
+
+.win-card__choose {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.win-card__choose:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.win-card__choose--on {
+  background: var(--color-focus);
+  border-color: var(--color-focus);
+  color: white;
+}
+
+.win-card__win-escalated {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-risk);
+}
+
+.win-card__win-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-right: 1px solid var(--wc-line);
+  min-width: 0;
+}
+
+.win-card__win-axis {
+  flex: 0 0 132px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--wc-line);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.82rem;
+  background: var(--color-surface);
+}
+
+.win-card__win-text {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--wc-line);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+}
+
+.win-card__win-cell {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-right: 1px solid var(--wc-line);
+}
+
+.win-card__win-cell:last-child {
+  border-right: none;
+}
+
+.win-card__win-cell select,
+.win-card__win-cell input {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--wc-line);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.82rem;
+  background: var(--color-surface);
+}
+
+.win-card__win-cell--tools {
+  justify-content: center;
+  gap: 4px;
+}
+
+.win-card__win-delete {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.win-card__win-delete:hover {
+  color: var(--color-fail);
+}
+
+.win-card__saving {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* --- Evidencia del win elegido --- */
+.win-card__evidence {
+  padding: 12px 16px;
+  border-top: 1px solid var(--wc-line);
+  background: var(--color-bg);
+}
+
+.win-card__evidence-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+/* --- Puntos a ser remontados sistemáticos --- */
+.win-card__matrix--focos {
+  border-top: 2px solid var(--color-primary);
+}
+
+.win-card__focos-head {
+  padding: 9px 8px;
+  border-right: 1px solid var(--wc-line);
+  border-bottom: 1px solid var(--wc-line);
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.82rem;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.win-card__focos-cell {
+  padding: 8px 10px;
+  border-right: 1px solid var(--wc-line);
+  min-height: 84px;
+  min-width: 0;
+}
+
+.win-card__focos-cell ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+
+.win-card__focos-empty {
+  color: var(--color-text-muted);
+}
+
+/* En pantallas angostas los renglones de win dejan de ser una grilla de 5
+   columnas (no caben sin aplastar los campos) y se apilan; las matrices por
+   pilar siguen desplazándose dentro de su .table-scroll. */
+@media (max-width: 860px) {
+  .win-card {
+    --wc-label: 108px;
+    border-width: 6px;
+  }
+
+  .win-card__wins-head {
+    display: none;
+  }
+
+  .win-card__win-row {
+    grid-template-columns: var(--wc-label) minmax(0, 1fr);
+  }
+
+  .win-card__win-label {
+    grid-row: span 4;
+  }
+
+  .win-card__win-body {
+    flex-wrap: wrap;
+  }
+
+  .win-card__win-cell {
+    border-right: none;
+    border-top: 1px dashed var(--wc-line);
+  }
+
+  .win-card__problema {
+    grid-template-columns: 1fr;
+  }
+
+  .win-card__problema .win-card__rowlabel {
+    border-right: none;
+    border-bottom: 1px solid var(--wc-line);
+  }
+}

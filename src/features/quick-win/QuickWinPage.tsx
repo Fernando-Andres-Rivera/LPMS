@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { fetchIndicators, fetchProfiles, fetchSites } from '../indicators/indicatorsApi'
 import type { IndicatorWithRelations } from '../indicators/indicatorsApi'
@@ -16,14 +16,16 @@ import {
   setQuickWinSelected,
   updateProblemaAxis,
   updateProblemaDelDia,
+  updateQuickWinCandidate,
   type QuickWinBoard,
   type QuickWinCandidateWithNames,
 } from './quickWinApi'
-import { QuickWinCandidateCard } from './QuickWinCandidateCard'
-import { AxisIcon } from '../../components/ui/AxisIcon'
+import { WinCardRow, type WinRowValues } from './WinCardRow'
+import { QuickWinEvidence } from './QuickWinEvidence'
 import { PageHeader } from '../../components/ui/PageHeader'
 import type { Axis, Profile, Site } from '../../lib/types'
 import './quick-win.css'
+import './win-card.css'
 
 type PillarStatus = 'ok' | 'fail' | 'sin_datos'
 
@@ -47,14 +49,6 @@ export function QuickWinPage() {
   const [loading, setLoading] = useState(true)
   const [savingProblema, setSavingProblema] = useState(false)
 
-  // Id del pilar cuyo formulario "+ Agregar win" está abierto — el marco de
-  // cada pilar tiene el suyo propio, así que solo uno a la vez puede estar
-  // abierto y ya sabe para qué eje es (no hace falta volver a elegirlo).
-  const [addingForAxisId, setAddingForAxisId] = useState<string | null>(null)
-  const [newDescription, setNewDescription] = useState('')
-  const [newResponsibleId, setNewResponsibleId] = useState('')
-  const [newExecutionTime, setNewExecutionTime] = useState('')
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const canRemoveEvidence =
@@ -85,13 +79,34 @@ export function QuickWinPage() {
     allIndicators.some((i) => i.axis_id === axis.id && (i.site_id === selectedSite || i.site_id === null)),
   )
 
-  // Cada pilar tiene su propio marco con sus propios wins propuestos — se
-  // agrupa una sola vez por render en vez de filtrar el arreglo completo
-  // dentro de cada iteración.
-  const candidatesByAxis = new Map<string, QuickWinCandidateWithNames[]>()
-  for (const candidate of candidates) {
-    candidatesByAxis.set(candidate.axis_id, [...(candidatesByAxis.get(candidate.axis_id) ?? []), candidate])
+  /**
+   * Los focos de la zona "Puntos a ser remontados sistemáticos": los
+   * indicadores marcados como foco (is_focus) que aplican a este sitio —
+   * propios o corporativos —, agrupados por pilar. Son de solo lectura aquí:
+   * el foco se define en la ficha del indicador, esta tarjeta solo lo
+   * recuerda en la reunión.
+   */
+  const focosByAxis = new Map<string, string[]>()
+  for (const indicator of allIndicators) {
+    if (!indicator.is_focus) continue
+    if (indicator.site_id !== selectedSite && indicator.site_id !== null) continue
+    focosByAxis.set(indicator.axis_id, [...(focosByAxis.get(indicator.axis_id) ?? []), indicator.name])
   }
+
+  // La tarjeta física tiene exactamente 3 renglones de win. Si un tablero
+  // viejo trae más, se muestran todos igual en vez de esconder datos.
+  const WIN_SLOTS = 3
+  const slotCount = Math.max(WIN_SLOTS, candidates.length)
+  const siteName = sites.find((s) => s.id === selectedSite)?.name ?? 'Sitio'
+  const chosen = candidates.find((c) => c.is_selected) ?? null
+
+  // El marco entero de la tarjeta toma el color de la decisión: verde si el
+  // win elegido se resuelve en este nivel, rojo si tiene que escalar.
+  const frameModifier = chosen
+    ? chosen.needs_escalation
+      ? ' win-card--red'
+      : ' win-card--green'
+    : ''
 
   useEffect(() => {
     if (!organizationId || !selectedSite) return
@@ -192,33 +207,33 @@ export function QuickWinPage() {
     }
   }
 
-  async function handleAddCandidate(axisId: string) {
-    if (!newDescription.trim() || !profile) {
-      setError('Describe el win propuesto.')
-      return
-    }
-    setSaving(true)
+  /** Una fila de la tarjeta se guarda sola: si estaba vacía crea el win, y si
+   * ya existía actualiza solo lo que cambió. */
+  async function handleSaveRow(candidate: QuickWinCandidateWithNames | null, values: WinRowValues) {
+    if (!profile) return
     setError(null)
     try {
       const currentBoard = await ensureBoard()
-      await createQuickWinCandidate({
-        boardId: currentBoard.id,
-        axisId,
-        description: newDescription.trim(),
-        responsibleId: newResponsibleId || null,
-        executionTime: newExecutionTime || null,
-        proposedBy: profile.id,
-      })
-      const refreshed = await fetchQuickWinCandidates(currentBoard.id)
-      setCandidates(refreshed)
-      setNewDescription('')
-      setNewResponsibleId('')
-      setNewExecutionTime('')
-      setAddingForAxisId(null)
+      if (candidate) {
+        await updateQuickWinCandidate(candidate.id, {
+          axis_id: values.axisId,
+          description: values.description.trim(),
+          responsible_id: values.responsibleId,
+          execution_time: values.executionTime,
+        })
+      } else {
+        await createQuickWinCandidate({
+          boardId: currentBoard.id,
+          axisId: values.axisId,
+          description: values.description.trim(),
+          responsibleId: values.responsibleId,
+          executionTime: values.executionTime,
+          proposedBy: profile.id,
+        })
+      }
+      setCandidates(await fetchQuickWinCandidates(currentBoard.id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo agregar el win.')
-    } finally {
-      setSaving(false)
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el win.')
     }
   }
 
@@ -285,154 +300,165 @@ export function QuickWinPage() {
       {loading ? (
         <p>Cargando…</p>
       ) : (
-        <>
-          <section className="quick-win-card">
-            <h2>Problema del día</h2>
-            <label className="quick-win-problema-axis">
-              Pilar
-              <select value={problemaAxisId} onChange={(e) => handleChangeProblemaAxis(e.target.value)}>
-                <option value="">Sin pilar asignado</option>
+        <section className={`win-card${frameModifier}`}>
+          <header className="win-card__head">
+            <h2 className="win-card__title">WIN CARD</h2>
+            <span className="win-card__head-meta">
+              {siteName} · {boardDate}
+            </span>
+            {chosen && (
+              <div className="win-card__decision">
+                <button
+                  type="button"
+                  className={`win-card__decision-toggle win-card__decision-toggle--${chosen.needs_escalation ? 'red' : 'green'}`}
+                  onClick={() => handleToggleEscalation(chosen)}
+                >
+                  {chosen.needs_escalation ? '● Necesita escalar' : '● Se resuelve aquí'}
+                </button>
+                {chosen.needs_escalation && chosen.level < 3 && (
+                  <button type="button" className="win-card__escalate" onClick={() => handleEscalate(chosen)}>
+                    Escalar a Nivel {chosen.level + 1} →
+                  </button>
+                )}
+              </div>
+            )}
+          </header>
+
+          {error && <p className="quick-win-error">{error}</p>}
+
+          {/* N1 RESULTADOS — una casilla por pilar que este sitio gestiona,
+              pintada con el mismo semáforo de los indicadores: cumplió ayer,
+              no cumplió, o todavía sin datos. */}
+          <div className="table-scroll">
+            <div className="win-card__matrix" style={{ '--wc-pillars': sitePillars.length } as CSSProperties}>
+              <div className="win-card__rowlabel">N1 Resultados</div>
+              {sitePillars.map((axis) => {
+                const status = pillarStatus.get(axis.id) ?? 'sin_datos'
+                return (
+                  <div
+                    key={axis.id}
+                    className={`win-card__pillar win-card__pillar--${status}`}
+                    title={
+                      status === 'ok'
+                        ? 'Cumplió ayer'
+                        : status === 'fail'
+                          ? 'No cumplió ayer'
+                          : 'Sin mediciones de ayer todavía'
+                    }
+                  >
+                    {axis.name}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Problema del día — en el mismo lugar que en la tarjeta física:
+              justo debajo de los resultados y arriba de los wins. */}
+          <div className="win-card__problema">
+            <div className="win-card__rowlabel">Problema del día</div>
+            <div className="win-card__problema-body">
+              <select
+                className="win-card__problema-axis"
+                value={problemaAxisId}
+                onChange={(e) => handleChangeProblemaAxis(e.target.value)}
+                aria-label="Pilar del problema del día"
+              >
+                <option value="">Pilar…</option>
                 {sitePillars.map((axis) => (
                   <option key={axis.id} value={axis.id}>
                     {axis.name}
                   </option>
                 ))}
               </select>
-              {savingProblemaAxis && <span className="quick-win-saving">Guardando…</span>}
-            </label>
-            <textarea
-              rows={2}
-              value={problemaDelDia}
-              onChange={(e) => setProblemaDelDia(e.target.value)}
-              onBlur={handleSaveProblema}
-              placeholder="¿Cuál fue el problema principal detectado en los recorridos de hoy?"
-            />
-            {savingProblema && <span className="quick-win-saving">Guardando…</span>}
-          </section>
+              <textarea
+                rows={2}
+                value={problemaDelDia}
+                onChange={(e) => setProblemaDelDia(e.target.value)}
+                onBlur={handleSaveProblema}
+                placeholder="¿Cuál fue el problema principal detectado en los recorridos de hoy?"
+              />
+              {(savingProblema || savingProblemaAxis) && <span className="win-card__saving">Guardando…</span>}
+            </div>
+          </div>
 
-          {error && <p className="quick-win-error">{error}</p>}
-
-          {/* Un marco por pilar: a la izquierda el resultado de Operaciones
-              (misma lógica roja/verde de los indicadores), y a la derecha los
-              wins que los responsables trajeron para ESE pilar. Elegir uno
-              pinta el marco completo — la señal ya no vive solo en la
-              tarjeta, sino en toda la zona. */}
-          <div className="quick-win-pillar-frames">
-            {sitePillars.map((axis) => {
-              const axisCandidates = candidatesByAxis.get(axis.id) ?? []
-              const chosen = axisCandidates.find((c) => c.is_selected)
-              const status = pillarStatus.get(axis.id) ?? 'sin_datos'
-              const frameModifier = chosen
-                ? chosen.needs_escalation
-                  ? ' quick-win-pillar-frame--chosen-red'
-                  : ' quick-win-pillar-frame--chosen-green'
-                : ''
-
+          {/* Los 3 renglones de win, editables en el momento. */}
+          <div className="win-card__wins">
+            <div className="win-card__wins-head">
+              <span />
+              <span>Win propuesto</span>
+              <span>Responsable</span>
+              <span>Hora de bouclage</span>
+              <span />
+            </div>
+            {Array.from({ length: slotCount }, (_, i) => {
+              const candidate = candidates[i] ?? null
+              const isLevel1 = !candidate || candidate.level === 1
               return (
-                <section key={axis.id} className={`quick-win-pillar-frame${frameModifier}`}>
-                  <header className="quick-win-pillar-frame__header" style={{ color: axis.color }}>
-                    <AxisIcon icon={axis.icon} size={20} />
-                    <h2>{axis.name}</h2>
-                    {chosen && (
-                      <span className="quick-win-pillar-frame__chosen-tag">
-                        {chosen.needs_escalation ? '↑ Escala a Nivel 2' : '✓ Se resuelve aquí'}
-                      </span>
-                    )}
-                  </header>
-
-                  <div className="quick-win-pillar-frame__body">
-                    <div className={`quick-win-ops-card quick-win-ops-card--${status}`}>
-                      <span className="quick-win-ops-card__title">Operaciones</span>
-                      <span className="quick-win-ops-card__status">
-                        {status === 'ok' ? 'Cumplió ayer' : status === 'fail' ? 'No cumplió ayer' : 'Sin datos de ayer'}
-                      </span>
-                    </div>
-
-                    {axisCandidates.map((candidate) =>
-                      profile && organizationId ? (
-                        <QuickWinCandidateCard
-                          key={candidate.id}
-                          candidate={candidate}
-                          organizationId={organizationId}
-                          uploadedBy={profile.id}
-                          canRemoveEvidence={canRemoveEvidence}
-                          tone="blue"
-                          // El marco ya pinta la zona entera al elegir el win
-                          // — la tarjeta no repite su propio verde/rojo aquí.
-                          showSelectedColor={false}
-                          // Una vez escalado, ya no es decisión de Nivel 1 —
-                          // la tarjeta queda de solo lectura con la nota de a
-                          // qué nivel subió.
-                          onToggleSelected={candidate.level === 1 ? () => handleToggleSelected(candidate) : undefined}
-                          onToggleEscalation={
-                            candidate.level === 1 ? () => handleToggleEscalation(candidate) : undefined
-                          }
-                          onEscalate={candidate.level === 1 ? () => handleEscalate(candidate) : undefined}
-                          canDeleteRecords={canDeleteRecords}
-                          onDelete={() => handleDeleteCandidate(candidate)}
-                        />
-                      ) : null,
-                    )}
-
-                    {addingForAxisId === axis.id ? (
-                      <div className="quick-win-candidate-card quick-win-candidate-card--blue quick-win-candidate-card--form">
-                        <label>
-                          Win propuesto
-                          <textarea
-                            rows={2}
-                            value={newDescription}
-                            onChange={(e) => setNewDescription(e.target.value)}
-                            autoFocus
-                          />
-                        </label>
-                        <label>
-                          Responsable
-                          <select value={newResponsibleId} onChange={(e) => setNewResponsibleId(e.target.value)}>
-                            <option value="">Sin asignar</option>
-                            {profiles.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.full_name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          Hora de ejecución
-                          <input
-                            type="time"
-                            value={newExecutionTime}
-                            onChange={(e) => setNewExecutionTime(e.target.value)}
-                          />
-                        </label>
-                        <div className="quick-win-candidate-card__actions">
-                          <button
-                            type="button"
-                            className="button-primary"
-                            onClick={() => handleAddCandidate(axis.id)}
-                            disabled={saving}
-                          >
-                            {saving ? 'Guardando…' : 'Guardar win'}
-                          </button>
-                          <button type="button" onClick={() => setAddingForAxisId(null)} disabled={saving}>
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="quick-win-add-card quick-win-add-card--compact"
-                        onClick={() => setAddingForAxisId(axis.id)}
-                      >
-                        + Agregar win
-                      </button>
-                    )}
-                  </div>
-                </section>
+                <WinCardRow
+                  key={candidate?.id ?? `empty-${i}`}
+                  position={i + 1}
+                  candidate={candidate}
+                  pillars={sitePillars}
+                  profiles={profiles}
+                  isChosen={!!candidate?.is_selected}
+                  onChoose={candidate && isLevel1 ? () => handleToggleSelected(candidate) : null}
+                  onSave={(values) => handleSaveRow(candidate, values)}
+                  canDelete={canDeleteRecords}
+                  onDelete={candidate ? () => handleDeleteCandidate(candidate) : null}
+                />
               )
             })}
           </div>
-        </>
+
+          {/* La evidencia del win elegido — la tarjeta física no la tiene, pero
+              la reunión ya la venía usando (fotos del antes/después), así que
+              se conserva como franja del win elegido. */}
+          {chosen && profile && organizationId && (
+            <div className="win-card__evidence">
+              <span className="win-card__evidence-label">Evidencia del win elegido</span>
+              <QuickWinEvidence
+                candidateId={chosen.id}
+                organizationId={organizationId}
+                uploadedBy={profile.id}
+                canRemove={canRemoveEvidence}
+              />
+            </div>
+          )}
+
+          {/* Puntos a ser remontados sistemáticos — los indicadores marcados
+              como foco para este sitio, por pilar. Solo lectura: el foco se
+              define en la ficha del indicador. */}
+          <div className="table-scroll">
+            <div className="win-card__matrix win-card__matrix--focos" style={{ '--wc-pillars': sitePillars.length } as CSSProperties}>
+              <div className="win-card__rowlabel win-card__rowlabel--strong">
+                Puntos a ser remontados sistemáticos
+              </div>
+              {sitePillars.map((axis) => (
+                <div key={`h-${axis.id}`} className="win-card__focos-head" style={{ color: axis.color }}>
+                  {axis.name}
+                </div>
+              ))}
+              <div className="win-card__rowlabel win-card__rowlabel--spacer" aria-hidden="true" />
+              {sitePillars.map((axis) => {
+                const focos = focosByAxis.get(axis.id) ?? []
+                return (
+                  <div key={`c-${axis.id}`} className="win-card__focos-cell">
+                    {focos.length === 0 ? (
+                      <span className="win-card__focos-empty">—</span>
+                    ) : (
+                      <ul>
+                        {focos.map((name) => (
+                          <li key={name}>{name}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
       )}
     </div>
   )
