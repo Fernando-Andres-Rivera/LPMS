@@ -450,9 +450,9 @@ export function GeneralDashboardPage() {
   const [tagsMap, setTagsMap] = useState<Map<string, IndicatorCauseTag[]>>(new Map())
   const [actionPlans, setActionPlans] = useState<AxisActionPlan[]>([])
   const [analysisSpeedDays, setAnalysisSpeedDays] = useState<number[]>([])
-  const [measurements, setMeasurements] = useState<{ indicator_id: string; period_date: string; value: number }[]>(
-    [],
-  )
+  const [measurements, setMeasurements] = useState<
+    { indicator_id: string; period_date: string; value: number; planned_value: number | null; real_value: number | null }[]
+  >([])
   const [currentCompliance, setCurrentCompliance] = useState<PeriodCompliance>({ cumplidos: 0, total: 0, pct: null })
   const [prevMonthCompliance, setPrevMonthCompliance] = useState<PeriodCompliance>({
     cumplidos: 0,
@@ -588,10 +588,13 @@ export function GeneralDashboardPage() {
   const indicatorById = useMemo(() => new Map(allIndicators.map((i) => [i.id, i])), [allIndicators])
 
   const trendByIndicator = useMemo(() => {
-    const map = new Map<string, { period_date: string; value: number }[]>()
+    const map = new Map<
+      string,
+      { period_date: string; value: number; planned_value: number | null; real_value: number | null }[]
+    >()
     for (const m of measurements) {
       const list = map.get(m.indicator_id) ?? []
-      list.push({ period_date: m.period_date, value: m.value })
+      list.push({ period_date: m.period_date, value: m.value, planned_value: m.planned_value, real_value: m.real_value })
       map.set(m.indicator_id, list)
     }
     for (const list of map.values()) list.sort((a, b) => a.period_date.localeCompare(b.period_date))
@@ -617,6 +620,7 @@ export function GeneralDashboardPage() {
           value: aggregateValues(
             indMeas.filter((m) => m.period_date >= b.startDate && m.period_date <= b.endDate),
             indicator.aggregation_method,
+            indicator.value_type,
           ),
         })),
       )

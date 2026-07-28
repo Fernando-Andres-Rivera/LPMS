@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase'
 import { aggregateValues, type PeriodBucket } from '../../lib/periods'
-import type { AggregationMethod, Axis, Indicator, IndicatorLink, Target } from '../../lib/types'
+import type { AggregationMethod, Axis, Indicator, IndicatorLink, IndicatorValueType, Target } from '../../lib/types'
 
 /** Ejes activos para la organización del usuario, ordenados por sort_order. */
 export async function fetchActiveAxes(organizationId: string): Promise<Axis[]> {
@@ -146,10 +146,13 @@ export async function fetchIndicatorStatusesInRange(
     fetchCurrentTargetsForIndicators(ids, Number(range.to.slice(0, 4)), Number(range.to.slice(5, 7))),
   ])
 
-  const measByIndicator = new Map<string, { period_date: string; value: number }[]>()
+  const measByIndicator = new Map<
+    string,
+    { period_date: string; value: number; planned_value: number | null; real_value: number | null }[]
+  >()
   for (const m of measurementRows) {
     const list = measByIndicator.get(m.indicator_id) ?? []
-    list.push({ period_date: m.period_date, value: m.value })
+    list.push({ period_date: m.period_date, value: m.value, planned_value: m.planned_value, real_value: m.real_value })
     measByIndicator.set(m.indicator_id, list)
   }
 
@@ -160,7 +163,7 @@ export async function fetchIndicatorStatusesInRange(
       : null
     return {
       ...status,
-      latest_value: aggregateValues(rows, status.aggregation_method),
+      latest_value: aggregateValues(rows, status.aggregation_method, status.value_type),
       latest_period_date: latestPeriodDate,
       target_value: targetMap.get(status.id) ?? status.target_value,
     }
@@ -168,16 +171,20 @@ export async function fetchIndicatorStatusesInRange(
 }
 
 /** Todas las mediciones de varios indicadores dentro de un rango, en una sola
- * consulta — para agregar por período en el cliente sin un round-trip por indicador. */
+ * consulta — para agregar por período en el cliente sin un round-trip por indicador.
+ * Incluye planned_value/real_value (programado/real) para poder agregar los
+ * indicadores tipo "razón" sumando esos totales en vez del % ya calculado. */
 export async function fetchMeasurementsInRange(
   indicatorIds: string[],
   startDate: string,
   endDate: string,
-): Promise<{ indicator_id: string; period_date: string; value: number }[]> {
+): Promise<
+  { indicator_id: string; period_date: string; value: number; planned_value: number | null; real_value: number | null }[]
+> {
   if (indicatorIds.length === 0) return []
   const { data, error } = await supabase
     .from('measurements')
-    .select('indicator_id, period_date, value')
+    .select('indicator_id, period_date, value, planned_value, real_value')
     .in('indicator_id', indicatorIds)
     .gte('period_date', startDate)
     .lte('period_date', endDate)
@@ -226,19 +233,22 @@ export interface PeriodResult {
 /**
  * Trae las mediciones del indicador que caen dentro de los `buckets` dados
  * (una sola consulta cubriendo el rango completo) y las agrega por período
- * según la regla del indicador (suma/promedio/último/máximo/mínimo). El
- * último elemento del resultado es el período vigente (ej. "esta semana").
+ * según la regla del indicador (suma/promedio/último/máximo/mínimo) — o,
+ * para un indicador de razón, sumando programado/real de cada bucket
+ * (valueType lo activa, ver aggregateValues). El último elemento del
+ * resultado es el período vigente (ej. "esta semana").
  */
 export async function fetchIndicatorPeriodSeries(
   indicatorId: string,
   buckets: PeriodBucket[],
   method: AggregationMethod,
+  valueType?: IndicatorValueType,
 ): Promise<PeriodResult[]> {
   if (buckets.length === 0) return []
 
   const { data, error } = await supabase
     .from('measurements')
-    .select('period_date, value')
+    .select('period_date, value, planned_value, real_value')
     .eq('indicator_id', indicatorId)
     .gte('period_date', buckets[0].startDate)
     .lte('period_date', buckets[buckets.length - 1].endDate)
@@ -252,6 +262,7 @@ export async function fetchIndicatorPeriodSeries(
     value: aggregateValues(
       rows.filter((r) => r.period_date >= bucket.startDate && r.period_date <= bucket.endDate),
       method,
+      valueType,
     ),
   }))
 }
@@ -272,7 +283,7 @@ export async function computeIndicatorSeries(
   buckets: PeriodBucket[],
 ): Promise<PeriodResult[]> {
   if (!indicator.is_calculated) {
-    return fetchIndicatorPeriodSeries(indicator.id, buckets, indicator.aggregation_method)
+    return fetchIndicatorPeriodSeries(indicator.id, buckets, indicator.aggregation_method, indicator.value_type)
   }
 
   const childIds = allLinks.filter((l) => l.parent_indicator_id === indicator.id).map((l) => l.child_indicator_id)

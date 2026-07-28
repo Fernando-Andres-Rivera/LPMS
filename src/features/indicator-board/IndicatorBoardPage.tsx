@@ -62,8 +62,8 @@ async function fetchRangeAndTrend(
 ): Promise<{ rangeSeries: PeriodResult[]; trendSeries: PeriodResult[] }> {
   if (!indicator.is_calculated) {
     const [rangeSeries, trendSeries] = await Promise.all([
-      fetchIndicatorPeriodSeries(indicator.id, rangeBucket, indicator.aggregation_method),
-      fetchIndicatorPeriodSeries(indicator.id, trendBuckets, indicator.aggregation_method),
+      fetchIndicatorPeriodSeries(indicator.id, rangeBucket, indicator.aggregation_method, indicator.value_type),
+      fetchIndicatorPeriodSeries(indicator.id, trendBuckets, indicator.aggregation_method, indicator.value_type),
     ])
     return { rangeSeries, trendSeries }
   }

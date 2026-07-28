@@ -1,4 +1,4 @@
-import type { AggregationMethod, PeriodType } from './types'
+import type { AggregationMethod, IndicatorValueType, PeriodType } from './types'
 
 export interface PeriodBucket {
   label: string
@@ -117,10 +117,31 @@ export function buildPeriodBucketsInRange(type: PeriodType, from: Date, to: Date
 
 /** Combina varias mediciones dentro de un período en un único resultado, según la regla del indicador. */
 export function aggregateValues(
-  values: { period_date: string; value: number }[],
+  values: { period_date: string; value: number; planned_value?: number | null; real_value?: number | null }[],
   method: AggregationMethod,
+  valueType?: IndicatorValueType,
 ): number | null {
   if (values.length === 0) return null
+
+  // Un indicador de razón (programado vs. real) se agrega SIEMPRE sumando el
+  // total programado y el total real de todo el período y calculando el %
+  // sobre esos totales — nunca promediando/sumando/tomando el último de los
+  // % ya calculados día a día, que pesaría igual un día de 2 personas que
+  // uno de 20. Por eso ignora `method` (el selector de agregación ni
+  // siquiera se muestra para este tipo en el formulario del indicador).
+  if (valueType === 'razon') {
+    let plannedTotal = 0
+    let realTotal = 0
+    let hasData = false
+    for (const v of values) {
+      if (v.planned_value == null || v.real_value == null) continue
+      plannedTotal += v.planned_value
+      realTotal += v.real_value
+      hasData = true
+    }
+    if (!hasData || plannedTotal === 0) return null
+    return (realTotal / plannedTotal) * 100
+  }
 
   switch (method) {
     case 'suma':

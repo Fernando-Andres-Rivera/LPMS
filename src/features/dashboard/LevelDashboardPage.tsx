@@ -104,10 +104,13 @@ export function LevelDashboardPage() {
         ),
       )
 
-      const measByIndicator = new Map<string, { period_date: string; value: number }[]>()
+      const measByIndicator = new Map<
+        string,
+        { period_date: string; value: number; planned_value: number | null; real_value: number | null }[]
+      >()
       for (const m of measRows) {
         const list = measByIndicator.get(m.indicator_id) ?? []
-        list.push({ period_date: m.period_date, value: m.value })
+        list.push({ period_date: m.period_date, value: m.value, planned_value: m.planned_value, real_value: m.real_value })
         measByIndicator.set(m.indicator_id, list)
       }
 
@@ -155,6 +158,7 @@ export function LevelDashboardPage() {
           value: aggregateValues(
             indMeas.filter((r) => r.period_date >= b.startDate && r.period_date <= b.endDate),
             indicator.aggregation_method,
+            indicator.value_type,
           ),
         }))
         // El KPI del rango completo (no solo el último bucket): "suma" debe
@@ -162,7 +166,7 @@ export function LevelDashboardPage() {
         // tomaba el valor del último día, que no reflejaba el rango.
         const latestValue = daysWithoutAccidentsMap.has(indicator.id)
           ? (daysWithoutAccidentsMap.get(indicator.id) ?? null)
-          : aggregateValues(indMeas, indicator.aggregation_method)
+          : aggregateValues(indMeas, indicator.aggregation_method, indicator.value_type)
         return {
           indicator,
           latestValue,

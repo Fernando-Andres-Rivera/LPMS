@@ -195,6 +195,9 @@ export function IndicatorFormPage() {
       // razón siempre mide "real sobre programado" — más real es mejor,
       // sin importar qué se esté contando.
       improvement_direction: nextType === 'binario' || nextType === 'razon' ? 'mayor_mejor' : f.improvement_direction,
+      // Para razón este valor queda sin uso real: aggregateValues() ignora
+      // aggregation_method en ese tipo y siempre suma programado/real del
+      // período — se deja en 'ultimo' solo porque la columna es NOT NULL.
       aggregation_method:
         nextType === 'binario' && !BINARY_AGGREGATION_METHODS.includes(f.aggregation_method)
           ? 'ultimo'
@@ -428,8 +431,8 @@ export function IndicatorFormPage() {
           <div className="indicator-form__target">
             <span className="indicator-form__target-label">Cómo resolver varios registros en un período</span>
             <p className="indicator-form__target-rule">
-              Se usa el valor más reciente capturado del período — un indicador de razón no se presta a
-              sumar/promediar programado y real de días distintos.
+              Se suma el total programado y el total real de todos los días del período elegido, y el % se
+              calcula sobre esos totales — no es el promedio de los % de cada día.
             </p>
           </div>
         ) : (
