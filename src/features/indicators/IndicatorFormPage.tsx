@@ -47,23 +47,27 @@ const BINARY_DIRECCIONES: { value: ImprovementDirection; label: string }[] = [
   { value: 'menor_mejor', label: 'El objetivo es No' },
 ]
 const AGGREGATION_METHODS: AggregationMethod[] = ['ultimo', 'suma', 'promedio', 'maximo', 'minimo']
-// Un indicador binario (Sí/No) solo admite reglas que dan un resultado 0/1
-// limpio — promedio o suma darían un número intermedio que ya no se puede
-// mostrar como "Sí"/"No".
-const BINARY_AGGREGATION_METHODS: AggregationMethod[] = ['ultimo', 'maximo', 'minimo']
+// Un indicador binario (Sí/No) admite reglas que dan un resultado 0/1
+// limpio (último/máximo/mínimo) más "promedio", que en cambio da el % de
+// registros que fueron Sí en el período — útil cuando lo que importa no es
+// "¿pasó alguna vez?" sino "¿qué tan seguido se cumplió?" (ej. 5S diaria,
+// checklist de arranque). "Suma" no aplica: sumar 0/1 no da ni un Sí/No ni
+// un % con sentido.
+const BINARY_AGGREGATION_METHODS: AggregationMethod[] = ['ultimo', 'maximo', 'minimo', 'promedio']
 const BINARY_AGGREGATION_LABEL: Record<AggregationMethod, string> = {
   ultimo: 'El más reciente',
   maximo: 'Si se cumplió al menos una vez en el período',
   minimo: 'Solo si se cumplió todas las veces en el período',
+  promedio: '% de veces que se cumplió en el período',
   suma: '',
-  promedio: '',
 }
 const BINARY_AGGREGATION_HELP: Record<AggregationMethod, string> = {
   ultimo: 'El indicador muestra Sí/No según la última vez que se registró en el período.',
   maximo: 'Basta con un "Sí" en el período para que el indicador muestre Sí — exige al menos una vez.',
   minimo: 'Si hubo un solo "No" en el período, el indicador muestra No — exige que se haya cumplido siempre.',
+  promedio:
+    'Cuenta cuántos registros del período fueron "Sí" contra el total y muestra ese % — ej. 18 Sí de 20 registros = 90%.',
   suma: '',
-  promedio: '',
 }
 const VALUE_TYPES: IndicatorValueType[] = ['numerico', 'binario', 'razon']
 
@@ -468,11 +472,22 @@ export function IndicatorFormPage() {
           <div className="indicator-form__target">
             <span className="indicator-form__target-label">Objetivo</span>
             <p className="indicator-form__target-rule">
-              La meta es <strong>{form.improvement_direction === 'mayor_mejor' ? 'Sí' : 'No'}</strong> — no hay un
-              número que definir, arriba elegiste cuál respuesta es la deseada. Cada vez que se capture{' '}
-              {form.improvement_direction === 'mayor_mejor' ? 'Sí' : 'No'}{' '}
-              <Semaforo estado="cumple" size="sm" />, o{' '}
-              {form.improvement_direction === 'mayor_mejor' ? 'No' : 'Sí'} <Semaforo estado="incumple" size="sm" />.
+              {form.aggregation_method === 'promedio' ? (
+                <>
+                  La meta es <strong>{form.improvement_direction === 'mayor_mejor' ? '100% Sí' : '0% Sí'}</strong> — no
+                  hay un número que definir, arriba elegiste cuál respuesta es la deseada. El % de registros{' '}
+                  {form.improvement_direction === 'mayor_mejor' ? 'que fueron Sí' : 'que fueron No'} en el período
+                  decide el color, con la misma banda de tolerancia que cualquier otro indicador.
+                </>
+              ) : (
+                <>
+                  La meta es <strong>{form.improvement_direction === 'mayor_mejor' ? 'Sí' : 'No'}</strong> — no hay un
+                  número que definir, arriba elegiste cuál respuesta es la deseada. Cada vez que se capture{' '}
+                  {form.improvement_direction === 'mayor_mejor' ? 'Sí' : 'No'}{' '}
+                  <Semaforo estado="cumple" size="sm" />, o{' '}
+                  {form.improvement_direction === 'mayor_mejor' ? 'No' : 'Sí'} <Semaforo estado="incumple" size="sm" />.
+                </>
+              )}
             </p>
           </div>
         ) : form.value_type === 'razon' ? (

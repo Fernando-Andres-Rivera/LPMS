@@ -46,7 +46,13 @@ export function formatIndicatorValue(
   unit: string,
 ): string {
   if (value === null) return '—'
-  if (valueType === 'binario') return value >= 1 ? 'Sí' : 'No'
+  if (valueType === 'binario') {
+    // Una lectura individual siempre es exactamente 0 o 1 (Sí/No); un valor
+    // fraccionario solo puede venir de promediar varias del período — ahí lo
+    // que importa es el % de veces que fue Sí, no un Sí/No único.
+    if (!Number.isInteger(value)) return `${Math.round(value * 1000) / 10}%`
+    return value >= 1 ? 'Sí' : 'No'
+  }
   if (valueType === 'razon') return `${Math.round(value * 10) / 10}%`
   return unit ? `${value} ${unit}` : String(value)
 }
