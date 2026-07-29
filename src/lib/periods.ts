@@ -1,4 +1,4 @@
-import type { AggregateBreakdown, AggregationMethod, IndicatorValueType, PeriodType } from './types'
+import type { AggregateBreakdown, AggregationMethod, ImprovementDirection, IndicatorValueType, PeriodType } from './types'
 
 export interface PeriodBucket {
   label: string
@@ -116,16 +116,20 @@ export function buildPeriodBucketsInRange(type: PeriodType, from: Date, to: Date
 }
 
 /**
- * El desglose detrás del % de un indicador de razón (real sobre programado)
- * o de un binario en modo "promedio" (Sí sobre total) — para mostrarlo junto
- * al resultado (ej. "18/20"). null si el tipo/método no tiene un desglose
- * que mostrar: numérico, o binario con último/máximo/mínimo, que ya dan un
- * Sí/No limpio sin fracción de por medio.
+ * El desglose detrás del % de un indicador de razón (real sobre programado),
+ * de un binario en modo "promedio" (Sí sobre total), o de un numérico que
+ * SUMA un conteo de eventos con "menor es mejor" (días sin evento sobre
+ * días registrados, ej. Actos Inseguros Encontrados) — para mostrarlo junto
+ * al resultado (ej. "18/20"). null en cualquier otro caso: un numérico que
+ * mide un nivel/tasa/costo (no se suma un conteo de eventos discretos), o
+ * un binario con último/máximo/mínimo, que ya dan un Sí/No limpio sin
+ * fracción de por medio.
  */
 export function aggregateBreakdown(
   values: { value: number; planned_value?: number | null; real_value?: number | null }[],
   method: AggregationMethod,
   valueType?: IndicatorValueType,
+  improvementDirection?: ImprovementDirection,
 ): AggregateBreakdown | null {
   if (valueType === 'razon') {
     let total = 0
@@ -142,6 +146,14 @@ export function aggregateBreakdown(
   if (valueType === 'binario' && method === 'promedio') {
     if (values.length === 0) return null
     return { count: values.reduce((sum, v) => sum + v.value, 0), total: values.length }
+  }
+  // Un numérico que se suma en el período y donde menos es mejor es, en la
+  // práctica, un conteo de eventos por día (actos inseguros, reclamos,
+  // inconsistencias...) — el mismo indicador ya distingue "día limpio"
+  // (0 eventos) de "día con evento" sin necesitar una captura Sí/No aparte.
+  if (valueType === 'numerico' && method === 'suma' && improvementDirection === 'menor_mejor') {
+    if (values.length === 0) return null
+    return { count: values.filter((v) => v.value === 0).length, total: values.length }
   }
   return null
 }

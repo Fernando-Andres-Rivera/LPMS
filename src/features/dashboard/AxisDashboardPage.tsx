@@ -112,7 +112,12 @@ export function AxisDashboardPage() {
         // sumar TODO el rango elegido, igual que el Tablero — antes esto
         // tomaba el valor del último día, que no reflejaba el rango.
         const latestValue = aggregateValues(indMeas, indicator.aggregation_method, indicator.value_type)
-        const breakdown = aggregateBreakdown(indMeas, indicator.aggregation_method, indicator.value_type)
+        const breakdown = aggregateBreakdown(
+          indMeas,
+          indicator.aggregation_method,
+          indicator.value_type,
+          indicator.improvement_direction,
+        )
         const targetValue = targetMap.get(indicator.id) ?? null
         return {
           indicator,

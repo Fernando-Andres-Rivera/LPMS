@@ -87,11 +87,13 @@ export interface CardMetric {
 }
 
 /**
- * Las 3 métricas secundarias estándar de una tarjeta de KPI: para razón y
- * binario en modo "promedio" (los dos únicos casos con un desglose
- * count/total) es Real/Sí, Programado/No y el %. Donde no exista esa
- * cantidad de medidas (numérico, o un binario de lectura única) se deja
- * "Sin datos" en las 3 — mismo molde de tarjeta para todos los tipos.
+ * Las 3 métricas secundarias estándar de una tarjeta de KPI: Real/Sí,
+ * Programado/No y el % para razón y binario en modo "promedio"; Días sin
+ * evento/Días con evento y el % para un numérico que suma un conteo de
+ * eventos (ej. Actos Inseguros, Reclamaciones del Cliente) — los únicos
+ * casos con un desglose count/total (ver aggregateBreakdown en periods.ts).
+ * Donde no exista esa cantidad de medidas se deja "Sin datos" en las 3 —
+ * mismo molde de tarjeta para todos los tipos.
  */
 export function computeCardMetrics(valueType: IndicatorValueType, breakdown: AggregateBreakdown | null): CardMetric[] {
   if (breakdown && breakdown.total !== 0) {
@@ -107,6 +109,13 @@ export function computeCardMetrics(valueType: IndicatorValueType, breakdown: Agg
       return [
         { label: 'Real', value: formatChipNumber(breakdown.count), tone: 'positive' },
         { label: 'Programado', value: formatChipNumber(breakdown.total), tone: 'neutral' },
+        { label: '%', value: `${pct}%`, tone: 'neutral' },
+      ]
+    }
+    if (valueType === 'numerico') {
+      return [
+        { label: 'Días sin evento', value: formatChipNumber(breakdown.count), tone: 'positive' },
+        { label: 'Días con evento', value: formatChipNumber(breakdown.total - breakdown.count), tone: 'negative' },
         { label: '%', value: `${pct}%`, tone: 'neutral' },
       ]
     }

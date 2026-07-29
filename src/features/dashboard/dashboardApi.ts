@@ -177,7 +177,7 @@ export async function fetchIndicatorStatusesInRange(
     return {
       ...status,
       latest_value: aggregateValues(rows, status.aggregation_method, status.value_type),
-      breakdown: aggregateBreakdown(rows, status.aggregation_method, status.value_type),
+      breakdown: aggregateBreakdown(rows, status.aggregation_method, status.value_type, status.improvement_direction),
       latest_period_date: latestPeriodDate,
       target_value: targetMap.get(status.id) ?? status.target_value,
     }
@@ -260,6 +260,7 @@ export async function fetchIndicatorPeriodSeries(
   buckets: PeriodBucket[],
   method: AggregationMethod,
   valueType?: IndicatorValueType,
+  improvementDirection?: Indicator['improvement_direction'],
 ): Promise<PeriodResult[]> {
   if (buckets.length === 0) return []
 
@@ -279,7 +280,7 @@ export async function fetchIndicatorPeriodSeries(
       label: bucket.label,
       date: bucket.startDate,
       value: aggregateValues(bucketRows, method, valueType),
-      breakdown: aggregateBreakdown(bucketRows, method, valueType),
+      breakdown: aggregateBreakdown(bucketRows, method, valueType, improvementDirection),
     }
   })
 }
@@ -300,7 +301,13 @@ export async function computeIndicatorSeries(
   buckets: PeriodBucket[],
 ): Promise<PeriodResult[]> {
   if (!indicator.is_calculated) {
-    return fetchIndicatorPeriodSeries(indicator.id, buckets, indicator.aggregation_method, indicator.value_type)
+    return fetchIndicatorPeriodSeries(
+      indicator.id,
+      buckets,
+      indicator.aggregation_method,
+      indicator.value_type,
+      indicator.improvement_direction,
+    )
   }
 
   const childIds = allLinks.filter((l) => l.parent_indicator_id === indicator.id).map((l) => l.child_indicator_id)

@@ -171,7 +171,12 @@ export function LevelDashboardPage() {
         // "Días sin accidentes" no tiene un desglose "X de Y" que mostrar.
         const breakdown = daysWithoutAccidentsMap.has(indicator.id)
           ? null
-          : aggregateBreakdown(indMeas, indicator.aggregation_method, indicator.value_type)
+          : aggregateBreakdown(
+              indMeas,
+              indicator.aggregation_method,
+              indicator.value_type,
+              indicator.improvement_direction,
+            )
         return {
           indicator,
           latestValue,
