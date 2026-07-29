@@ -1,4 +1,4 @@
-import type { AggregationMethod, IndicatorValueType, PeriodType } from './types'
+import type { AggregateBreakdown, AggregationMethod, IndicatorValueType, PeriodType } from './types'
 
 export interface PeriodBucket {
   label: string
@@ -115,6 +115,37 @@ export function buildPeriodBucketsInRange(type: PeriodType, from: Date, to: Date
   return buckets
 }
 
+/**
+ * El desglose detrás del % de un indicador de razón (real sobre programado)
+ * o de un binario en modo "promedio" (Sí sobre total) — para mostrarlo junto
+ * al resultado (ej. "18/20"). null si el tipo/método no tiene un desglose
+ * que mostrar: numérico, o binario con último/máximo/mínimo, que ya dan un
+ * Sí/No limpio sin fracción de por medio.
+ */
+export function aggregateBreakdown(
+  values: { value: number; planned_value?: number | null; real_value?: number | null }[],
+  method: AggregationMethod,
+  valueType?: IndicatorValueType,
+): AggregateBreakdown | null {
+  if (valueType === 'razon') {
+    let total = 0
+    let count = 0
+    let hasData = false
+    for (const v of values) {
+      if (v.planned_value == null || v.real_value == null) continue
+      total += v.planned_value
+      count += v.real_value
+      hasData = true
+    }
+    return hasData && total !== 0 ? { count, total } : null
+  }
+  if (valueType === 'binario' && method === 'promedio') {
+    if (values.length === 0) return null
+    return { count: values.reduce((sum, v) => sum + v.value, 0), total: values.length }
+  }
+  return null
+}
+
 /** Combina varias mediciones dentro de un período en un único resultado, según la regla del indicador. */
 export function aggregateValues(
   values: { period_date: string; value: number; planned_value?: number | null; real_value?: number | null }[],
@@ -130,17 +161,8 @@ export function aggregateValues(
   // uno de 20. Por eso ignora `method` (el selector de agregación ni
   // siquiera se muestra para este tipo en el formulario del indicador).
   if (valueType === 'razon') {
-    let plannedTotal = 0
-    let realTotal = 0
-    let hasData = false
-    for (const v of values) {
-      if (v.planned_value == null || v.real_value == null) continue
-      plannedTotal += v.planned_value
-      realTotal += v.real_value
-      hasData = true
-    }
-    if (!hasData || plannedTotal === 0) return null
-    return (realTotal / plannedTotal) * 100
+    const breakdown = aggregateBreakdown(values, method, valueType)
+    return breakdown ? (breakdown.count / breakdown.total) * 100 : null
   }
 
   switch (method) {

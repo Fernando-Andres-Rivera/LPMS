@@ -37,8 +37,8 @@ import {
   fetchActionPlansForIndicator,
   type ActionPlanWithNames,
 } from '../action-plans/actionPlansApi'
-import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL, formatIndicatorValue } from '../../lib/types'
-import type { PdcaStatus, Profile, Target } from '../../lib/types'
+import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL, formatBreakdown, formatIndicatorValue } from '../../lib/types'
+import type { AggregateBreakdown, PdcaStatus, Profile, Target } from '../../lib/types'
 import './indicator-board.css'
 
 function today(): string {
@@ -82,6 +82,7 @@ export function IndicatorBoardPage() {
   const [indicator, setIndicator] = useState<IndicatorWithRelations | null>(null)
   const [range, setRange] = useState(defaultRange())
   const [latestValue, setLatestValue] = useState<number | null>(null)
+  const [breakdown, setBreakdown] = useState<AggregateBreakdown | null>(null)
   const [trend, setTrend] = useState<{ date: string; value: number | null }[]>([])
   const [target, setTarget] = useState<Target | null>(null)
   const [causes, setCauses] = useState<CausalAnalysisWithAuthor[]>([])
@@ -147,6 +148,7 @@ export function IndicatorBoardPage() {
       if (cancelled) return
       setIndicator(indicatorData)
       setLatestValue(rangeSeries[0]?.value ?? null)
+      setBreakdown(rangeSeries[0]?.breakdown ?? null)
       setTrend(trendSeries.map((p) => ({ date: p.date, value: p.value })))
       setCauses(causesData)
       setPlans(plansData)
@@ -290,6 +292,9 @@ export function IndicatorBoardPage() {
       >
         <div className="board-result__header">
           <h2>{indicator.name}</h2>
+          {formatBreakdown(breakdown) && (
+            <span className="board-result__breakdown">{formatBreakdown(breakdown)}</span>
+          )}
         </div>
         <div className="board-result__content">
         {indicator.is_calculated && (

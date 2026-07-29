@@ -465,6 +465,15 @@
   text-transform: uppercase;
 }
 
+/* Mismo tamaño que .gdash-card__value, sin negrilla — el detalle ("18/20 ·
+   90%") detrás del resultado grande de la barra. */
+.gdash-card__breakdown {
+  align-self: flex-end;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
 .gdash-card__name {
   margin: 0;
   font-size: 0.95rem;

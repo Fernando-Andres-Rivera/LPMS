@@ -1,4 +1,4 @@
-import { Line, LineChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 import './TrendSparkline.css'
 
 export interface TrendSparklinePoint {
@@ -37,19 +37,10 @@ function DayTick({ x, y, payload }: { x?: number; y?: number; payload?: { value:
   )
 }
 
-/** Solo dibuja el punto cuando el día tiene un registro real — así se
- * distingue de un vistazo qué días sí se capturaron dentro del rango. */
-function RegisteredDot(color: string) {
-  return function Dot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: TrendSparklinePoint }) {
-    if (cx === undefined || cy === undefined || !payload || payload.value === null) return null
-    return <circle cx={cx} cy={cy} r={2.5} fill={color} stroke="none" />
-  }
-}
-
 /**
  * Mini-tendencia estándar para todas las tarjetas y tableros de KPI: eje X
- * con el día calendario de cada punto (tenue, domingos en rojo) y un punto
- * visible únicamente en los días con registro real, para distinguirlos de
+ * con el día calendario de cada punto (tenue, domingos en rojo) y barras
+ * sólidas únicamente en los días con registro real, para distinguirlos de
  * los días sin captura dentro del mismo rango.
  */
 export function TrendSparkline({ data, color, height = 44 }: TrendSparklineProps) {
@@ -59,19 +50,11 @@ export function TrendSparkline({ data, color, height = 44 }: TrendSparklineProps
   return (
     <div className="trend-sparkline">
       <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={data} margin={{ top: 2, right: 4, bottom: 0, left: 4 }}>
+        <BarChart data={data} margin={{ top: 2, right: 4, bottom: 0, left: 4 }}>
           <XAxis dataKey="date" tick={<DayTick />} axisLine={false} tickLine={false} interval={0} height={16} />
-          <YAxis hide domain={['dataMin', 'dataMax']} />
-          <Line
-            type="monotone"
-            dataKey="value"
-            stroke={color}
-            strokeWidth={2}
-            dot={RegisteredDot(color)}
-            connectNulls
-            isAnimationActive={false}
-          />
-        </LineChart>
+          <YAxis hide domain={[0, 'dataMax']} />
+          <Bar dataKey="value" fill={color} radius={[2, 2, 0, 0]} isAnimationActive={false} />
+        </BarChart>
       </ResponsiveContainer>
     </div>
   )

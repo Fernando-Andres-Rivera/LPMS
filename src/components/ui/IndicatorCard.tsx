@@ -3,7 +3,9 @@ import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
 import { Semaforo } from './Semaforo'
 import { TrendSparkline } from './TrendSparkline'
 import {
+  formatBreakdown,
   formatIndicatorValue,
+  type AggregateBreakdown,
   type ImprovementDirection,
   type IndicatorValueType,
   type SemaforoEstado,
@@ -33,6 +35,10 @@ interface IndicatorCardProps {
   estadoOverride?: SemaforoEstado
   /** Indicador marcado como "foco" — se resalta con un borde azul muy visible. */
   isFocus?: boolean
+  /** El detalle detrás del % (ej. "18/20") — solo aplica a razón y a
+   * binario en modo "promedio"; null en cualquier otro caso, y entonces no
+   * se muestra nada. */
+  breakdown?: AggregateBreakdown | null
 }
 
 /**
@@ -51,8 +57,10 @@ export function IndicatorCard({
   trend,
   estadoOverride,
   isFocus = false,
+  breakdown = null,
 }: IndicatorCardProps) {
   const estado = estadoOverride ?? calcularSemaforo(latestValue, targetValue, improvementDirection)
+  const breakdownText = formatBreakdown(breakdown)
 
   return (
     <Link
@@ -64,6 +72,13 @@ export function IndicatorCard({
         <span className="indicator-card__level">Nivel {level}</span>
         <Semaforo estado={estado} showLabel={false} size="sm" />
       </div>
+
+      {/* El detalle del % (ej. "18/20 · 90%"), arriba a la derecha, del mismo
+          tamaño del resultado pero sin negrilla — el KPI importante sigue
+          siendo el resultado grande de abajo, esto es solo contexto de cuántas
+          mediciones lo arman. En su propia fila, no en el header: a 1.5rem no
+          cabría junto al nivel y el semáforo sin desbordar la tarjeta. */}
+      {breakdownText && <div className="indicator-card__breakdown">{breakdownText}</div>}
 
       <h3 className="indicator-card__name">{name}</h3>
 

@@ -63,6 +63,14 @@
   margin-bottom: 0;
 }
 
+/* Mismo tamaño que .board-result__value, sin negrilla — el detalle ("18/20 ·
+   90%") detrás del resultado grande de la tarjeta. */
+.board-result__breakdown {
+  font-size: 1.8rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+
 .board-result__content {
   display: flex;
   flex-direction: column;

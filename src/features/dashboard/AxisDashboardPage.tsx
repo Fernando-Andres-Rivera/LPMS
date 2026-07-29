@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo } from '../../lib/semaforo'
-import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
+import { aggregateBreakdown, aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
 import { defaultRange } from '../../lib/dateRange'
 import {
   fetchAxisById,
@@ -14,7 +14,7 @@ import {
 } from './dashboardApi'
 import { fetchLatestRootCauses } from '../causal-analysis/causalAnalysisApi'
 import { fetchActionPlanCounts } from '../action-plans/actionPlansApi'
-import type { Axis, Indicator, SemaforoEstado } from '../../lib/types'
+import type { AggregateBreakdown, Axis, Indicator, SemaforoEstado } from '../../lib/types'
 import './dashboard.css'
 
 type Diagnostico = 'cumple' | 'sin_datos' | 'sin_causa' | 'falta_gestion' | 'falta_eficacia'
@@ -22,6 +22,7 @@ type Diagnostico = 'cumple' | 'sin_datos' | 'sin_causa' | 'falta_gestion' | 'fal
 interface IndicatorRow {
   indicator: Indicator
   latestValue: number | null
+  breakdown: AggregateBreakdown | null
   targetValue: number | null
   trend: { period_date: string; value: number | null }[]
   estado: SemaforoEstado
@@ -111,10 +112,12 @@ export function AxisDashboardPage() {
         // sumar TODO el rango elegido, igual que el Tablero — antes esto
         // tomaba el valor del último día, que no reflejaba el rango.
         const latestValue = aggregateValues(indMeas, indicator.aggregation_method, indicator.value_type)
+        const breakdown = aggregateBreakdown(indMeas, indicator.aggregation_method, indicator.value_type)
         const targetValue = targetMap.get(indicator.id) ?? null
         return {
           indicator,
           latestValue,
+          breakdown,
           targetValue,
           trend: series.map((p) => ({ period_date: p.date, value: p.value })),
           estado: calcularSemaforo(latestValue, targetValue, indicator.improvement_direction),
@@ -149,7 +152,7 @@ export function AxisDashboardPage() {
       {rows.length === 0 && <p>Este eje no tiene indicadores activos todavía.</p>}
 
       <div className="indicators-grid">
-        {rows.map(({ indicator, latestValue, targetValue, trend, estado, rootCause, actionPlanCount }) => {
+        {rows.map(({ indicator, latestValue, breakdown, targetValue, trend, estado, rootCause, actionPlanCount }) => {
           const diagnostico = diagnosticar(estado, rootCause, actionPlanCount)
           return (
             <div key={indicator.id} className="indicator-cell">
@@ -161,6 +164,7 @@ export function AxisDashboardPage() {
                 improvementDirection={indicator.improvement_direction}
                 valueType={indicator.value_type}
                 latestValue={latestValue}
+                breakdown={breakdown}
                 targetValue={targetValue}
                 trend={trend}
                 isFocus={indicator.is_focus}

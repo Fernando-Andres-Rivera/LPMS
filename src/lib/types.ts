@@ -57,6 +57,23 @@ export function formatIndicatorValue(
   return unit ? `${value} ${unit}` : String(value)
 }
 
+/** El detalle detrás del % de un indicador de razón (real sobre programado)
+ * o de un binario en modo "promedio" (Sí sobre total) — ej. "18/20". Solo
+ * existe para esos dos casos: un numérico no tiene un "conteo sobre total"
+ * equivalente, y un binario con último/máximo/mínimo ya da un Sí/No limpio
+ * sin fracción de por medio. */
+export interface AggregateBreakdown {
+  count: number
+  total: number
+}
+
+/** Texto "detalle · %" para mostrar junto al resultado (ej. "18/20 · 90%"). */
+export function formatBreakdown(breakdown: AggregateBreakdown | null): string | null {
+  if (!breakdown || breakdown.total === 0) return null
+  const pct = Math.round((breakdown.count / breakdown.total) * 1000) / 10
+  return `${breakdown.count}/${breakdown.total} · ${pct}%`
+}
+
 export const CAUSAL_METHODOLOGY_LABEL: Record<CausalMethodology, string> = {
   ishikawa: 'Ishikawa',
   '5_porques': '5 Porqués',

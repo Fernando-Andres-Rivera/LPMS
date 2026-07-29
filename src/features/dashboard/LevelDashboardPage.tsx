@@ -5,7 +5,7 @@ import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { DueActionsPanel, type DueAction } from '../../components/ui/DueActionsPanel'
 import { EscalatedQuickWins } from '../quick-win/EscalatedQuickWins'
-import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
+import { aggregateBreakdown, aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
 import { defaultRange, today } from '../../lib/dateRange'
 import {
   fetchActiveAxes,
@@ -21,13 +21,14 @@ import {
   fetchSafetyEventsInRange,
   isDaysWithoutAccidentsIndicatorName,
 } from '../safety/safetyApi'
-import type { Axis, Indicator, PdcaStatus, SemaforoEstado, Site } from '../../lib/types'
+import type { AggregateBreakdown, Axis, Indicator, PdcaStatus, SemaforoEstado, Site } from '../../lib/types'
 import { PageHeader } from '../../components/ui/PageHeader'
 import './dashboard.css'
 
 interface IndicatorRow {
   indicator: Indicator
   latestValue: number | null
+  breakdown: AggregateBreakdown | null
   targetValue: number | null
   trend: { period_date: string; value: number | null }[]
   estadoOverride?: SemaforoEstado
@@ -167,9 +168,14 @@ export function LevelDashboardPage() {
         const latestValue = daysWithoutAccidentsMap.has(indicator.id)
           ? (daysWithoutAccidentsMap.get(indicator.id) ?? null)
           : aggregateValues(indMeas, indicator.aggregation_method, indicator.value_type)
+        // "Días sin accidentes" no tiene un desglose "X de Y" que mostrar.
+        const breakdown = daysWithoutAccidentsMap.has(indicator.id)
+          ? null
+          : aggregateBreakdown(indMeas, indicator.aggregation_method, indicator.value_type)
         return {
           indicator,
           latestValue,
+          breakdown,
           targetValue: targetMap.get(indicator.id) ?? null,
           trend: series.map((p) => ({ period_date: p.date, value: p.value })),
           estadoOverride: daysWithoutAccidentsEstadoMap.get(indicator.id),
@@ -291,7 +297,7 @@ export function LevelDashboardPage() {
           <div className="level-section" key={axis.id}>
             <h3 style={{ color: axisById.get(axis.id)?.color }}>{axis.name}</h3>
             <div className="indicators-grid">
-              {axisRows.map(({ indicator, latestValue, targetValue, trend, estadoOverride }) => (
+              {axisRows.map(({ indicator, latestValue, breakdown, targetValue, trend, estadoOverride }) => (
                 <div key={indicator.id} className="indicator-cell">
                   <IndicatorCard
                     id={indicator.id}
@@ -301,6 +307,7 @@ export function LevelDashboardPage() {
                     improvementDirection={indicator.improvement_direction}
                     valueType={indicator.value_type}
                     latestValue={latestValue}
+                    breakdown={breakdown}
                     targetValue={targetValue}
                     trend={trend}
                     estadoOverride={estadoOverride}

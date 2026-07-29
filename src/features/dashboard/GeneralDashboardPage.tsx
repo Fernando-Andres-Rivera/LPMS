@@ -8,7 +8,7 @@ import { RangePicker } from '../../components/ui/RangePicker'
 import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
 import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
 import { daysAgo, yesterday, DEFAULT_RANGE_DAYS } from '../../lib/dateRange'
-import { formatIndicatorValue, type Axis, type Indicator, type Site } from '../../lib/types'
+import { formatBreakdown, formatIndicatorValue, type Axis, type Indicator, type Site } from '../../lib/types'
 import {
   fetchActiveAxes,
   fetchCurrentTargetsForIndicators,
@@ -285,6 +285,8 @@ interface KpiTileProps {
 function KpiTile({ indicator, status, trend }: KpiTileProps) {
   const latestValue = status?.latest_value ?? null
   const targetValue = status?.target_value ?? null
+  const breakdown = status?.breakdown ?? null
+  const breakdownText = formatBreakdown(breakdown)
   const estado = calcularSemaforo(latestValue, targetValue, indicator.improvement_direction)
 
   if (indicator.value_type === 'binario') {
@@ -297,6 +299,7 @@ function KpiTile({ indicator, status, trend }: KpiTileProps) {
         improvementDirection={indicator.improvement_direction}
         valueType="binario"
         latestValue={latestValue}
+        breakdown={breakdown}
         targetValue={targetValue}
         trend={trend}
         isFocus={indicator.is_focus}
@@ -316,6 +319,7 @@ function KpiTile({ indicator, status, trend }: KpiTileProps) {
           <span className="gdash-card__level">Nivel {indicator.level}</span>
           <Semaforo estado={estado} showLabel={false} size="sm" />
         </div>
+        {breakdownText && <div className="gdash-card__breakdown">{breakdownText}</div>}
         <h3 className="gdash-card__name">{indicator.name}</h3>
         <div className="gdash-progress">
           <div className="gdash-progress__fill" style={{ width: `${pct}%`, background: SEMAFORO_COLOR[estado] }} />

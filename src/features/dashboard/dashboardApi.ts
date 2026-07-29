@@ -1,6 +1,14 @@
 import { supabase } from '../../lib/supabase'
-import { aggregateValues, type PeriodBucket } from '../../lib/periods'
-import type { AggregationMethod, Axis, Indicator, IndicatorLink, IndicatorValueType, Target } from '../../lib/types'
+import { aggregateBreakdown, aggregateValues, type PeriodBucket } from '../../lib/periods'
+import type {
+  AggregateBreakdown,
+  AggregationMethod,
+  Axis,
+  Indicator,
+  IndicatorLink,
+  IndicatorValueType,
+  Target,
+} from '../../lib/types'
 
 /** Ejes activos para la organización del usuario, ordenados por sort_order. */
 export async function fetchActiveAxes(organizationId: string): Promise<Axis[]> {
@@ -101,6 +109,11 @@ export interface IndicatorStatus {
   latest_period_date: string | null
   target_value: number | null
   value_type: Indicator['value_type']
+  /** El detalle detrás de latest_value (ej. "18/20") — solo en razón y en
+   * binario con "promedio"; null en cualquier otro caso. Ausente en la fila
+   * cruda de la vista indicator_status (fetchIndicatorStatuses), que no
+   * calcula esto; fetchIndicatorStatusesInRange sí lo agrega. */
+  breakdown?: AggregateBreakdown | null
 }
 
 export async function fetchIndicatorStatuses(
@@ -164,6 +177,7 @@ export async function fetchIndicatorStatusesInRange(
     return {
       ...status,
       latest_value: aggregateValues(rows, status.aggregation_method, status.value_type),
+      breakdown: aggregateBreakdown(rows, status.aggregation_method, status.value_type),
       latest_period_date: latestPeriodDate,
       target_value: targetMap.get(status.id) ?? status.target_value,
     }
@@ -228,6 +242,9 @@ export interface PeriodResult {
   label: string
   date: string
   value: number | null
+  /** El detalle detrás de `value` (ej. "18/20") — solo en razón y en
+   * binario con "promedio"; null en cualquier otro caso. */
+  breakdown?: AggregateBreakdown | null
 }
 
 /**
@@ -256,15 +273,15 @@ export async function fetchIndicatorPeriodSeries(
   if (error) throw error
   const rows = data ?? []
 
-  return buckets.map((bucket) => ({
-    label: bucket.label,
-    date: bucket.startDate,
-    value: aggregateValues(
-      rows.filter((r) => r.period_date >= bucket.startDate && r.period_date <= bucket.endDate),
-      method,
-      valueType,
-    ),
-  }))
+  return buckets.map((bucket) => {
+    const bucketRows = rows.filter((r) => r.period_date >= bucket.startDate && r.period_date <= bucket.endDate)
+    return {
+      label: bucket.label,
+      date: bucket.startDate,
+      value: aggregateValues(bucketRows, method, valueType),
+      breakdown: aggregateBreakdown(bucketRows, method, valueType),
+    }
+  })
 }
 
 /**
