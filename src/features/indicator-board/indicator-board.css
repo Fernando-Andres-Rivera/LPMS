@@ -43,9 +43,13 @@
   margin-bottom: 12px;
 }
 
+/* Panel "hero" del indicador: mismo lenguaje visual que la tarjeta estándar
+   (IndicatorCard) — fondo coloreado por pilar (mezclado con el navy
+   corporativo, ver el style inline en IndicatorBoardPage.tsx), texto claro. */
 .board-result {
   border-left: 4px solid transparent;
   box-shadow: var(--shadow-kpi);
+  color: #fff;
 }
 
 .board-result__header {
@@ -56,19 +60,12 @@
   gap: 10px;
   padding-bottom: 14px;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .board-result__header h2 {
   margin-bottom: 0;
-}
-
-/* Mismo tamaño que .board-result__value, sin negrilla — el detalle ("18/20 ·
-   90%") detrás del resultado grande de la tarjeta. */
-.board-result__breakdown {
-  font-size: 1.8rem;
-  font-weight: 400;
-  color: var(--color-text);
+  color: #fff;
 }
 
 .board-result__content {
@@ -78,14 +75,14 @@
 
 .board-result__period {
   margin: 10px 0 0;
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 0.82rem;
 }
 
 .board-result__calculated-note {
   margin: 0 0 12px;
-  color: var(--color-primary);
-  background: rgba(27, 54, 93, 0.06);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   font-size: 0.82rem;
@@ -93,32 +90,33 @@
 }
 
 .board-result__badge {
-  display: inline-block;
-  font-weight: 800;
-  font-size: 1.1rem;
-  padding: 8px 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #fff;
+  padding: 5px 14px;
   border-radius: 999px;
-  margin-bottom: 14px;
+  white-space: nowrap;
 }
 
 .board-result__badge--cumple {
-  background: rgba(38, 166, 154, 0.14);
-  color: var(--color-ok);
+  background: var(--color-ok);
 }
 
 .board-result__badge--riesgo {
-  background: rgba(245, 124, 0, 0.14);
-  color: var(--color-risk);
+  background: var(--color-risk);
 }
 
 .board-result__badge--incumple {
-  background: rgba(211, 47, 47, 0.12);
-  color: var(--color-fail);
+  background: var(--color-fail);
 }
 
 .board-result__badge--sin_datos {
-  background: rgba(176, 182, 189, 0.2);
-  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .board-result__values {
@@ -131,23 +129,83 @@
 .board-result__value {
   font-size: 1.8rem;
   font-weight: 700;
-  color: var(--color-primary);
+  color: #fff;
 }
 
 .board-result__value small {
   font-size: 0.9rem;
   font-weight: 500;
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .board-result__target {
-  color: var(--color-kpi-target);
+  color: rgba(255, 255, 255, 0.8);
   font-weight: 600;
   font-size: 0.9rem;
 }
 
 .board-result__sparkline {
   margin-top: 8px;
+}
+
+.board-result .trend-sparkline__tick {
+  fill: rgba(255, 255, 255, 0.45);
+}
+
+.board-result .trend-sparkline__tick--sunday {
+  fill: #ff8a80;
+}
+
+.board-result__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(90px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+  max-width: 420px;
+}
+
+.board-result__metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.board-result__metric--positive {
+  background: color-mix(in srgb, var(--color-ok) 30%, transparent);
+}
+
+.board-result__metric--negative {
+  background: color-mix(in srgb, var(--color-fail) 30%, transparent);
+}
+
+.board-result__metric--neutral {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.board-result__metric--muted {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.board-result__metric-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.board-result__metric--muted .board-result__metric-value {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.board-result__metric-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .board-causes-subtitle {

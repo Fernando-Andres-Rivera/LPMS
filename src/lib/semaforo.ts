@@ -39,3 +39,13 @@ export const SEMAFORO_LABEL: Record<SemaforoEstado, string> = {
   incumple: 'Incumple',
   sin_datos: 'Sin datos',
 }
+
+/** Ícono de la insignia de estado en las tarjetas de KPI — "riesgo" lleva su
+ * propio símbolo de advertencia en vez de la ✗ de "incumple": todavía no es
+ * un fallo duro. */
+export const ESTADO_ICON: Record<SemaforoEstado, string> = {
+  cumple: '✓',
+  riesgo: '!',
+  incumple: '✗',
+  sin_datos: '•',
+}

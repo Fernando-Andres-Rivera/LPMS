@@ -3,12 +3,11 @@ import { Link } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
-import { Semaforo } from '../../components/ui/Semaforo'
 import { RangePicker } from '../../components/ui/RangePicker'
-import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
+import { calcularSemaforo } from '../../lib/semaforo'
 import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
 import { daysAgo, yesterday, DEFAULT_RANGE_DAYS } from '../../lib/dateRange'
-import { formatBreakdown, formatIndicatorValue, type Axis, type Indicator, type Site } from '../../lib/types'
+import type { Axis, Indicator, Site } from '../../lib/types'
 import {
   fetchActiveAxes,
   fetchCurrentTargetsForIndicators,
@@ -273,87 +272,27 @@ interface KpiTileProps {
   indicator: Indicator
   status: IndicatorStatus | undefined
   trend: { period_date: string; value: number | null }[]
+  axisColor: string
 }
 
-/**
- * Elige cómo mostrar cada indicador según su naturaleza, no un único
- * formato para todos: Sí/No es un ESTADO (tarjeta), un % ya es una barra
- * de avance por definición, y numérico es progreso contra un objetivo
- * (barra con la marca del objetivo) — el mismo criterio que se explicó al
- * usuario al construirlo.
- */
-function KpiTile({ indicator, status, trend }: KpiTileProps) {
-  const latestValue = status?.latest_value ?? null
-  const targetValue = status?.target_value ?? null
-  const breakdown = status?.breakdown ?? null
-  const breakdownText = formatBreakdown(breakdown)
-  const estado = calcularSemaforo(latestValue, targetValue, indicator.improvement_direction)
-
-  if (indicator.value_type === 'binario') {
-    return (
-      <IndicatorCard
-        id={indicator.id}
-        name={indicator.name}
-        unit={indicator.unit}
-        level={indicator.level}
-        improvementDirection={indicator.improvement_direction}
-        valueType="binario"
-        latestValue={latestValue}
-        breakdown={breakdown}
-        targetValue={targetValue}
-        trend={trend}
-        isFocus={indicator.is_focus}
-      />
-    )
-  }
-
-  if (indicator.value_type === 'razon') {
-    const pct = latestValue !== null ? Math.max(0, Math.min(100, latestValue)) : 0
-    return (
-      <Link
-        to={`/tablero/${indicator.id}`}
-        className={`gdash-card gdash-card--bar${indicator.is_focus ? ' kpi-focus' : ''}`}
-        style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
-      >
-        <div className="gdash-card__header">
-          <span className="gdash-card__level">Nivel {indicator.level}</span>
-          <Semaforo estado={estado} showLabel={false} size="sm" />
-        </div>
-        {breakdownText && <div className="gdash-card__breakdown">{breakdownText}</div>}
-        <h3 className="gdash-card__name">{indicator.name}</h3>
-        <div className="gdash-progress">
-          <div className="gdash-progress__fill" style={{ width: `${pct}%`, background: SEMAFORO_COLOR[estado] }} />
-        </div>
-        <span className="gdash-card__value">{formatIndicatorValue(latestValue, 'razon', '')}</span>
-      </Link>
-    )
-  }
-
-  // numérico: barra de valor vs. objetivo, con la marca del objetivo encima
-  const scale = Math.max(Math.abs(latestValue ?? 0), Math.abs(targetValue ?? 0), 1) * 1.15
-  const valuePct = latestValue !== null ? (Math.abs(latestValue) / scale) * 100 : 0
-  const targetPct = targetValue !== null ? (Math.abs(targetValue) / scale) * 100 : null
-
+/** Delgado envoltorio sobre la tarjeta estándar de KPI — todos los tipos de
+ * indicador usan el mismo molde de tarjeta en toda la app. */
+function KpiTile({ indicator, status, trend, axisColor }: KpiTileProps) {
   return (
-    <Link
-      to={`/tablero/${indicator.id}`}
-      className={`gdash-card gdash-card--bar${indicator.is_focus ? ' kpi-focus' : ''}`}
-      style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
-    >
-      <div className="gdash-card__header">
-        <span className="gdash-card__level">Nivel {indicator.level}</span>
-        <Semaforo estado={estado} showLabel={false} size="sm" />
-      </div>
-      <h3 className="gdash-card__name">{indicator.name}</h3>
-      <div className="gdash-progress">
-        <div className="gdash-progress__fill" style={{ width: `${valuePct}%`, background: SEMAFORO_COLOR[estado] }} />
-        {targetPct !== null && <div className="gdash-progress__target" style={{ left: `${targetPct}%` }} />}
-      </div>
-      <span className="gdash-card__value">
-        {latestValue ?? '—'} {indicator.unit}
-        <small> · Objetivo: {targetValue ?? '—'} {indicator.unit}</small>
-      </span>
-    </Link>
+    <IndicatorCard
+      id={indicator.id}
+      name={indicator.name}
+      unit={indicator.unit}
+      level={indicator.level}
+      improvementDirection={indicator.improvement_direction}
+      valueType={indicator.value_type}
+      latestValue={status?.latest_value ?? null}
+      breakdown={status?.breakdown ?? null}
+      targetValue={status?.target_value ?? null}
+      trend={trend}
+      isFocus={indicator.is_focus}
+      axisColor={axisColor}
+    />
   )
 }
 
@@ -796,6 +735,7 @@ export function GeneralDashboardPage() {
                     indicator={indicator}
                     status={statusByIndicator.get(indicator.id)}
                     trend={sparklineByIndicator.get(indicator.id) ?? []}
+                    axisColor={currentAxis?.color ?? '#1B365D'}
                   />
                 ))}
               </div>

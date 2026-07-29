@@ -11,13 +11,12 @@ import {
   YAxis,
 } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
-import { Semaforo } from '../../components/ui/Semaforo'
 import { ActionPlanProgress } from '../../components/ui/ActionPlanProgress'
 import { ActionPlanEvidence } from '../../components/ui/ActionPlanEvidence'
 import { ParetoAxisTick } from '../../components/ui/ParetoAxisTick'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { TrendSparkline } from '../../components/ui/TrendSparkline'
-import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
+import { calcularSemaforo, ESTADO_ICON, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
 import { buildPeriodBucketsInRange, type PeriodBucket } from '../../lib/periods'
 import { defaultRange } from '../../lib/dateRange'
 import { fetchIndicatorWithRelationsById, fetchProfiles } from '../indicators/indicatorsApi'
@@ -37,7 +36,7 @@ import {
   fetchActionPlansForIndicator,
   type ActionPlanWithNames,
 } from '../action-plans/actionPlansApi'
-import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL, formatBreakdown, formatIndicatorValue } from '../../lib/types'
+import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL, computeCardMetrics, formatIndicatorValue } from '../../lib/types'
 import type { AggregateBreakdown, PdcaStatus, Profile, Target } from '../../lib/types'
 import './indicator-board.css'
 
@@ -168,6 +167,7 @@ export function IndicatorBoardPage() {
   }, [indicatorId, organizationId, range])
 
   const estado = calcularSemaforo(latestValue, target?.target_value, indicator?.improvement_direction ?? 'mayor_mejor')
+  const axisColor = indicator?.axes?.color ?? '#1B365D'
   // Mismo criterio que el RLS de action_plan_evidence: solo estos roles
   // pueden quitar evidencia ya subida (un operativo puede adjuntar pero no
   // ocultar evidencia después).
@@ -288,13 +288,15 @@ export function IndicatorBoardPage() {
       <div className="board-columns">
       <section
         className={`board-card board-result${indicator.is_focus ? ' kpi-focus' : ''}`}
-        style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
+        style={{
+          background: `linear-gradient(155deg, color-mix(in srgb, var(--color-primary) 68%, ${axisColor} 32%) 0%, color-mix(in srgb, #0f2338 72%, ${axisColor} 28%) 100%)`,
+        }}
       >
         <div className="board-result__header">
           <h2>{indicator.name}</h2>
-          {formatBreakdown(breakdown) && (
-            <span className="board-result__breakdown">{formatBreakdown(breakdown)}</span>
-          )}
+          <span className={`board-result__badge board-result__badge--${estado}`}>
+            {ESTADO_ICON[estado]} {SEMAFORO_LABEL[estado].toUpperCase()}
+          </span>
         </div>
         <div className="board-result__content">
         {indicator.is_calculated && (
@@ -303,9 +305,6 @@ export function IndicatorBoardPage() {
             de sus indicadores hijo) — no se captura a mano.
           </p>
         )}
-        <div className={`board-result__badge board-result__badge--${estado}`}>
-          {estado === 'cumple' ? '✓ CUMPLE' : estado === 'sin_datos' ? 'SIN DATOS' : '✗ NO CUMPLE'}
-        </div>
         <div className="board-result__values">
           {indicator.value_type === 'binario' ? (
             <span className="board-result__value">{formatIndicatorValue(latestValue, 'binario', '')}</span>
@@ -321,7 +320,6 @@ export function IndicatorBoardPage() {
               Objetivo: {target?.target_value ?? '—'} {indicator.unit}
             </span>
           )}
-          <Semaforo estado={estado} />
         </div>
         <p className="board-result__period">
           Del {range.from} al {range.to} — {AGGREGATION_METHOD_LABEL[indicator.aggregation_method]} en ese rango
@@ -331,6 +329,14 @@ export function IndicatorBoardPage() {
             <TrendSparkline data={trend} color={SEMAFORO_COLOR[estado]} height={48} />
           </div>
         )}
+        <div className="board-result__metrics">
+          {computeCardMetrics(indicator.value_type, breakdown).map((metric, i) => (
+            <div key={i} className={`board-result__metric board-result__metric--${metric.tone}`}>
+              <span className="board-result__metric-value">{metric.value}</span>
+              <span className="board-result__metric-label">{metric.label}</span>
+            </div>
+          ))}
+        </div>
         </div>
       </section>
 

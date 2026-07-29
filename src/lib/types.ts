@@ -74,6 +74,50 @@ export function formatBreakdown(breakdown: AggregateBreakdown | null): string | 
   return `${breakdown.count}/${breakdown.total} · ${pct}%`
 }
 
+/** Redondea a 1 decimal solo si hace falta — evita "20.333333333333332" en
+ * los chips cuando programado/real vienen con decimales. */
+function formatChipNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : String(Math.round(value * 10) / 10)
+}
+
+export interface CardMetric {
+  label: string
+  value: string
+  tone: 'positive' | 'negative' | 'neutral' | 'muted'
+}
+
+/**
+ * Las 3 métricas secundarias estándar de una tarjeta de KPI: para razón y
+ * binario en modo "promedio" (los dos únicos casos con un desglose
+ * count/total) es Real/Sí, Programado/No y el %. Donde no exista esa
+ * cantidad de medidas (numérico, o un binario de lectura única) se deja
+ * "Sin datos" en las 3 — mismo molde de tarjeta para todos los tipos.
+ */
+export function computeCardMetrics(valueType: IndicatorValueType, breakdown: AggregateBreakdown | null): CardMetric[] {
+  if (breakdown && breakdown.total !== 0) {
+    const pct = Math.round((breakdown.count / breakdown.total) * 1000) / 10
+    if (valueType === 'binario') {
+      return [
+        { label: 'Sí', value: formatChipNumber(breakdown.count), tone: 'positive' },
+        { label: 'No', value: formatChipNumber(breakdown.total - breakdown.count), tone: 'negative' },
+        { label: '%', value: `${pct}%`, tone: 'neutral' },
+      ]
+    }
+    if (valueType === 'razon') {
+      return [
+        { label: 'Real', value: formatChipNumber(breakdown.count), tone: 'positive' },
+        { label: 'Programado', value: formatChipNumber(breakdown.total), tone: 'neutral' },
+        { label: '%', value: `${pct}%`, tone: 'neutral' },
+      ]
+    }
+  }
+  return [
+    { label: 'Sin datos', value: '—', tone: 'muted' },
+    { label: 'Sin datos', value: '—', tone: 'muted' },
+    { label: 'Sin datos', value: '—', tone: 'muted' },
+  ]
+}
+
 export const CAUSAL_METHODOLOGY_LABEL: Record<CausalMethodology, string> = {
   ishikawa: 'Ishikawa',
   '5_porques': '5 Porqués',

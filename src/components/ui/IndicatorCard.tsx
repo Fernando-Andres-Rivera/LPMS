@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom'
-import { calcularSemaforo, SEMAFORO_COLOR } from '../../lib/semaforo'
-import { Semaforo } from './Semaforo'
+import { calcularSemaforo, ESTADO_ICON, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
 import { TrendSparkline } from './TrendSparkline'
 import {
-  formatBreakdown,
+  computeCardMetrics,
   formatIndicatorValue,
   type AggregateBreakdown,
   type ImprovementDirection,
@@ -36,14 +35,34 @@ interface IndicatorCardProps {
   /** Indicador marcado como "foco" — se resalta con un borde azul muy visible. */
   isFocus?: boolean
   /** El detalle detrás del % (ej. "18/20") — solo aplica a razón y a
-   * binario en modo "promedio"; null en cualquier otro caso, y entonces no
-   * se muestra nada. */
+   * binario en modo "promedio"; null en cualquier otro caso, y entonces las
+   * 3 métricas secundarias quedan en "Sin datos". */
   breakdown?: AggregateBreakdown | null
+  /** Color del eje/pilar del indicador — colorea el fondo completo de la
+   * tarjeta (mezclado con el navy corporativo) para que se identifique el
+   * pilar de un vistazo, sin importar en qué pantalla se vea. */
+  axisColor: string
+}
+
+/** % de la barra de progreso: razón y binario-% ya vienen en escala 0-100;
+ * un binario de lectura única es 0 o 100; numérico se mide contra su
+ * objetivo (o 0 sin objetivo). */
+function computeProgressPercent(
+  valueType: IndicatorValueType,
+  value: number | null,
+  target: number | null,
+): number {
+  if (value === null) return 0
+  if (valueType === 'binario' || valueType === 'razon') return Math.max(0, Math.min(100, value))
+  if (target === null || target === 0) return 0
+  return Math.max(0, Math.min(100, (Math.abs(value) / Math.abs(target)) * 100))
 }
 
 /**
- * Tarjeta de indicador reutilizable: nombre, semáforo, último valor vs.
- * objetivo, y mini-tendencia de los últimos períodos.
+ * Tarjeta de indicador estándar de toda la app: fondo coloreado por pilar,
+ * insignia de estado, resultado principal, barra de progreso y las 3
+ * métricas secundarias (ej. Sí / No / % o Real / Programado / %) que arman
+ * ese resultado — mismo molde en Dashboard, reunión por eje/nivel y Tablero.
  */
 export function IndicatorCard({
   id,
@@ -58,55 +77,70 @@ export function IndicatorCard({
   estadoOverride,
   isFocus = false,
   breakdown = null,
+  axisColor,
 }: IndicatorCardProps) {
   const estado = estadoOverride ?? calcularSemaforo(latestValue, targetValue, improvementDirection)
-  const breakdownText = formatBreakdown(breakdown)
+  const metrics = computeCardMetrics(valueType, breakdown)
+  const progressPct = computeProgressPercent(valueType, latestValue, targetValue)
 
   return (
     <Link
       to={`/tablero/${id}`}
       className={`indicator-card${isFocus ? ' kpi-focus' : ''}`}
-      style={{ borderLeftColor: SEMAFORO_COLOR[estado] }}
+      style={{
+        background: `linear-gradient(155deg, color-mix(in srgb, var(--color-primary) 68%, ${axisColor} 32%) 0%, color-mix(in srgb, #0f2338 72%, ${axisColor} 28%) 100%)`,
+      }}
     >
-      <div className="indicator-card__header">
+      <div className="indicator-card__top">
         <span className="indicator-card__level">Nivel {level}</span>
-        <Semaforo estado={estado} showLabel={false} size="sm" />
+        <span className={`indicator-card__badge indicator-card__badge--${estado}`}>
+          {ESTADO_ICON[estado]} {SEMAFORO_LABEL[estado].toUpperCase()}
+        </span>
       </div>
-
-      {/* El detalle del % (ej. "18/20 · 90%"), arriba a la derecha, del mismo
-          tamaño del resultado pero sin negrilla — el KPI importante sigue
-          siendo el resultado grande de abajo, esto es solo contexto de cuántas
-          mediciones lo arman. En su propia fila, no en el header: a 1.5rem no
-          cabría junto al nivel y el semáforo sin desbordar la tarjeta. */}
-      {breakdownText && <div className="indicator-card__breakdown">{breakdownText}</div>}
 
       <h3 className="indicator-card__name">{name}</h3>
 
-      <div className="indicator-card__values">
+      <div className="indicator-card__main">
         {valueType === 'binario' ? (
           <span className="indicator-card__value">{formatIndicatorValue(latestValue, 'binario', '')}</span>
         ) : valueType === 'razon' ? (
           <span className="indicator-card__value">{formatIndicatorValue(latestValue, 'razon', '')}</span>
         ) : (
-          <>
-            <span className="indicator-card__value">
-              {latestValue ?? '—'} <span className="indicator-card__unit">{unit}</span>
-            </span>
-            <span className="indicator-card__target">
-              Objetivo: {targetValue ?? '—'} {unit}
-            </span>
-          </>
+          <span className="indicator-card__value">
+            {latestValue ?? '—'} <span className="indicator-card__unit">{unit}</span>
+          </span>
+        )}
+        {valueType === 'numerico' && (
+          <span className="indicator-card__target">
+            Objetivo: {targetValue ?? '—'} {unit}
+          </span>
         )}
       </div>
 
-      <div className="indicator-card__sparkline">
-        {trend.length > 0 && (
+      <div className="indicator-card__progress">
+        <div
+          className="indicator-card__progress-fill"
+          style={{ width: `${progressPct}%`, background: SEMAFORO_COLOR[estado] }}
+        />
+      </div>
+
+      {trend.length > 0 && (
+        <div className="indicator-card__sparkline">
           <TrendSparkline
             data={trend.map((p) => ({ date: p.period_date, value: p.value }))}
             color={SEMAFORO_COLOR[estado]}
-            height={40}
+            height={36}
           />
-        )}
+        </div>
+      )}
+
+      <div className="indicator-card__metrics">
+        {metrics.map((metric, i) => (
+          <div key={i} className={`indicator-card__metric indicator-card__metric--${metric.tone}`}>
+            <span className="indicator-card__metric-value">{metric.value}</span>
+            <span className="indicator-card__metric-label">{metric.label}</span>
+          </div>
+        ))}
       </div>
     </Link>
   )

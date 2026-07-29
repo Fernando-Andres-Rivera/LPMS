@@ -312,6 +312,7 @@ export function LevelDashboardPage() {
                     trend={trend}
                     estadoOverride={estadoOverride}
                     isFocus={indicator.is_focus}
+                    axisColor={axis.color}
                   />
                   {profile && organizationId && (
                     <DueActionsPanel
