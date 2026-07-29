@@ -16,7 +16,7 @@ import { ActionPlanEvidence } from '../../components/ui/ActionPlanEvidence'
 import { ParetoAxisTick } from '../../components/ui/ParetoAxisTick'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { TrendSparkline } from '../../components/ui/TrendSparkline'
-import { calcularSemaforo, ESTADO_ICON, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
+import { calcularSemaforo, ESTADO_ICON, MARCO_COLOR, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
 import { buildPeriodBucketsInRange, type PeriodBucket } from '../../lib/periods'
 import { defaultRange } from '../../lib/dateRange'
 import { fetchIndicatorWithRelationsById, fetchProfiles } from '../indicators/indicatorsApi'
@@ -36,7 +36,13 @@ import {
   fetchActionPlansForIndicator,
   type ActionPlanWithNames,
 } from '../action-plans/actionPlansApi'
-import { ACTION_PLAN_STEPS, AGGREGATION_METHOD_LABEL, computeCardMetrics, formatIndicatorValue } from '../../lib/types'
+import {
+  ACTION_PLAN_STEPS,
+  AGGREGATION_METHOD_LABEL,
+  computeCardMetrics,
+  formatIndicatorValue,
+  pillarCardBackground,
+} from '../../lib/types'
 import type { AggregateBreakdown, PdcaStatus, Profile, Target } from '../../lib/types'
 import './indicator-board.css'
 
@@ -301,7 +307,8 @@ export function IndicatorBoardPage() {
       <section
         className={`board-card board-result${indicator.is_focus ? ' kpi-focus' : ''}`}
         style={{
-          background: `linear-gradient(155deg, color-mix(in srgb, ${axisColor} 58%, #0d1b2a 42%) 0%, color-mix(in srgb, ${axisColor} 32%, #0d1b2a 68%) 100%)`,
+          background: pillarCardBackground(indicator.is_focus ? 'var(--color-focus)' : axisColor),
+          borderColor: MARCO_COLOR[estado],
         }}
       >
         <div className="board-result__header">

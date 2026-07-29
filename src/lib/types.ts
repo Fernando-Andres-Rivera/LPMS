@@ -87,6 +87,17 @@ export interface CardMetric {
 }
 
 /**
+ * Fondo estándar de una tarjeta de KPI: un degradado que solo oscurece
+ * `baseColor` mezclándolo con un navy casi negro (nunca con otro tono
+ * saturado, para no ensuciar el color — ver IndicatorCard.tsx). Mismo
+ * cálculo para el color del pilar y para el azul de "foco", así ambos casos
+ * se ven consistentes.
+ */
+export function pillarCardBackground(baseColor: string): string {
+  return `linear-gradient(155deg, color-mix(in srgb, ${baseColor} 58%, #0d1b2a 42%) 0%, color-mix(in srgb, ${baseColor} 32%, #0d1b2a 68%) 100%)`
+}
+
+/**
  * Las 3 métricas secundarias estándar de una tarjeta de KPI: Real/Sí,
  * Programado/No y el % para razón y binario en modo "promedio"; Días sin
  * evento/Días con evento y el % para un numérico que suma un conteo de

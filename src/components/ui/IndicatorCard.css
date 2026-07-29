@@ -5,7 +5,10 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-md);
-  border-left: 4px solid transparent;
+  /* Marco de la tarjeta: rojo si incumple, verde si cumple (ver
+     MARCO_COLOR en lib/semaforo.ts) — "en riesgo"/"sin datos" quedan sin
+     marco para no competir con el fondo del pilar. */
+  border: 3px solid transparent;
   box-shadow: var(--shadow-kpi);
   padding: 16px;
   text-decoration: none;
@@ -48,7 +51,7 @@
 }
 
 .indicator-card__badge--cumple {
-  background: var(--color-ok);
+  background: var(--color-marco-cumple);
 }
 
 .indicator-card__badge--riesgo {
@@ -136,11 +139,17 @@
   margin-top: 12px;
 }
 
+/* Alto FIJO, no mínimo — un rótulo largo como "Días sin evento" envuelve a 2
+   líneas; con min-height ese recuadro simplemente crece más alto que uno de
+   "Sí"/"No" en otra tarjeta. Con height fijo, el de 1 línea queda con el
+   mismo tamaño, solo centrado verticalmente. */
 .indicator-card__metric {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
+  height: 58px;
   padding: 6px 4px;
   border-radius: 8px;
   text-align: center;
@@ -175,7 +184,12 @@
 .indicator-card__metric-label {
   font-size: 0.6rem;
   font-weight: 600;
+  line-height: 1.15;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: rgba(255, 255, 255, 0.7);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }

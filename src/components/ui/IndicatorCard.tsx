@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
-import { calcularSemaforo, ESTADO_ICON, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
+import { calcularSemaforo, ESTADO_ICON, MARCO_COLOR, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
 import { TrendSparkline } from './TrendSparkline'
 import {
   computeCardMetrics,
   formatIndicatorValue,
+  pillarCardBackground,
   type AggregateBreakdown,
   type ImprovementDirection,
   type IndicatorValueType,
@@ -32,7 +33,9 @@ interface IndicatorCardProps {
    * objetivo de 0, pero lo que importa es si hubo un accidente DENTRO del
    * rango elegido) — cuando se da, reemplaza el cálculo genérico. */
   estadoOverride?: SemaforoEstado
-  /** Indicador marcado como "foco" — se resalta con un borde azul muy visible. */
+  /** Indicador marcado como "foco" — el fondo de la tarjeta cambia a azul
+   * (en vez del color del pilar) mientras esté marcado; al quitarlo vuelve
+   * a mostrarse con el color del pilar. */
   isFocus?: boolean
   /** El detalle detrás del % (ej. "18/20") — solo aplica a razón y a
    * binario en modo "promedio"; null en cualquier otro caso, y entonces las
@@ -91,7 +94,8 @@ export function IndicatorCard({
       to={`/tablero/${id}`}
       className={`indicator-card${isFocus ? ' kpi-focus' : ''}`}
       style={{
-        background: `linear-gradient(155deg, color-mix(in srgb, ${axisColor} 58%, #0d1b2a 42%) 0%, color-mix(in srgb, ${axisColor} 32%, #0d1b2a 68%) 100%)`,
+        background: pillarCardBackground(isFocus ? 'var(--color-focus)' : axisColor),
+        borderColor: MARCO_COLOR[estado],
       }}
     >
       <div className="indicator-card__top">

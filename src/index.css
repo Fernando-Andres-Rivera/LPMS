@@ -11,6 +11,12 @@
   --color-risk: #F57C00;
   --color-fail: #D32F2F;
 
+  /* Marco (borde) de "cumple" en las tarjetas de KPI — un verde distinto
+     al teal corporativo (--color-ok), que también es el color de fondo de
+     los pilares Calidad y Personas: si el marco usara el mismo teal se
+     perdería contra el fondo de esos dos pilares. */
+  --color-marco-cumple: #2E7D32;
+
   --color-bg: #F5F6F8;
   --color-surface: #FFFFFF;
   --color-border: #E1E4E8;

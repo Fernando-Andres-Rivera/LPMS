@@ -49,3 +49,14 @@ export const ESTADO_ICON: Record<SemaforoEstado, string> = {
   incumple: '✗',
   sin_datos: '•',
 }
+
+/** Marco (borde) de la tarjeta de KPI — solo los dos estados clave llevan
+ * marco de color (rojo incumple, verde cumple); "en riesgo" y "sin datos"
+ * quedan sin marco (transparente) para no competir con el fondo del pilar,
+ * que ya puede ser naranja/rojo/etc. */
+export const MARCO_COLOR: Record<SemaforoEstado, string> = {
+  cumple: 'var(--color-marco-cumple)',
+  riesgo: 'transparent',
+  incumple: 'var(--color-fail)',
+  sin_datos: 'transparent',
+}

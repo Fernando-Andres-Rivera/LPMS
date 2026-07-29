@@ -47,7 +47,9 @@
    (IndicatorCard) — fondo coloreado por pilar (mezclado con el navy
    corporativo, ver el style inline en IndicatorBoardPage.tsx), texto claro. */
 .board-result {
-  border-left: 4px solid transparent;
+  /* Marco: rojo si incumple, verde si cumple (ver MARCO_COLOR) — igual que
+     IndicatorCard, para que el estado clave se vea de un vistazo. */
+  border: 3px solid transparent;
   box-shadow: var(--shadow-kpi);
   color: #fff;
 }
@@ -104,7 +106,7 @@
 }
 
 .board-result__badge--cumple {
-  background: var(--color-ok);
+  background: var(--color-marco-cumple);
 }
 
 .board-result__badge--riesgo {
@@ -164,11 +166,17 @@
   max-width: 420px;
 }
 
+/* Alto FIJO, no mínimo — mismo motivo que .indicator-card__metric: con
+   min-height, un rótulo largo como "Días sin evento" simplemente crece más
+   alto que uno de "Sí"/"No" en otro indicador, y el tamaño deja de ser
+   igual/estándar entre pantallas. */
 .board-result__metric {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
+  height: 66px;
   padding: 10px 6px;
   border-radius: 10px;
   text-align: center;
@@ -203,9 +211,14 @@
 .board-result__metric-label {
   font-size: 0.65rem;
   font-weight: 600;
+  line-height: 1.15;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: rgba(255, 255, 255, 0.7);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .board-causes-subtitle {
