@@ -39,8 +39,11 @@ interface IndicatorCardProps {
    * 3 métricas secundarias quedan en "Sin datos". */
   breakdown?: AggregateBreakdown | null
   /** Color del eje/pilar del indicador — colorea el fondo completo de la
-   * tarjeta (mezclado con el navy corporativo) para que se identifique el
-   * pilar de un vistazo, sin importar en qué pantalla se vea. */
+   * tarjeta (oscurecido con un navy casi negro, NUNCA mezclado con otro tono
+   * saturado como el navy corporativo: pilares complementarios al azul, como
+   * el naranja de Seguridad, se ven sucios/pardos si se mezclan con otro
+   * color en vez de solo oscurecerse) para identificar el pilar de un
+   * vistazo, sin importar en qué pantalla se vea. */
   axisColor: string
 }
 
@@ -88,7 +91,7 @@ export function IndicatorCard({
       to={`/tablero/${id}`}
       className={`indicator-card${isFocus ? ' kpi-focus' : ''}`}
       style={{
-        background: `linear-gradient(155deg, color-mix(in srgb, var(--color-primary) 68%, ${axisColor} 32%) 0%, color-mix(in srgb, #0f2338 72%, ${axisColor} 28%) 100%)`,
+        background: `linear-gradient(155deg, color-mix(in srgb, ${axisColor} 58%, #0d1b2a 42%) 0%, color-mix(in srgb, ${axisColor} 32%, #0d1b2a 68%) 100%)`,
       }}
     >
       <div className="indicator-card__top">

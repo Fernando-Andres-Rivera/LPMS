@@ -289,7 +289,7 @@ export function IndicatorBoardPage() {
       <section
         className={`board-card board-result${indicator.is_focus ? ' kpi-focus' : ''}`}
         style={{
-          background: `linear-gradient(155deg, color-mix(in srgb, var(--color-primary) 68%, ${axisColor} 32%) 0%, color-mix(in srgb, #0f2338 72%, ${axisColor} 28%) 100%)`,
+          background: `linear-gradient(155deg, color-mix(in srgb, ${axisColor} 58%, #0d1b2a 42%) 0%, color-mix(in srgb, ${axisColor} 32%, #0d1b2a 68%) 100%)`,
         }}
       >
         <div className="board-result__header">
