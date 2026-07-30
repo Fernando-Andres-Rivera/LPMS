@@ -1,6 +1,11 @@
 /* Tarjeta de KPI estándar: fondo coloreado por pilar (mezclado con el navy
    corporativo vía color-mix inline, ver IndicatorCard.tsx) — todo el texto
    es claro sobre ese fondo oscuro. */
+/* Entrada suave al montar — el semáforo, el resultado y las métricas son
+   justo lo que se decide mirar en una reunión, así que el movimiento (fade
+   + un leve avance hacia arriba) ayuda a que el ojo aterrice ahí primero
+   en vez de competir con el resto de la grilla de un vistazo estático. Se
+   apaga automáticamente con prefers-reduced-motion (ver index.css). */
 .indicator-card {
   display: flex;
   flex-direction: column;
@@ -14,6 +19,7 @@
   text-decoration: none;
   color: #fff;
   transition: box-shadow 0.15s ease;
+  animation: lpms-fade-up var(--dur-slow) var(--ease-out) both;
 }
 
 .indicator-card:hover {
@@ -89,6 +95,10 @@
   font-size: 1.7rem;
   font-weight: 700;
   color: #fff;
+  /* El resultado es el dato que más pesa en la decisión — un pequeño pop de
+     entrada (@keyframes lpms-pop, en index.css) lo separa del resto de la
+     tarjeta apenas se pinta. */
+  animation: lpms-pop var(--dur-slow) var(--ease-out) both;
 }
 
 .indicator-card__unit {
@@ -115,11 +125,18 @@
 .indicator-card__progress-fill {
   height: 100%;
   border-radius: 999px;
+  transform-origin: left;
   transition: width 0.2s ease;
+  /* Crece desde 0 al montar (@keyframes lpms-grow, en index.css), sin
+     importar el % real — scaleX funciona igual para cualquier tarjeta. */
+  animation: lpms-grow var(--dur-slow) var(--ease-out) both;
 }
 
+/* Alto fijo — con o sin tendencia que dibujar, el contenedor ocupa el mismo
+   espacio, así los chips de abajo no suben o bajan según el indicador. */
 .indicator-card__sparkline {
   margin-top: 10px;
+  min-height: 36px;
 }
 
 /* Los ticks del eje de la mini-tendencia son gris oscuro por defecto (para
@@ -153,14 +170,35 @@
   padding: 6px 4px;
   border-radius: 8px;
   text-align: center;
+  /* Entran en cascada (ver los delays por posición más abajo) — son los 3
+     datos que arman el resultado, así que se les da su propio momento de
+     entrada en vez de aparecer todos de golpe con el resto de la tarjeta. */
+  animation: lpms-fade-up var(--dur) var(--ease-out) both;
 }
 
+.indicator-card__metric:nth-child(1) {
+  animation-delay: 80ms;
+}
+
+.indicator-card__metric:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.indicator-card__metric:nth-child(3) {
+  animation-delay: 220ms;
+}
+
+/* Menos transparencia que antes (era 30%) para que el rojo/verde se lea con
+   fuerza — son los datos secundarios que sostienen el resultado principal.
+   "Positivo" usa el mismo verde del marco (--color-marco-cumple), no el
+   teal corporativo, por la misma razón: ese teal ya es el fondo de los
+   pilares Calidad y Personas. */
 .indicator-card__metric--positive {
-  background: color-mix(in srgb, var(--color-ok) 30%, transparent);
+  background: color-mix(in srgb, var(--color-marco-cumple) 55%, transparent);
 }
 
 .indicator-card__metric--negative {
-  background: color-mix(in srgb, var(--color-fail) 30%, transparent);
+  background: color-mix(in srgb, var(--color-fail) 55%, transparent);
 }
 
 .indicator-card__metric--neutral {

@@ -52,6 +52,7 @@
   border: 3px solid transparent;
   box-shadow: var(--shadow-kpi);
   color: #fff;
+  animation: lpms-fade-up var(--dur-slow) var(--ease-out) both;
 }
 
 .board-result__header {
@@ -132,6 +133,8 @@
   font-size: 1.8rem;
   font-weight: 700;
   color: #fff;
+  /* @keyframes lpms-pop está en index.css. */
+  animation: lpms-pop var(--dur-slow) var(--ease-out) both;
 }
 
 .board-result__value small {
@@ -146,8 +149,10 @@
   font-size: 0.9rem;
 }
 
+/* Alto fijo — mismo espacio con o sin tendencia que dibujar. */
 .board-result__sparkline {
   margin-top: 8px;
+  min-height: 48px;
 }
 
 .board-result .trend-sparkline__tick {
@@ -180,14 +185,31 @@
   padding: 10px 6px;
   border-radius: 10px;
   text-align: center;
+  animation: lpms-fade-up var(--dur) var(--ease-out) both;
 }
 
+.board-result__metric:nth-child(1) {
+  animation-delay: 80ms;
+}
+
+.board-result__metric:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.board-result__metric:nth-child(3) {
+  animation-delay: 220ms;
+}
+
+/* Menos transparencia que antes (era 30%) para que el rojo/verde se lea con
+   fuerza. "Positivo" usa el mismo verde del marco (--color-marco-cumple),
+   no el teal corporativo — ese teal ya es el fondo de los pilares Calidad
+   y Personas. */
 .board-result__metric--positive {
-  background: color-mix(in srgb, var(--color-ok) 30%, transparent);
+  background: color-mix(in srgb, var(--color-marco-cumple) 55%, transparent);
 }
 
 .board-result__metric--negative {
-  background: color-mix(in srgb, var(--color-fail) 30%, transparent);
+  background: color-mix(in srgb, var(--color-fail) 55%, transparent);
 }
 
 .board-result__metric--neutral {

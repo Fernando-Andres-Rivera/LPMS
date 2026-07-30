@@ -334,20 +334,20 @@ export function IndicatorBoardPage() {
               {latestValue ?? '—'} <small>{indicator.unit}</small>
             </span>
           )}
-          {indicator.value_type === 'numerico' && (
-            <span className="board-result__target">
-              Objetivo: {target?.target_value ?? '—'} {indicator.unit}
-            </span>
-          )}
+          {/* Objetivo en todos los tipos, no solo numérico — para que el
+              alto del bloque sea igual sin importar el indicador. */}
+          <span className="board-result__target">
+            Objetivo: {formatIndicatorValue(target?.target_value ?? null, indicator.value_type, indicator.unit)}
+          </span>
         </div>
         <p className="board-result__period">
           Del {range.from} al {range.to} — {AGGREGATION_METHOD_LABEL[indicator.aggregation_method]} en ese rango
         </p>
-        {trend.length > 0 && (
-          <div className="board-result__sparkline">
-            <TrendSparkline data={trend} color={SEMAFORO_COLOR[estado]} height={48} />
-          </div>
-        )}
+        {/* Alto fijo (ver CSS) — el mismo espacio se reserve haya o no
+            tendencia que dibujar. */}
+        <div className="board-result__sparkline">
+          {trend.length > 0 && <TrendSparkline data={trend} color={SEMAFORO_COLOR[estado]} height={48} />}
+        </div>
         <div className="board-result__metrics">
           {computeCardMetrics(indicator.value_type, breakdown).map((metric, i) => (
             <div key={i} className={`board-result__metric board-result__metric--${metric.tone}`}>

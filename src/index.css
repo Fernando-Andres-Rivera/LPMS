@@ -57,8 +57,11 @@
   --shadow-kpi: 0 6px 18px rgba(27, 54, 93, 0.22);
   --color-kpi-target: var(--color-primary);
 
-  /* Indicadores marcados como "foco" (prioritarios) */
-  --color-focus: #1565C0;
+  /* Indicadores marcados como "foco" (prioritarios) — azul Azure, distinto
+     del azul corporativo (--color-primary), para que un indicador en foco
+     se distinga de un vistazo incluso en el pilar Mantenimiento/Disponibilidad,
+     que ya usan el navy corporativo como su propio color de pilar. */
+  --color-focus: #0078D4;
 
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
@@ -205,6 +208,30 @@ h1 {
   }
   to {
     opacity: 1;
+  }
+}
+
+/* Pop de entrada para el resultado principal de una tarjeta de KPI — el
+   dato que más pesa en una decisión se separa del resto apenas se pinta. */
+@keyframes lpms-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Crecimiento de una barra de progreso desde 0 al montar — scaleX no
+   necesita saber el ancho final en %, así que sirve para cualquier valor. */
+@keyframes lpms-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
   }
 }
 

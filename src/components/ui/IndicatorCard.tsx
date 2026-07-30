@@ -117,11 +117,10 @@ export function IndicatorCard({
             {latestValue ?? '—'} <span className="indicator-card__unit">{unit}</span>
           </span>
         )}
-        {valueType === 'numerico' && (
-          <span className="indicator-card__target">
-            Objetivo: {targetValue ?? '—'} {unit}
-          </span>
-        )}
+        {/* Objetivo en TODAS las tarjetas, sin importar el tipo — antes solo
+            aparecía en numérico, así que el resto del contenido (barra,
+            tendencia, chips) quedaba más arriba o más abajo según el tipo. */}
+        <span className="indicator-card__target">Objetivo: {formatIndicatorValue(targetValue, valueType, unit)}</span>
       </div>
 
       <div className="indicator-card__progress">
@@ -131,15 +130,18 @@ export function IndicatorCard({
         />
       </div>
 
-      {trend.length > 0 && (
-        <div className="indicator-card__sparkline">
+      {/* El contenedor de la mini-tendencia siempre reserva el mismo alto,
+          tenga o no datos para dibujar — si no, los chips de abajo suben o
+          bajan según si hubo tendencia que mostrar. */}
+      <div className="indicator-card__sparkline">
+        {trend.length > 0 && (
           <TrendSparkline
             data={trend.map((p) => ({ date: p.period_date, value: p.value }))}
             color={SEMAFORO_COLOR[estado]}
             height={36}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="indicator-card__metrics">
         {metrics.map((metric, i) => (
