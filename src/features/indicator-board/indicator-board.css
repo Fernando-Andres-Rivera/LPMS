@@ -243,6 +243,78 @@
   overflow: hidden;
 }
 
+/* Variante clara — mismo criterio y mismas clases que .indicator-card--light
+   (ver IndicatorCard.css): pilares sin fondo de color (hoy solo Seguridad)
+   muestran este panel en blanco con texto oscuro, sin cambiar alto ni
+   espaciado. */
+.board-result--light {
+  color: var(--color-text);
+}
+
+.board-result--light .board-result__header {
+  border-bottom-color: var(--color-border);
+}
+
+.board-result--light .board-result__header h2,
+.board-result--light .board-result__value,
+.board-result--light .board-result__metric-value {
+  color: var(--color-text);
+}
+
+.board-result--light .board-result__period,
+.board-result--light .board-result__target,
+.board-result--light .board-result__value small,
+.board-result--light .board-result__metric-label {
+  color: var(--color-text-muted);
+}
+
+.board-result--light .board-result__calculated-note {
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+.board-result--light .board-result__badge--sin_datos {
+  background: var(--color-gray);
+}
+
+.board-result--light .trend-sparkline__tick {
+  fill: var(--color-text-muted);
+}
+
+.board-result--light .trend-sparkline__tick--sunday {
+  fill: var(--color-fail);
+}
+
+.board-result--light .board-result__metric--positive {
+  background: var(--color-marco-cumple);
+}
+
+.board-result--light .board-result__metric--negative {
+  background: var(--color-fail);
+}
+
+.board-result--light .board-result__metric--positive .board-result__metric-value,
+.board-result--light .board-result__metric--negative .board-result__metric-value {
+  color: #fff;
+}
+
+.board-result--light .board-result__metric--positive .board-result__metric-label,
+.board-result--light .board-result__metric--negative .board-result__metric-label {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.board-result--light .board-result__metric--neutral {
+  background: var(--color-bg);
+}
+
+.board-result--light .board-result__metric--muted {
+  background: var(--color-bg);
+}
+
+.board-result--light .board-result__metric--muted .board-result__metric-value {
+  color: var(--color-gray);
+}
+
 .board-causes-subtitle {
   color: var(--color-text-muted);
   font-size: 0.82rem;

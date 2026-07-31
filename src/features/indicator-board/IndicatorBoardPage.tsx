@@ -41,6 +41,7 @@ import {
   AGGREGATION_METHOD_LABEL,
   computeCardMetrics,
   formatIndicatorValue,
+  isLightPillarCard,
   pillarCardBackground,
 } from '../../lib/types'
 import type { AggregateBreakdown, PdcaStatus, Profile, Target } from '../../lib/types'
@@ -186,6 +187,8 @@ export function IndicatorBoardPage() {
 
   const estado = calcularSemaforo(latestValue, target?.target_value, indicator?.improvement_direction ?? 'mayor_mejor')
   const axisColor = indicator?.axes?.color ?? '#1B365D'
+  // El foco gana sobre el pilar, igual que en IndicatorCard.
+  const isLight = !indicator?.is_focus && isLightPillarCard(indicator?.axes?.code)
   // Mismo criterio que el RLS de action_plan_evidence: solo estos roles
   // pueden quitar evidencia ya subida (un operativo puede adjuntar pero no
   // ocultar evidencia después).
@@ -305,9 +308,11 @@ export function IndicatorBoardPage() {
 
       <div className="board-columns">
       <section
-        className={`board-card board-result${indicator.is_focus ? ' kpi-focus' : ''}`}
+        className={`board-card board-result${isLight ? ' board-result--light' : ''}${indicator.is_focus ? ' kpi-focus' : ''}`}
         style={{
-          background: pillarCardBackground(indicator.is_focus ? 'var(--color-focus)' : axisColor),
+          background: isLight
+            ? 'var(--color-surface)'
+            : pillarCardBackground(indicator.is_focus ? 'var(--color-focus)' : axisColor),
           borderColor: MARCO_COLOR[estado],
         }}
       >

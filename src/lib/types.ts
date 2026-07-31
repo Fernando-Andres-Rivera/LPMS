@@ -97,6 +97,21 @@ export function pillarCardBackground(baseColor: string): string {
   return `linear-gradient(155deg, color-mix(in srgb, ${baseColor} 58%, #0d1b2a 42%) 0%, color-mix(in srgb, ${baseColor} 32%, #0d1b2a 68%) 100%)`
 }
 
+/** Pilares cuya tarjeta de KPI va SIN fondo de color: tarjeta blanca con
+ * texto oscuro, en vez del fondo oscuro que arma `pillarCardBackground`. */
+const LIGHT_CARD_AXIS_CODES = new Set(['seguridad'])
+
+/**
+ * ¿La tarjeta de este pilar va en claro? Se decide por el `code` del eje y no
+ * por su color: el color se puede reconfigurar desde la app, pero el pilar
+ * sigue siendo el mismo. Un indicador en "foco" NO usa esto — el azul de foco
+ * gana sobre el pilar, para que la marca de foco se siga notando igual en
+ * cualquier tarjeta (ver IndicatorCard.tsx).
+ */
+export function isLightPillarCard(axisCode: string | null | undefined): boolean {
+  return axisCode != null && LIGHT_CARD_AXIS_CODES.has(axisCode)
+}
+
 /**
  * Las 3 métricas secundarias estándar de una tarjeta de KPI: Real/Sí,
  * Programado/No y el % para razón y binario en modo "promedio"; Días sin

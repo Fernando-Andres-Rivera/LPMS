@@ -1,6 +1,8 @@
 /* Tarjeta de KPI estándar: fondo coloreado por pilar (mezclado con el navy
    corporativo vía color-mix inline, ver IndicatorCard.tsx) — todo el texto
-   es claro sobre ese fondo oscuro. */
+   es claro sobre ese fondo oscuro. Los pilares que van sin fondo de color
+   (tarjeta blanca) invierten esos colores al final del archivo, en
+   .indicator-card--light. */
 /* Entrada suave al montar — el semáforo, el resultado y las métricas son
    justo lo que se decide mirar en una reunión, así que el movimiento (fade
    + un leve avance hacia arriba) ayuda a que el ojo aterrice ahí primero
@@ -230,4 +232,81 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ------------------------------------------------------------------
+   Variante clara — pilares sin fondo de color (hoy solo Seguridad, ver
+   isLightPillarCard en lib/types.ts). La tarjeta es blanca como el resto de
+   superficies de la app, así que todo lo que arriba está resuelto en blanco
+   sobre oscuro se invierte aquí. La estructura (altos, espaciados, marco de
+   cumple/incumple, animaciones) NO cambia: solo el color, para que una
+   tarjeta clara y una oscura sigan alineándose lado a lado en la grilla.
+   ------------------------------------------------------------------ */
+.indicator-card--light {
+  color: var(--color-text);
+}
+
+.indicator-card--light .indicator-card__level,
+.indicator-card--light .indicator-card__unit,
+.indicator-card--light .indicator-card__target,
+.indicator-card--light .indicator-card__metric-label {
+  color: var(--color-text-muted);
+}
+
+.indicator-card--light .indicator-card__name,
+.indicator-card--light .indicator-card__value,
+.indicator-card--light .indicator-card__metric-value {
+  color: var(--color-text);
+}
+
+/* "Sin datos" era blanco al 25% — sobre la tarjeta blanca desaparecía. */
+.indicator-card--light .indicator-card__badge--sin_datos {
+  background: var(--color-gray);
+}
+
+.indicator-card--light .indicator-card__progress {
+  background: var(--color-border);
+}
+
+/* Los ticks de la mini-tendencia vuelven a su color por defecto (gris
+   oscuro), que es justo el pensado para fondos claros. */
+.indicator-card--light .trend-sparkline__tick {
+  fill: var(--color-text-muted);
+}
+
+.indicator-card--light .trend-sparkline__tick--sunday {
+  fill: var(--color-fail);
+}
+
+/* Sobre blanco, un verde/rojo translúcido queda tan pálido que el texto
+   blanco encima no se lee — aquí van a color pleno, igual de fuertes que en
+   la tarjeta oscura pero por saturación en vez de por transparencia. */
+.indicator-card--light .indicator-card__metric--positive {
+  background: var(--color-marco-cumple);
+}
+
+.indicator-card--light .indicator-card__metric--negative {
+  background: var(--color-fail);
+}
+
+.indicator-card--light .indicator-card__metric--positive .indicator-card__metric-value,
+.indicator-card--light .indicator-card__metric--negative .indicator-card__metric-value {
+  color: #fff;
+}
+
+.indicator-card--light .indicator-card__metric--positive .indicator-card__metric-label,
+.indicator-card--light .indicator-card__metric--negative .indicator-card__metric-label {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.indicator-card--light .indicator-card__metric--neutral {
+  background: var(--color-bg);
+}
+
+.indicator-card--light .indicator-card__metric--muted {
+  background: var(--color-bg);
+}
+
+.indicator-card--light .indicator-card__metric--muted .indicator-card__metric-value {
+  color: var(--color-gray);
 }

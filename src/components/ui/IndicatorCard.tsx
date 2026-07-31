@@ -4,6 +4,7 @@ import { TrendSparkline } from './TrendSparkline'
 import {
   computeCardMetrics,
   formatIndicatorValue,
+  isLightPillarCard,
   pillarCardBackground,
   type AggregateBreakdown,
   type ImprovementDirection,
@@ -48,6 +49,9 @@ interface IndicatorCardProps {
    * color en vez de solo oscurecerse) para identificar el pilar de un
    * vistazo, sin importar en qué pantalla se vea. */
   axisColor: string
+  /** `code` del eje/pilar — algunos pilares (hoy solo Seguridad) van con la
+   * tarjeta en claro, sin fondo de color; ver isLightPillarCard. */
+  axisCode?: string | null
 }
 
 /** % de la barra de progreso: razón y binario-% ya vienen en escala 0-100;
@@ -84,17 +88,23 @@ export function IndicatorCard({
   isFocus = false,
   breakdown = null,
   axisColor,
+  axisCode = null,
 }: IndicatorCardProps) {
   const estado = estadoOverride ?? calcularSemaforo(latestValue, targetValue, improvementDirection)
   const metrics = computeCardMetrics(valueType, breakdown)
   const progressPct = computeProgressPercent(valueType, latestValue, targetValue)
+  /* El foco gana sobre el pilar: un indicador en foco siempre se ve con el
+     fondo azul, aunque su pilar sea de los que van con la tarjeta en claro. */
+  const isLight = !isFocus && isLightPillarCard(axisCode)
 
   return (
     <Link
       to={`/tablero/${id}`}
-      className={`indicator-card${isFocus ? ' kpi-focus' : ''}`}
+      className={`indicator-card${isLight ? ' indicator-card--light' : ''}${isFocus ? ' kpi-focus' : ''}`}
       style={{
-        background: pillarCardBackground(isFocus ? 'var(--color-focus)' : axisColor),
+        background: isLight
+          ? 'var(--color-surface)'
+          : pillarCardBackground(isFocus ? 'var(--color-focus)' : axisColor),
         borderColor: MARCO_COLOR[estado],
       }}
     >

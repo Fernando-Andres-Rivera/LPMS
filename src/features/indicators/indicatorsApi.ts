@@ -2,14 +2,14 @@ import { supabase } from '../../lib/supabase'
 import type { Axis, Indicator, Profile, Site } from '../../lib/types'
 
 export interface IndicatorWithRelations extends Indicator {
-  axes: Pick<Axis, 'id' | 'name' | 'color' | 'sort_order'> | null
+  axes: Pick<Axis, 'id' | 'code' | 'name' | 'color' | 'sort_order'> | null
   sites: Pick<Site, 'id' | 'name'> | null
 }
 
 export async function fetchIndicators(organizationId: string): Promise<IndicatorWithRelations[]> {
   const { data, error } = await supabase
     .from('indicators')
-    .select('*, axes(id, name, color, sort_order), sites(id, name)')
+    .select('*, axes(id, code, name, color, sort_order), sites(id, name)')
     .eq('organization_id', organizationId)
     .order('level', { ascending: false })
     .order('name', { ascending: true })
@@ -33,7 +33,7 @@ export async function fetchIndicatorById(id: string): Promise<Indicator | null> 
 export async function fetchIndicatorWithRelationsById(id: string): Promise<IndicatorWithRelations | null> {
   const { data, error } = await supabase
     .from('indicators')
-    .select('*, axes(id, name, color), sites(id, name)')
+    .select('*, axes(id, code, name, color), sites(id, name)')
     .eq('id', id)
     .single()
   if (error) return null

@@ -273,11 +273,12 @@ interface KpiTileProps {
   status: IndicatorStatus | undefined
   trend: { period_date: string; value: number | null }[]
   axisColor: string
+  axisCode: string | undefined
 }
 
 /** Delgado envoltorio sobre la tarjeta estándar de KPI — todos los tipos de
  * indicador usan el mismo molde de tarjeta en toda la app. */
-function KpiTile({ indicator, status, trend, axisColor }: KpiTileProps) {
+function KpiTile({ indicator, status, trend, axisColor, axisCode }: KpiTileProps) {
   return (
     <IndicatorCard
       id={indicator.id}
@@ -292,6 +293,7 @@ function KpiTile({ indicator, status, trend, axisColor }: KpiTileProps) {
       trend={trend}
       isFocus={indicator.is_focus}
       axisColor={axisColor}
+      axisCode={axisCode}
     />
   )
 }
@@ -736,6 +738,7 @@ export function GeneralDashboardPage() {
                     status={statusByIndicator.get(indicator.id)}
                     trend={sparklineByIndicator.get(indicator.id) ?? []}
                     axisColor={currentAxis?.color ?? '#1B365D'}
+                    axisCode={currentAxis?.code}
                   />
                 ))}
               </div>

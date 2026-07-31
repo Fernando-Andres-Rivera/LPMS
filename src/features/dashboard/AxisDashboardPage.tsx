@@ -174,6 +174,7 @@ export function AxisDashboardPage() {
                 trend={trend}
                 isFocus={indicator.is_focus}
                 axisColor={axis?.color ?? '#1B365D'}
+                axisCode={axis?.code}
               />
 
               {diagnostico !== 'cumple' && (
