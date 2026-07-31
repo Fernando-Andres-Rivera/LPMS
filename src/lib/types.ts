@@ -113,6 +113,23 @@ export function isLightPillarCard(axisCode: string | null | undefined): boolean 
 }
 
 /**
+ * Texto oscuro o claro sobre un color de fondo arbitrario (fórmula YIQ de
+ * brillo percibido) — para bloques que se pintan directo con el color del
+ * pilar (ej. el banner de "Reunión por nivel"). Necesario porque no todos
+ * los colores del catálogo son igual de oscuros: el amarillo de Seguridad o
+ * el gris de Estándar se leen mal con texto blanco, aunque el resto de
+ * pilares (navy, teal, naranja) sí lo soportan.
+ */
+export function readableTextColor(bgColor: string): string {
+  const hex = bgColor.replace('#', '')
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000
+  return yiq >= 150 ? 'var(--color-text)' : '#fff'
+}
+
+/**
  * Las 3 métricas secundarias estándar de una tarjeta de KPI: Real/Sí,
  * Programado/No y el % para razón y binario en modo "promedio"; Días sin
  * evento/Días con evento y el % para un numérico que suma un conteo de

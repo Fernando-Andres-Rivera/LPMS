@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
+import { AxisIcon } from '../../components/ui/AxisIcon'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { DueActionsPanel, type DueAction } from '../../components/ui/DueActionsPanel'
 import { EscalatedQuickWins } from '../quick-win/EscalatedQuickWins'
@@ -21,6 +22,7 @@ import {
   fetchSafetyEventsInRange,
   isDaysWithoutAccidentsIndicatorName,
 } from '../safety/safetyApi'
+import { readableTextColor } from '../../lib/types'
 import type { AggregateBreakdown, Axis, Indicator, PdcaStatus, SemaforoEstado, Site } from '../../lib/types'
 import { PageHeader } from '../../components/ui/PageHeader'
 import './dashboard.css'
@@ -234,7 +236,6 @@ export function LevelDashboardPage() {
     })
   }
 
-  const axisById = new Map(axes.map((a) => [a.id, a]))
   const rowsByAxis = new Map<string, IndicatorRow[]>()
   for (const row of rows) {
     const list = rowsByAxis.get(row.indicator.axis_id) ?? []
@@ -300,7 +301,15 @@ export function LevelDashboardPage() {
         if (!axisRows || axisRows.length === 0) return null
         return (
           <div className="level-section" key={axis.id}>
-            <h3 style={{ color: axisById.get(axis.id)?.color }}>{axis.name}</h3>
+            <div
+              className="level-section__banner"
+              style={{ background: axis.color, color: readableTextColor(axis.color) } as CSSProperties}
+            >
+              <span className="level-section__banner-icon" aria-hidden="true">
+                <AxisIcon icon={axis.icon} size={22} />
+              </span>
+              <h3 className="level-section__banner-title">{axis.name}</h3>
+            </div>
             <div className="indicators-grid">
               {axisRows.map(({ indicator, latestValue, breakdown, targetValue, trend, estadoOverride }) => (
                 <div key={indicator.id} className="indicator-cell">
