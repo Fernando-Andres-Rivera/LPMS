@@ -153,9 +153,15 @@ export function computeCardMetrics(valueType: IndicatorValueType, breakdown: Agg
       // Real solo va en verde si alcanzó o superó lo Programado (100% o
       // más) — si se quedó corto, va en rojo. Programado primero, Real
       // después: se lee como "esto se esperaba, esto se logró".
+      // "Prog" en vez de "Programado" completo: en MAYÚSCULAS (así se pinta
+      // el rótulo) es la palabra más larga de las 3 tarjetas — con el
+      // recuadro de tamaño fijo e igual en todos los tipos, forzarla a
+      // caber en una sola línea, como "Real", "Sí" o "No", mantiene la
+      // misma huella visual entre recuadros en vez de ser la única con 2
+      // líneas de texto.
       const metPlan = pct >= 100
       return [
-        { label: 'Programado', value: formatChipNumber(breakdown.total), tone: 'positive' },
+        { label: 'Prog', value: formatChipNumber(breakdown.total), tone: 'positive' },
         { label: 'Real', value: formatChipNumber(breakdown.count), tone: metPlan ? 'positive' : 'negative' },
         { label: '%', value: `${pct}%`, tone: 'neutral' },
       ]
