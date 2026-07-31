@@ -1,4 +1,4 @@
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 import './TrendSparkline.css'
 
 export interface TrendSparklinePoint {
@@ -13,6 +13,19 @@ interface TrendSparklineProps {
   data: TrendSparklinePoint[]
   color: string
   height?: number
+  /** Si se da, cada barra se pinta según si ESE día cumplió su propio
+   * objetivo (verde) o no (rojo), en vez de un único color para toda la
+   * tendencia — para indicadores donde el objetivo se evalúa día a día
+   * (binario: "¿se hizo?"; razón: "¿llegó al 100%?"). Sin esto, un
+   * indicador con días buenos y malos se veía con todas las barras del
+   * mismo color, el del estado agregado del rango completo. */
+  colorForValue?: (value: number) => string
+  /** Todas las barras a la misma altura, sin importar el valor — necesario
+   * en binario: el valor real es 0 o 1, y una barra a altura PROPORCIONAL
+   * (lo normal en el resto de tipos) literalmente desaparece en los días
+   * "No" (0 = piso del eje = 0px de alto), sin importar qué color se le dé.
+   */
+  constantHeight?: boolean
 }
 
 function isSunday(dateIso: string): boolean {
@@ -43,17 +56,24 @@ function DayTick({ x, y, payload }: { x?: number; y?: number; payload?: { value:
  * sólidas únicamente en los días con registro real, para distinguirlos de
  * los días sin captura dentro del mismo rango.
  */
-export function TrendSparkline({ data, color, height = 44 }: TrendSparklineProps) {
+export function TrendSparkline({ data, color, height = 44, colorForValue, constantHeight = false }: TrendSparklineProps) {
   const registeredCount = data.filter((p) => p.value !== null).length
   if (registeredCount < 2) return null
+
+  // El color (Cell) siempre lee el valor ORIGINAL de `data`; solo la altura
+  // que recharts dibuja (dataKey="value" de este chartData) se aplana a 1.
+  const chartData = constantHeight ? data.map((p) => ({ date: p.date, value: p.value === null ? null : 1 })) : data
 
   return (
     <div className="trend-sparkline">
       <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={data} margin={{ top: 2, right: 4, bottom: 0, left: 4 }}>
+        <BarChart data={chartData} margin={{ top: 2, right: 4, bottom: 0, left: 4 }}>
           <XAxis dataKey="date" tick={<DayTick />} axisLine={false} tickLine={false} interval={0} height={16} />
-          <YAxis hide domain={[0, 'dataMax']} />
-          <Bar dataKey="value" fill={color} radius={[2, 2, 0, 0]} isAnimationActive={false} />
+          <YAxis hide domain={constantHeight ? [0, 1] : [0, 'dataMax']} />
+          <Bar dataKey="value" fill={color} radius={[2, 2, 0, 0]} isAnimationActive={false}>
+            {colorForValue &&
+              data.map((p, i) => <Cell key={i} fill={p.value === null ? color : colorForValue(p.value)} />)}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

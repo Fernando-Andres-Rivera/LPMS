@@ -16,7 +16,7 @@ import { ActionPlanEvidence } from '../../components/ui/ActionPlanEvidence'
 import { ParetoAxisTick } from '../../components/ui/ParetoAxisTick'
 import { RangePicker } from '../../components/ui/RangePicker'
 import { TrendSparkline } from '../../components/ui/TrendSparkline'
-import { calcularSemaforo, ESTADO_ICON, MARCO_COLOR, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
+import { calcularSemaforo, dailyTrendStyle, ESTADO_ICON, MARCO_COLOR, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
 import { buildPeriodBucketsInRange, type PeriodBucket } from '../../lib/periods'
 import { defaultRange } from '../../lib/dateRange'
 import { fetchIndicatorWithRelationsById, fetchProfiles } from '../indicators/indicatorsApi'
@@ -351,7 +351,14 @@ export function IndicatorBoardPage() {
         {/* Alto fijo (ver CSS) — el mismo espacio se reserve haya o no
             tendencia que dibujar. */}
         <div className="board-result__sparkline">
-          {trend.length > 0 && <TrendSparkline data={trend} color={SEMAFORO_COLOR[estado]} height={48} />}
+          {trend.length > 0 && (
+            <TrendSparkline
+              data={trend}
+              color={SEMAFORO_COLOR[estado]}
+              height={48}
+              {...dailyTrendStyle(indicator.value_type)}
+            />
+          )}
         </div>
         <div className="board-result__metrics">
           {computeCardMetrics(indicator.value_type, breakdown).map((metric, i) => (

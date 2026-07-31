@@ -212,8 +212,10 @@
   background: color-mix(in srgb, var(--color-fail) 55%, transparent);
 }
 
+/* Gris propio, igual que .indicator-card__metric--neutral (ver
+   IndicatorCard.css) — un poco más oscuro que el aclarado blanco de antes. */
 .board-result__metric--neutral {
-  background: rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--color-text-muted) 42%, transparent);
 }
 
 .board-result__metric--muted {
@@ -304,7 +306,7 @@
 }
 
 .board-result--light .board-result__metric--neutral {
-  background: var(--color-bg);
+  background: color-mix(in srgb, var(--color-text-muted) 16%, var(--color-bg));
 }
 
 .board-result--light .board-result__metric--muted {

@@ -203,8 +203,11 @@
   background: color-mix(in srgb, var(--color-fail) 55%, transparent);
 }
 
+/* Gris propio (var(--color-text-muted)) en vez de un simple aclarado
+   translúcido — se ve como un chip neutro reconocible sobre cualquier color
+   de pilar, y algo más oscuro que el aclarado blanco que tenía antes. */
 .indicator-card__metric--neutral {
-  background: rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--color-text-muted) 42%, transparent);
 }
 
 .indicator-card__metric--muted {
@@ -299,8 +302,10 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* Un poco más oscuro que --color-bg (el fondo de la tarjeta) para que el
+   chip se distinga como su propio bloque, no una diferencia casi invisible. */
 .indicator-card--light .indicator-card__metric--neutral {
-  background: var(--color-bg);
+  background: color-mix(in srgb, var(--color-text-muted) 16%, var(--color-bg));
 }
 
 .indicator-card--light .indicator-card__metric--muted {

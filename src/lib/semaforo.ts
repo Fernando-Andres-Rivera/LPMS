@@ -1,4 +1,4 @@
-import type { ImprovementDirection, SemaforoEstado } from './types'
+import type { ImprovementDirection, IndicatorValueType, SemaforoEstado } from './types'
 
 /**
  * Calcula el estado de semáforo comparando el último valor medido contra el
@@ -59,4 +59,39 @@ export const MARCO_COLOR: Record<SemaforoEstado, string> = {
   riesgo: 'transparent',
   incumple: 'var(--color-fail)',
   sin_datos: 'transparent',
+}
+
+interface DailyTrendStyle {
+  /** Colorea CADA barra por separado según si ESE día cumplió su propio
+   * objetivo — en vez del único color del estado agregado del rango
+   * completo (lo que antes hacía que un indicador con días buenos y malos
+   * se viera con todas las barras del mismo color). */
+  colorForValue?: (value: number) => string
+  /** Todas las barras a la misma altura, sin importar el valor — necesario
+   * en binario: el valor real es 0 o 1, y una barra a altura PROPORCIONAL
+   * (lo normal en el resto de tipos) literalmente desaparece en los días
+   * "No" (0 = piso del eje = 0px de alto), sin importar qué color se le dé.
+   * Con el color siendo lo único que comunica pase/no-pase, la altura no
+   * necesita variar. */
+  constantHeight?: boolean
+}
+
+/**
+ * Estilo día a día para la mini-tendencia de un indicador — solo binario
+ * ("¿se hizo?", objetivo fijo: Sí) y razón ("¿llegó al 100%?", objetivo
+ * fijo: 100) tienen un objetivo fijo evaluable punto a punto; numérico no
+ * — su objetivo varía por período y la tendencia no trae esa referencia
+ * día a día, así que sigue con el color único de siempre (objeto vacío).
+ */
+export function dailyTrendStyle(valueType: IndicatorValueType): DailyTrendStyle {
+  if (valueType === 'binario') {
+    return {
+      colorForValue: (value) => (value >= 1 ? SEMAFORO_COLOR.cumple : SEMAFORO_COLOR.incumple),
+      constantHeight: true,
+    }
+  }
+  if (valueType === 'razon') {
+    return { colorForValue: (value) => (value >= 100 ? SEMAFORO_COLOR.cumple : SEMAFORO_COLOR.incumple) }
+  }
+  return {}
 }

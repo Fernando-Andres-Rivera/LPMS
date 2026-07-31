@@ -130,8 +130,8 @@ export function readableTextColor(bgColor: string): string {
 }
 
 /**
- * Las 3 métricas secundarias estándar de una tarjeta de KPI: Real/Sí,
- * Programado/No y el % para razón y binario en modo "promedio"; Días sin
+ * Las 3 métricas secundarias estándar de una tarjeta de KPI: Programado/Real
+ * y el % para razón; Sí/No y el % para binario en modo "promedio"; Días sin
  * evento/Días con evento y el % para un numérico que suma un conteo de
  * eventos (ej. Actos Inseguros, Reclamaciones del Cliente) — los únicos
  * casos con un desglose count/total (ver aggregateBreakdown en periods.ts).
@@ -149,9 +149,14 @@ export function computeCardMetrics(valueType: IndicatorValueType, breakdown: Agg
       ]
     }
     if (valueType === 'razon') {
+      // Programado es la referencia (el plan), así que siempre va en verde;
+      // Real solo va en verde si alcanzó o superó lo Programado (100% o
+      // más) — si se quedó corto, va en rojo. Programado primero, Real
+      // después: se lee como "esto se esperaba, esto se logró".
+      const metPlan = pct >= 100
       return [
-        { label: 'Real', value: formatChipNumber(breakdown.count), tone: 'positive' },
-        { label: 'Programado', value: formatChipNumber(breakdown.total), tone: 'neutral' },
+        { label: 'Programado', value: formatChipNumber(breakdown.total), tone: 'positive' },
+        { label: 'Real', value: formatChipNumber(breakdown.count), tone: metPlan ? 'positive' : 'negative' },
         { label: '%', value: `${pct}%`, tone: 'neutral' },
       ]
     }

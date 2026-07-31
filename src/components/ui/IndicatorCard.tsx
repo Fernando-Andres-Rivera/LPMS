@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { calcularSemaforo, ESTADO_ICON, MARCO_COLOR, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
+import { calcularSemaforo, dailyTrendStyle, ESTADO_ICON, MARCO_COLOR, SEMAFORO_COLOR, SEMAFORO_LABEL } from '../../lib/semaforo'
 import { TrendSparkline } from './TrendSparkline'
 import {
   computeCardMetrics,
@@ -149,6 +149,7 @@ export function IndicatorCard({
             data={trend.map((p) => ({ date: p.period_date, value: p.value }))}
             color={SEMAFORO_COLOR[estado]}
             height={36}
+            {...dailyTrendStyle(valueType)}
           />
         )}
       </div>
