@@ -163,12 +163,30 @@
   fill: #ff8a80;
 }
 
+/* width FIJO, no max-width — mismo motivo que .indicator-card__metrics (ver
+   IndicatorCard.css): .board-result__content es un flex column con
+   align-items:stretch por defecto, así que con max-width en vez de width
+   el ancho estirado deja de ser un tamaño DEFINIDO para el navegador y las
+   columnas 1fr caen de vuelta a ajustarse al contenido en vez de repartir
+   el ancho fijo entre los 3 recuadros. */
 .board-result__metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(90px, 1fr));
   gap: 10px;
   margin-top: 16px;
-  max-width: 420px;
+  width: 420px;
+}
+
+/* width:420px es un ancho FIJO (ver el porqué arriba) — en pantallas donde
+   .board-card ya no tiene 420px de ancho de contenido disponible (móvil),
+   se cambia a 100% para no desbordar horizontalmente; sigue siendo un
+   ancho DEFINIDO (100% de un padre con ancho definido), así que las
+   columnas 1fr se siguen repartiendo bien, solo que el recuadro deja de
+   medir lo mismo que en escritorio en este único breakpoint. */
+@media (max-width: 480px) {
+  .board-result__metrics {
+    width: 100%;
+  }
 }
 
 /* Alto FIJO, no mínimo — mismo motivo que .indicator-card__metric: con

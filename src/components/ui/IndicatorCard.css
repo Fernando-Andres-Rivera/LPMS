@@ -151,11 +151,29 @@
   fill: #ff8a80;
 }
 
+/* width FIJO (no max-width) y centrado con margin auto, en vez de dejar que
+   la fila ocupe el 100% de la tarjeta: el ancho de la tarjeta VARÍA según
+   cuántas caben por fila en la grilla del Dashboard/Reunión — con solo
+   1fr, esa variación se transmitía directo al ancho de cada recuadro, y
+   una tarjeta más ancha (ej. una sección con pocos indicadores) terminaba
+   con recuadros más anchos que otra más angosta.
+   Tiene que ser width y NO max-width: `.indicator-card` es un flex column
+   con align-items:stretch, así que .indicator-card__metrics normalmente
+   se estira a lo ancho de la tarjeta — pero con max-width en vez de width,
+   ese ancho estirado deja de ser un tamaño DEFINIDO para el navegador, y
+   las columnas 1fr caen de vuelta a ajustarse al contenido (auto) en vez
+   de repartir el ancho fijo: en la práctica, dos tarjetas con contenido de
+   distinto ancho ("Sin datos" vs "248"/"PROGRAMADO") terminaban con
+   recuadros de tamaño distinto pese al max-width. width sí es un tamaño
+   definido sin ambigüedad — 204px es seguro incluso en la tarjeta más
+   angosta que permite la grilla (240px de ancho mínimo − 32px de padding
+   = 208px). */
 .indicator-card__metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
-  margin-top: 12px;
+  margin: 12px auto 0;
+  width: 204px;
 }
 
 /* Alto FIJO, no mínimo — un rótulo largo como "Días sin evento" envuelve a 2
