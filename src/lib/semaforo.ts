@@ -26,6 +26,19 @@ export function calcularSemaforo(
   return dentroDeTolerancia ? 'riesgo' : 'incumple'
 }
 
+/**
+ * Color de un % de cumplimiento agregado (un pilar, un sitio, un período) —
+ * distinto de `calcularSemaforo`, que evalúa UN indicador contra SU objetivo.
+ * Aquí ya no hay objetivo que comparar: 80% y 50% son los cortes con los que
+ * la app lee un porcentaje de indicadores cumplidos.
+ */
+export function cumplimientoPctColor(pct: number | null): string {
+  if (pct === null) return 'var(--color-border)'
+  if (pct >= 80) return 'var(--color-ok)'
+  if (pct >= 50) return 'var(--color-risk)'
+  return 'var(--color-fail)'
+}
+
 export const SEMAFORO_COLOR: Record<SemaforoEstado, string> = {
   cumple: 'var(--color-ok)',
   riesgo: 'var(--color-risk)',

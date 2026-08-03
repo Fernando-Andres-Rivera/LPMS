@@ -4,7 +4,7 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { useAuth } from '../../hooks/useAuth'
 import { IndicatorCard } from '../../components/ui/IndicatorCard'
 import { RangePicker } from '../../components/ui/RangePicker'
-import { calcularSemaforo } from '../../lib/semaforo'
+import { calcularSemaforo, cumplimientoPctColor } from '../../lib/semaforo'
 import { aggregateValues, buildPeriodBucketsInRange } from '../../lib/periods'
 import { daysAgo, yesterday, DEFAULT_RANGE_DAYS } from '../../lib/dateRange'
 import type { Axis, Indicator, Site } from '../../lib/types'
@@ -28,6 +28,7 @@ import { ExposureSection } from './ExposureSection'
 import { fetchExposureSchedule } from './exposureScheduleApi'
 import type { ExposureSchedule, IndicatorCause } from '../../lib/types'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { NumberTicker } from '../../components/ui/NumberTicker'
 import { AxisIcon } from '../../components/ui/AxisIcon'
 import './general-dashboard.css'
 
@@ -41,13 +42,6 @@ interface PillarDailyPoint {
   pct: number | null
   cumplidos: number
   total: number
-}
-
-function pillarPctColor(pct: number | null): string {
-  if (pct === null) return 'var(--color-border)'
-  if (pct >= 80) return 'var(--color-ok)'
-  if (pct >= 50) return 'var(--color-risk)'
-  return 'var(--color-fail)'
 }
 
 /**
@@ -234,7 +228,7 @@ function PillarResultSection({ axisName, rangeFrom, rangeTo, dailyData, current,
       ) : (
         <>
           <div className="gdash-pillar-result__value">
-            {current.pct}%
+            <NumberTicker value={current.pct} />%
             <span className="gdash-pillar-result__value-sub">
               {current.cumplidos}/{current.total} mediciones cumplen en el período
             </span>
@@ -255,7 +249,7 @@ function PillarResultSection({ axisName, rangeFrom, rangeTo, dailyData, current,
                   <Tooltip formatter={(value) => [`${value}%`, 'Cumplimiento']} />
                   <Bar dataKey="pct" radius={[4, 4, 0, 0]}>
                     {dailyData.map((p) => (
-                      <Cell key={p.date} fill={pillarPctColor(p.pct)} />
+                      <Cell key={p.date} fill={cumplimientoPctColor(p.pct)} />
                     ))}
                   </Bar>
                 </BarChart>

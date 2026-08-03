@@ -123,9 +123,16 @@
 
 .org-structure-add-row--site button {
   flex: none;
-  background: var(--color-teal);
+  background: var(--grad-teal);
   color: white;
   border: none;
+  box-shadow: 0 6px 14px -7px rgba(38, 166, 154, 0.7);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.org-structure-add-row--site button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 9px 18px -8px rgba(38, 166, 154, 0.85);
 }
 
 .org-structure-add-row--site button:disabled {
@@ -198,10 +205,11 @@
 
 /* .button-primary (botón teal, usado para el CTA principal "+ Agregar
    unidad de negocio") necesita más especificidad que la regla genérica de
-   arriba para no perder su fondo — si no, se ve como un botón fantasma. */
+   arriba para no perder su fondo — si no, se ve como un botón fantasma.
+   Mismo look que el .button-primary global (degradado, no plano). */
 .org-structure-add-row button.button-primary {
-  border-color: var(--color-teal);
-  background: var(--color-teal);
+  border: none;
+  background: var(--grad-teal);
   color: white;
 }
 
@@ -451,6 +459,122 @@
 
 .org-results-badge--sin_datos {
   background: var(--color-gray);
+}
+
+/* ---- Ranking de seguridad por sitio ---- */
+
+.org-safety-ranking {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* "pos" ocupa las dos filas para que el número quede centrado frente al
+   bloque completo del sitio (nombre + barra), no pegado al nombre. */
+.org-safety-rank {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'pos name meta'
+    'pos bar bar';
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.org-safety-rank:last-child {
+  border-bottom: none;
+}
+
+.org-safety-rank__pos {
+  grid-area: pos;
+  justify-self: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+/* El primer puesto es el único que se marca: convertirlo en un podio de tres
+   colores haría competir al 2.º y 3.º con el semáforo de la barra, que es lo
+   que de verdad hay que leer. */
+.org-safety-rank--top .org-safety-rank__pos {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.org-safety-rank__name {
+  grid-area: name;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.org-safety-rank__meta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.org-safety-rank__pct {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.org-safety-rank__detail {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.org-safety-rank__warn {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-gray);
+  color: #fff;
+  cursor: help;
+}
+
+.org-safety-rank__bar {
+  grid-area: bar;
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.org-safety-rank__bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.org-safety-ranking__empty {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* En pantalla angosta el % baja a su propia fila: junto al nombre deja al
+   nombre del sitio sin ancho suficiente y lo parte letra por letra. */
+@media (max-width: 480px) {
+  .org-safety-rank {
+    grid-template-columns: 26px minmax(0, 1fr);
+    grid-template-areas:
+      'pos name'
+      'pos meta'
+      'pos bar';
+  }
 }
 
 .org-structure-responsibles-table {
