@@ -7,18 +7,6 @@
   margin: 4px 0 20px;
 }
 
-.button-primary {
-  background: var(--color-teal);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 10px 16px;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-block;
-}
-
 .account-security-card {
   background: var(--color-surface);
   border-radius: var(--radius-md);

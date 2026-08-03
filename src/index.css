@@ -43,6 +43,15 @@
   --blueprint-grid: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
 
+  /* Cinta de seguridad industrial (franjas diagonales naranja/navy) —
+     reservada para contextos críticos: acciones destructivas y avisos de
+     bloqueo. Usarla en otra cosa le quitaría el significado. */
+  --hazard-tape: repeating-linear-gradient(
+    -45deg,
+    var(--color-orange) 0 10px,
+    var(--color-primary) 10px 20px
+  );
+
   /* Movimiento — curvas y tiempos consistentes en toda la app. */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
@@ -98,6 +107,9 @@ body {
   background-color: var(--color-bg);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
+  /* Numerales tabulares en toda la app — los datos alinean en columna
+     como display de instrumento, y un valor que cambia no "baila". */
+  font-variant-numeric: tabular-nums;
 }
 
 #root {
@@ -112,8 +124,163 @@ textarea {
   font-size: 1rem;
 }
 
+/* Presión táctil universal — TODO botón de la app baja 1px al presionarlo,
+   tenga la clase que tenga: el lenguaje "pulsador de planta" es global.
+   (Ningún botón de la app usa transform persistente; verificado.) */
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Anillo de foco consistente para teclado en toda la app. */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 1px;
+}
+
 a {
   color: var(--color-primary);
+}
+
+/* ============================================================
+   Sistema de botones "pulsador de planta" — un solo lenguaje táctil
+   para toda la app: al presionar, el botón baja 1px y su sombra se
+   comprime (como un pulsador físico de tablero de mando); al pasar el
+   mouse, el primario recibe un barrido de luz. Las pantallas usan
+   .button-primary / .button-ghost / .button-danger; los botones con
+   clase propia (login, topbar) reutilizan esta misma receta en su CSS.
+   ============================================================ */
+.button-primary,
+.button-ghost,
+.button-danger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  text-decoration: none;
+  overflow: hidden;
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.button-primary:focus-visible,
+.button-ghost:focus-visible,
+.button-danger:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.button-primary:disabled,
+.button-ghost:disabled,
+.button-danger:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.button-primary {
+  background: var(--grad-teal);
+  color: white;
+  border: none;
+  box-shadow: 0 8px 18px -8px rgba(38, 166, 154, 0.75);
+}
+
+.button-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px -9px rgba(38, 166, 154, 0.9);
+}
+
+/* Barrido de luz del primario — cruza una sola vez por hover. */
+.button-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.38) 50%, transparent 62%);
+  transform: translateX(-110%);
+  pointer-events: none;
+}
+
+.button-primary:hover:not(:disabled)::after {
+  animation: lpms-shimmer var(--dur-slow) var(--ease-in-out);
+}
+
+.button-ghost {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
+}
+
+.button-ghost:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Destructivo: sobrio en reposo; la cinta de seguridad naranja aparece
+   solo al apuntarle — la advertencia industrial antes de actuar. */
+.button-danger {
+  background: var(--color-surface);
+  color: var(--color-fail);
+  border: 1px solid rgba(211, 47, 47, 0.45);
+}
+
+.button-danger::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--hazard-tape);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.button-danger:hover:not(:disabled) {
+  border-color: var(--color-fail);
+  background: rgba(211, 47, 47, 0.05);
+}
+
+.button-danger:hover:not(:disabled)::before {
+  opacity: 1;
+}
+
+/* Presión física — común a los tres. */
+.button-primary:active:not(:disabled),
+.button-ghost:active:not(:disabled),
+.button-danger:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px -3px rgba(27, 54, 93, 0.35);
+}
+
+/* Flecha que se desliza al apuntar al botón que la contiene. */
+.button-arrow {
+  display: inline-block;
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.button-primary:hover .button-arrow,
+.button-ghost:hover .button-arrow {
+  transform: translateX(3px);
+}
+
+@keyframes lpms-shimmer {
+  to {
+    transform: translateX(110%);
+  }
 }
 
 /* Envuelve las tablas para que solo ellas hagan scroll horizontal en

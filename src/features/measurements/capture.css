@@ -146,8 +146,12 @@
   color: var(--color-text-muted);
 }
 
+/* El botón de piso: receta "pulsador de planta" completa (index.css) —
+   degradado, barrido de luz al hover y sombra que se comprime al presionar. */
 .capture-submit {
-  background: var(--color-teal);
+  position: relative;
+  overflow: hidden;
+  background: var(--grad-teal);
   color: white;
   border: none;
   border-radius: var(--radius-md);
@@ -155,10 +159,36 @@
   font-size: 1.1rem;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 10px 22px -10px rgba(38, 166, 154, 0.85);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.capture-submit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.38) 50%, transparent 62%);
+  transform: translateX(-110%);
+  pointer-events: none;
+}
+
+.capture-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px -10px rgba(38, 166, 154, 0.95);
+}
+
+.capture-submit:hover:not(:disabled)::after {
+  animation: lpms-shimmer var(--dur-slow) var(--ease-in-out);
+}
+
+.capture-submit:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px -3px rgba(27, 54, 93, 0.35);
 }
 
 .capture-submit:disabled {
   opacity: 0.6;
+  box-shadow: none;
 }
 
 .capture-location {
@@ -190,16 +220,31 @@
   line-height: 1.5;
 }
 
+/* Aviso de fecha bloqueada — lleva la cinta de seguridad industrial
+   (--hazard-tape) como borde superior: es EL contexto crítico para el que
+   esa cinta está reservada en el sistema de diseño. */
 .capture-cutoff-warning {
+  position: relative;
+  overflow: hidden;
   margin: 0;
   background: rgba(211, 47, 47, 0.1);
   border: 1px solid var(--color-fail);
   color: var(--color-fail);
   border-radius: var(--radius-sm);
-  padding: 12px;
+  padding: 15px 12px 12px;
   font-size: 0.85rem;
   font-weight: 600;
   line-height: 1.5;
+}
+
+.capture-cutoff-warning::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--hazard-tape);
 }
 
 .capture-override {

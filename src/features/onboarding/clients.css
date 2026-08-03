@@ -87,13 +87,20 @@
 }
 
 .clients-reactivate {
-  background: var(--color-teal);
+  background: var(--grad-teal);
   color: white;
   border: none;
   border-radius: var(--radius-sm);
   padding: 8px 14px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 6px 14px -7px rgba(38, 166, 154, 0.7);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.clients-reactivate:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 9px 18px -8px rgba(38, 166, 154, 0.85);
 }
 
 .clients-reactivate:disabled {
